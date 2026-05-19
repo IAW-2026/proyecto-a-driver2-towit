@@ -18,20 +18,22 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 - `tower_id: string`
 - `clerk_id: string`
 - `full_name: string`
-- `payments_alias`
+- `payments_alias: string`
 
 #### **Vehicles**
 - `vehicle_id: string`
 - `brand: string`
 - `model: string`
-- `year: int`
-- `max_load: int`
+- `year: number`
+- `max_load: number`
 
 #### **Assignments**
 - `assignment_id: string`
 - `trip_id: string`
 - `tower_id: string`
 - `status: string`
+- `location: {lat: string, long: string}`<br>
+Posibles valores de status: `pending`, `accepted`, `completed`, `cancelled`
 
 #### **Admin**
 - `Admin_id: string`
@@ -57,8 +59,8 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 - `customer_id: string`
 - `tower_id: string`
 - `vehicle_id: string`
-- `origin: string`
-- `destination: string`
+- `origin: {lat: string, long: string}`
+- `destination: {lat: string, long: string}`
 - `date: string`
 - `time: string`
 - `status: string`
@@ -93,8 +95,8 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 #### **Payments**
 - `transaction_id: string`
 - `trip_id: string`
-- `id_user: string`  <!-- Usuario que realiza el pago -->
-- `amount: float`
+- `user_id: string`  <!-- Usuario que realiza el pago -->
+- `amount: number`
 - `external_id: string`
 - `status: string`
 - `created_at: string`
@@ -104,10 +106,10 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 #### **Disbursements** 
 - `transaction_id: string`
 - `trip_id: string`
-- `amount: float`
-- `id_user: string`  <!-- Usuario al que le liquidan el pago -->
+- `amount: number`
+- `user_id: string`  <!-- Usuario al que le liquidan el pago -->
 - `payment_alias: string`
-- `platform_fee: float`
+- `platform_fee: number`
 - `external_id: string`
 - `status: string`
 - `created_at: string`
@@ -115,8 +117,8 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 #### **Refunds** 
 - `transaction_id: string`
 - `trip_id: string`
-- `amount: float`
-- `id_user: string`  <!-- Usuario al que le devuelven el pago -->
+- `amount: number`
+- `user_id: string`  <!-- Usuario al que le devuelven el pago -->
 - `refund_type: string`
 - `external_id: string`
 - `reason: string`
@@ -125,7 +127,7 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 
 #### **Users**
 - `clerk_id: string`
-- `id_user: string`
+- `user_id: string`
 
 
 #### **Admin**
@@ -179,17 +181,11 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 
 ---
 
-## Promotions App *(si aplica)*
-
-### Entidades principales
-
-<!-- Describir tablas y campos -->
-
----
 
 ## Datos duplicados y estrategia de consistencia
 
 | Dato duplicado | Apps que lo tienen | Fuente de verdad | Estrategia |
 |----------------|--------------------|-----------------|------------|
 | Usuario (clerk_user_id) | Todas | Clerk | Cada app sincroniza al primer login vía webhook o lazy load |
-| *(agregar otros)* | | | |
+| Referencia a usuario (tower_id) | Customer, Feedback y Payments apps | Tower app | Id de referencia para obtener datos necesarios a través de consultas |
+| Referencia a viaje (customer_id) | Tower y Payments apps | Customer app | Id de referencia para obtener datos necesarios a través de consultas |

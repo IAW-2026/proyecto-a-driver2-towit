@@ -36,7 +36,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 ### *Obtener datos de vehículo de Tower:* 
 
 **Endpoint:**  
-- GET /api/tower/{vehicle_id}
+- GET /api/tower/vehicles/{vehicle_id}
 
 **Request params:**  
 - vehicle_id: string
@@ -74,13 +74,67 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
   "customer_id": "string",
   "trip": {
     "id": "string",
-    "origin": {"lat": "number","lng": "number"},
-    "destination": {"lat": "number","lng": "number"},
+    "origin": {"lat": "string","long": "string"},
+    "destination": {"lat": "string","long": "string"},
   },
   "vehicle_data": {"brand": "string", "model": "string", "year": "number"},
   "preferred_tow_type": "string"
 } 
 
+```
+
+**Response:**  
+```json
+{}
+```
+
+**Quién llama a quién:**  
+- Customer App → Tower App
+
+<br>
+
+### *Consultar estado de tower asignado:* 
+
+**Endpoint:**  
+- GET /api/tower/requests/{trip_id}
+
+**Request params:**  
+- trip_id: string
+
+**Request body:**
+```json
+{}
+```
+
+**Response:**  
+```json
+{
+  "status": "string",
+  "location": {
+    "lat": "string",
+    "long": "string"
+  }
+}
+```
+
+**Quién llama a quién:**  
+- Customer App → Tower App
+
+<br>
+
+### *Cancelar pedido de tower:* 
+
+La intención del endpoint es poder recibir la cancelación de un pedido de viaje que todavía no encontró tower para ser asignado. Ante el timeout en la Customer App, esta debería llamar a este endpoint para avisar la cancelación del pedido. También funciona para el caso normal de cancelación.
+
+**Endpoint:**  
+- PATCH /api/tower/requests/{trip_id}
+
+**Request params:**  
+- trip_id: string
+
+**Request body:**
+```json
+{}
 ```
 
 **Response:**  
@@ -142,8 +196,8 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
   "trip_id": "string",
   "customer_id": "string",
   "tower_id":"string",
-  "origin": "string",
-  "destination": "string",
+  "origin": {"lat": "string", "long": "string"},
+  "destination": {"lat": "string", "long": "string"},
   "status": "string",
   "date": "string"
 }
@@ -153,35 +207,6 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 - Customer App → Customer App
 - Payments App → Customer App
 - Tower App → Customer App 
-
-<br>
-
-### *Asignar conductor a un viaje*
-
-**Endpoint:**  
-- POST /api/customer/trips/{trip_id}/assign-tower/{tower_id}
-
-**Request params:**  
-- trip_id: string
-- tower_id: string
-
-**Request body:**  
-```json
-{}
-```
-
-**Response:**  
-```json
-{
-  "trip_id": "string",
-  "tower_id": "string",
-  "status": "assigned",
-  "estimated_arrival_time": "number"
-}
-```
-
-**Quién llama a quién:**  
-- Tower App → Customer App
 
 <br>
 
@@ -228,8 +253,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 ```json
 {
   "trip_id": "string",
-  "payment_status": "confirmed",
-  "trip_status": "searching_tower"
+  "payment_status": "string",
 }
 ```
 
@@ -241,7 +265,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 ### *Actualizar estado de viaje:* 
 
 **Endpoint:**  
-- POST /api/customer/trips/{trip_id}
+- PATCH /api/customer/trips/{trip_id}
 
 **Request params:**
 - Ninguno
@@ -265,7 +289,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 
 ---
 
-## Payment App — Endpoints expuestos
+## Payments App — Endpoints expuestos
 
 <!-- Documentar los endpoints que expone esta app -->
 
@@ -280,9 +304,9 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 **Request body:**
 ```json
 {
-    "trip_id" : int,
+    "trip_id" : "number",
     "clerk_id": "string",
-    "amount" : float
+    "amount" : "number"
 }
 ```
 
@@ -299,7 +323,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 ### *Reembolsar dinero de un viaje cancelado:* 
 
 **Endpoint:**  
-- POST /api/cancellations/
+- POST /api/payments/cancellations/
 
 **Request params:**  
 - Ninguno
@@ -328,7 +352,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 ### *Liquidar dinero de un viaje al conductor (Tower):* 
 
 **Endpoint:**  
-- POST /api/disbursements/
+- POST /api/payments/disbursements/
 
 **Request params:**  
 - Ninguno
@@ -339,7 +363,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
     "trip_id": "string",
     "clerk_id": "string",
     "payment_alias": "string",
-    "platform_fee": "float"
+    "platform_fee": "number"
 }
 ```
 
@@ -378,12 +402,12 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 **Response:**  
 ```json
 {
-  "rating": "string" 
+  "rating": "number" 
 }
 ```
 
 **Quién llama a quién:**  
-- Tower App, Client App → Feedback App
+- Tower App, Customer App → Feedback App
 
 <br>
 
@@ -403,7 +427,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 **Response:**  
 ```json
 {
-  "avg_rating": "string" 
+  "avg_rating": "number" 
 }
 ```
 
