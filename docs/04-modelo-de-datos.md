@@ -8,7 +8,7 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 
 ---
 
-## Driver App
+## Tower App
 
 ### Entidades principales
 

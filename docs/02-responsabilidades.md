@@ -6,10 +6,10 @@
 
 | App | Responsable | Repositorio |
 |-----|-------------|-------------|
-| Tower App (driver) | Iván Maciel | `proyecto-a-driver-towit` |
+| Tower App (driver) | Iván Maciel | `proyecto-a-driver2-towit` |
 | Customer App (rider) | Agustina Guastavino | `proyecto-a-rider-towit` |
 | Payments App | Germán Schnaider | `proyecto-a-payments-towit` |
-| Feedback App | Pablo Bonanno | `proyecto-a-feedback-towit` |
+| Feedback App | Pablo Bonanno | `proyecto-a-feedback2-towit` |
 
 
 ---
