@@ -4,10 +4,57 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../app/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tower {
+  tower_id       String       @id @default(uuid())
+  clerk_id       String       @unique
+  full_name      String
+  payments_alias String
+  vehicles       Vehicle[]
+  assignments    Assignment[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Vehicle {
+  vehicle_id String @id @default(uuid())
+  brand      String
+  model      String
+  year       Int
+  max_load   Float
+  tower_id   String
+  tower      Tower  @relation(fields: [tower_id], references: [tower_id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Assignment {
+  assignment_id String   @id @default(uuid())
+  trip_id       String
+  tower_id      String
+  tower         Tower    @relation(fields: [tower_id], references: [tower_id], onDelete: Cascade)
+  status        String   // pending, accepted, completed, cancelled
+  location      Json     // {lat: string, long: string}
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Admin {
+  admin_id  String   @id @default(uuid())
+  clerk_id  String   @unique
+  full_name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
