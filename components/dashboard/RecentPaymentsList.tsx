@@ -9,7 +9,6 @@ export default function RecentPaymentsList() {
   const recentPayments = [
     { id: "pay_001", date: "2026-05-29", amount: 150.00, status: "Completado" },
     { id: "pay_002", date: "2026-05-28", amount: 120.50, status: "Completado" },
-    { id: "pay_003", date: "2026-05-27", amount: 95.75, status: "Completado" },
   ];
 
   return (

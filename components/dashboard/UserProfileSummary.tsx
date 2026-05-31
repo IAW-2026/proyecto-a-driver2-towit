@@ -22,7 +22,7 @@ export default function UserProfileSummary() {
   const avgRating = 4.8; 
 
   return (
-    <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex items-center space-x-4">
+    <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex items-center space-x-4 h-full">
       <Image
         src={user.imageUrl}
         alt={user.fullName || "User Avatar"}

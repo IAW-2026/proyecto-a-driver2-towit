@@ -9,7 +9,6 @@ export default function RecentTripsList() {
   const recentTrips = [
     { id: "trip_001", date: "2026-05-28", customer: "Juan Pérez", destination: "Av. Libertador 1234" },
     { id: "trip_002", date: "2026-05-27", customer: "María López", destination: "Calle Falsa 123" },
-    { id: "trip_003", date: "2026-05-26", customer: "Carlos García", destination: "Ruta Nacional 9 Km 200" },
   ];
 
   return (

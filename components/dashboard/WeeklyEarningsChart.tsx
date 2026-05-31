@@ -19,7 +19,7 @@ export default function WeeklyEarningsChart() {
   const todayIndex = earningsData.length - 1;
 
   return (
-    <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 col-span-full md:col-span-2 flex flex-col">
+    <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 col-span-full md:col-span-2 flex flex-col h-full">
       <h3 className="text-lg font-bold text-white mb-4">Ganancias de la última semana</h3>
       <div className="flex flex-1 items-end justify-around h-48 mt-4">
         {earningsData.map((data, index) => (
