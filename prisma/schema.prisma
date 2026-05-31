@@ -15,8 +15,9 @@ datasource db {
 model Tower {
   tower_id       String       @id @default(uuid())
   clerk_id       String       @unique
+  email          String       @unique
   full_name      String
-  payments_alias String
+  payments_alias String       @default("")
   vehicles       Vehicle[]
   assignments    Assignment[]
 
