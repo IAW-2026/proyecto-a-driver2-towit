@@ -17,6 +17,7 @@ También identificar posibles duplicados entre apps (ej: usuarios) y definir có
 #### **Tower**
 - `tower_id: string`
 - `clerk_id: string`
+- `email: string`
 - `full_name: string`
 - `payments_alias: string`
 
