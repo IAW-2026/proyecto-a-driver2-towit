@@ -1,0 +1,62 @@
+"use server";
+
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { clerkClient } from "@clerk/nextjs/server"; // Importamos clerkClient
+
+interface UpdateTowerDetailsResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
+
+export async function updateTowerDetails(
+  clerkId: string,
+  data: { full_name?: string; email?: string; payments_alias?: string }
+): Promise<UpdateTowerDetailsResult> {
+  try {
+    // 1. Actualizar en la base de datos de Neon (vía Prisma)
+    const updatedTower = await prisma.tower.update({
+      where: { clerk_id: clerkId },
+      data: {
+        full_name: data.full_name,
+        email: data.email,
+        payments_alias: data.payments_alias,
+      },
+    });
+
+    // 2. Actualizar en la base de datos de Clerk
+    const clerkUpdateParams: {
+      firstName?: string;
+      lastName?: string;
+      emailAddress?: string;
+    } = {};
+
+    if (data.full_name !== undefined) {
+      const nameParts = data.full_name.split(' ');
+      clerkUpdateParams.firstName = nameParts[0] || '';
+      clerkUpdateParams.lastName = nameParts.slice(1).join(' ') || '';
+    }
+
+    if (data.email !== undefined) {
+      clerkUpdateParams.emailAddress = data.email;
+    }
+
+    if (Object.keys(clerkUpdateParams).length > 0) {
+      try {
+        const client = await clerkClient();
+        await client.users.updateUser(clerkId, clerkUpdateParams);
+        console.log(`Clerk user ${clerkId} actualizado con`, clerkUpdateParams);
+      } catch (clerkError: any) {
+        console.error(`Error al actualizar usuario de Clerk ${clerkId}:`, clerkError);
+        return { success: false, error: `Failed to update Clerk user: ${clerkError.message}` };
+      }
+    }
+
+    revalidatePath("/account-details"); // Revalida la ruta para mostrar los datos actualizados
+    return { success: true, data: updatedTower };
+  } catch (error: any) {
+    console.error("Error al actualizar detalles de Tower:", error);
+    return { success: false, error: error.message || "Failed to update Tower details" };
+  }
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, UserAvatar, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 
 export default function AppHeader() {
@@ -36,7 +36,7 @@ export default function AppHeader() {
               <Link href="/account-details" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
                 Mi Cuenta
               </Link>
-              <UserButton />
+              <UserAvatar />
             </>
           )}
         </nav>
