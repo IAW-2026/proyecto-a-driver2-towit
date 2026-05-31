@@ -1,10 +1,29 @@
-"use client"; // Se necesita "use client" para usar componentes interactivos de Clerk
+"use client";
 
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function HomePage() {
+  const { isSignedIn, isLoaded } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  if (isLoaded && isSignedIn) {
+    return (
+      <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col justify-center items-center">
+        <p className="text-slate-400">Redirigiendo al dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">
       <AppHeader />
