@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from 'next/navigation'; // Importar useRouter
 import { useClerk } from "@clerk/nextjs"; // Importar useClerk
-import { updateTowerDetails, getTowerDetails } from "@/app/actions/tower"; // Import getTowerDetails
+import { updateTowerDetails, getTowerDetails, deleteTowerAccount } from "@/app/actions/tower"; // Importar deleteTowerAccount
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 interface UserProfileProps {
   imageUrl: string;
@@ -35,14 +36,47 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false); // Estado para el popup de confirmación
+
   const router = useRouter(); // Inicializar useRouter
-  const { signOut } = useClerk(); // Obtener la función signOut de Clerk
+  const { signOut, user } = useClerk(); // Obtener la función signOut y el user de Clerk
 
   const handleSignOut = async () => {
     if (onClose) {
-      onClose(); // Cerrar el modal antes de redirigir
+      onClose(); // Cerrar el modal principal antes de redirigir
     }
     await signOut({ redirectUrl: '/home' }); // Redirigir a /home después de cerrar sesión
+  };
+
+  const handleDeleteAccountClick = () => {
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!user || !user.id) {
+      setStatusMessage({ type: 'error', message: 'No se pudo identificar al usuario para eliminar.' });
+      setShowDeleteConfirmation(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    setShowDeleteConfirmation(false); // Cerrar el popup de confirmación inmediatamente
+
+    const result = await deleteTowerAccount(user.id);
+
+    if (result.success) {
+      if (onClose) {
+        onClose(); // Cerrar el modal principal
+      }
+      // Clerk debería manejar la redirección y el estado de sesión automáticamente después de la eliminación del usuario.
+      // Aquí, podríamos redirigir explícitamente a /home si la eliminación en Clerk tarda un poco en propagarse o si signOut no es llamado implícitamente por deleteUser.
+      // Para mayor seguridad, forzamos la redirección aquí.
+      router.push('/home');
+    } else {
+      setStatusMessage({ type: 'error', message: result.error || 'Error al eliminar la cuenta.' });
+      setIsSubmitting(false);
+    }
   };
 
   const fetchData = useCallback(async () => {
@@ -147,13 +181,15 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
           <p className="text-base text-yellow-400 mt-0 mb-1">
             Calificación: {userProfile.avgRating}
           </p>
-          <button
-            type="button"
-            onClick={handleSignOut} // Llamar a nuestra función handleSignOut
-            className="text-sm text-red-400 hover:text-red-500"
-          >
-            Cerrar Sesión
-          </button>
+          <div className="flex flex-col gap-1 mt-2">
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="text-sm text-red-400 hover:text-red-500 self-start"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
         <Image
           src={userProfile.imageUrl}
@@ -224,6 +260,13 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
       <div className="flex justify-end gap-4 pt-4 border-t border-slate-800 mt-8">
         <Button
           type="button"
+          onClick={handleDeleteAccountClick}
+          className="text-xs bg-red-500 text-white hover:bg-red-600 self-start mr-auto" // Estilo más sutil para eliminar
+        >
+          Eliminar Cuenta
+        </Button>
+        <Button
+          type="button"
           onClick={handleCancel}
           disabled={!isDirty || isSubmitting}
           className="px-6 py-3 rounded-lg text-white bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -238,6 +281,38 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
           {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
         </Button>
       </div>
+
+      <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <DialogContent className="max-w-md bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">Confirmar Eliminación de Cuenta</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              ¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es irreversible y se perderán todos tus datos.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 mt-4 bg-slate/70">
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="px-4 py-2 text-sm text-slate-400 hover:text-white bg-slate-900 rounded-md transition-colors"
+                onClick={() => setShowDeleteConfirmation(false)}
+              >
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              className="px-4 py-2 text-sm bg-red-600 hover:bg-red-500 text-white font-bold rounded-md transition-colors"
+              onClick={handleConfirmDelete}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Eliminando...' : 'Confirmar Eliminación'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

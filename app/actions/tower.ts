@@ -113,6 +113,27 @@ export async function getTowerDetails(): Promise<TowerDetails | null> {
   return { userProfile, towerData };
 }
 
+export async function deleteTowerAccount(clerkId: string): Promise<UpdateTowerDetailsResult> {
+  try {
+    // 1. Eliminar de la base de datos de Neon (vía Prisma)
+    await prisma.tower.delete({
+      where: { clerk_id: clerkId },
+    });
+    console.log(`Tower ${clerkId} deleted from Neon database.`);
+
+    // 2. Eliminar de Clerk
+    const client = await clerkClient();
+    await client.users.deleteUser(clerkId);
+    console.log(`Clerk user ${clerkId} deleted.`);
+
+    revalidatePath("/home"); // Revalida la ruta /home
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error al eliminar la cuenta de Tower ${clerkId}:`, error);
+    return { success: false, error: error.message || "Failed to delete Tower account" };
+  }
+}
+
 export async function getTowerVehicles(): Promise<Vehicle[] | null> {
   const { userId } = await auth();
 
