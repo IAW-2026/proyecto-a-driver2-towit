@@ -14,7 +14,7 @@ export default function AccountDetailsModal() {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-slate-900 p-8 rounded-lg shadow-lg border border-slate-800 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+      <div className="relative w-full max-w-2xl bg-slate-900/70 p-8 rounded-lg shadow-lg border border-slate-800 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
         <Button
           variant="ghost"
           size="icon-sm"

@@ -18,7 +18,7 @@ export default async function AccountDetailsPage() {
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">
       <AppHeader />
       <main className="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-2xl bg-slate-900 p-8 rounded-lg shadow-lg border border-slate-800">
+        <div className="w-full max-w-2xl bg-slate-900/70 p-8 rounded-lg shadow-lg border border-slate-800">
           <AccountDetailsForm />
         </div>
       </main>

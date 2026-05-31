@@ -158,7 +158,7 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
             name="full_name"
             value={formData.full_name || ''}
             onChange={handleChange}
-            className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+            className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
             required
           />
         </div>
@@ -173,7 +173,7 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
             name="email"
             value={formData.email || ''}
             onChange={handleChange}
-            className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+            className="w-full p-3 bg-slate-800/70 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
             required
           />
         </div>
@@ -188,7 +188,7 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
             name="payments_alias"
             value={formData.payments_alias || ''}
             onChange={handleChange}
-            className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+            className="w-full p-3 bg-slate-800/70 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
           />
         </div>
       </div>
