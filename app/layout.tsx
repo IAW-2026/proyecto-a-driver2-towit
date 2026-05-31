@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import { AccountDetailsModalProvider } from "@/components/providers/AccountDetailsModalProvider"; // Importar el Provider
-import AccountDetailsModal from "@/components/account-details/AccountDetailsModal"; // Importar el componente del modal
+import { AccountDetailsModalProvider } from "@/components/providers/AccountDetailsModalProvider";
+import AccountDetailsModal from "@/components/account-details/AccountDetailsModal";
+import { NoVehicleErrorModalProvider } from "@/components/providers/NoVehicleErrorModalProvider"; // Nuevo import del Provider
+import NoVehicleErrorModal from "@/components/NoVehicleErrorModal"; // Nuevo import del componente del modal
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,8 +35,11 @@ export default function RootLayout({
       >
         <body className="min-h-full flex flex-col">
           <AccountDetailsModalProvider>
-            {children}
-            <AccountDetailsModal /> {/* Renderizar el modal al final del body */}
+            <NoVehicleErrorModalProvider> {/* Nuevo proveedor */}
+              {children}
+              <AccountDetailsModal />
+              <NoVehicleErrorModal /> {/* Nuevo modal */}
+            </NoVehicleErrorModalProvider>
           </AccountDetailsModalProvider>
         </body>
       </html>

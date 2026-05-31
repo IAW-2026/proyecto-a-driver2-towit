@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { auth, currentUser, clerkClient } from "@clerk/nextjs/server"; // Importamos auth, currentUser, clerkClient
+import { Vehicle } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 interface UpdateTowerDetailsResult {

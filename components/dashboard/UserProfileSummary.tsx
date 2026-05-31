@@ -6,6 +6,7 @@ import { getTowerVehicles } from "@/app/actions/tower";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useNoVehicleErrorModal } from "@/components/providers/NoVehicleErrorModalProvider"; // Importar el hook
 
 interface Vehicle {
   vehicle_id: string;
@@ -19,6 +20,8 @@ export default function UserProfileSummary() {
   const { user, isLoaded } = useUser();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const { openNoVehicleErrorModal } = useNoVehicleErrorModal(); // Usar el hook para abrir el modal de error
 
   useEffect(() => {
     async function fetchVehicles() {
@@ -31,6 +34,16 @@ export default function UserProfileSummary() {
     }
     fetchVehicles();
   }, [isLoaded, user]);
+
+  const handleToggleAvailability = () => {
+    if (!vehicles || vehicles.length === 0) {
+      openNoVehicleErrorModal(); // Abrir el modal personalizado en lugar de alert
+      return;
+    }
+    // Mocking Redis update
+    console.log(`Mock: Updating availability in Redis for user ${user?.id} to ${!isAvailable}`);
+    setIsAvailable(!isAvailable);
+  };
 
   if (!isLoaded || isLoadingVehicles) {
     return (
@@ -69,7 +82,7 @@ export default function UserProfileSummary() {
         </div>
       </div>
 
-      <div className="w-full">
+      <div className="w-full mb-6"> {/* Added mb-6 for spacing before the new button */}
         <h3 className="text-md font-bold text-white mb-2">Vehículo Actual</h3>
         {currentVehicle ? (
           <div className="space-y-1 text-slate-400 text-sm">
@@ -89,6 +102,18 @@ export default function UserProfileSummary() {
           </div>
         )}
       </div>
+
+      {/* Botón de disponibilidad */}
+      <Button
+        onClick={handleToggleAvailability}
+        className={`w-full font-bold ${
+          isAvailable
+            ? "bg-green-600 hover:bg-green-500 text-white"
+            : "bg-slate-700 hover:bg-slate-600 text-white"
+        }`}
+      >
+        {isAvailable ? "Disponible" : "No Disponible"}
+      </Button>
     </div>
   );
 }
