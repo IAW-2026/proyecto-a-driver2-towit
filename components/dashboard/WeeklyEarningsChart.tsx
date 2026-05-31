@@ -47,7 +47,11 @@ export default function WeeklyEarningsChart() {
             <LabelList
               dataKey="valor"
               position="top"
-              formatter={(value: number) => `$${value.toFixed(0)}`} // Formato para el valor
+              // Acepta valores de distinto tipo (number | string | null | undefined) que vienen de Recharts
+              formatter={(value: any) => {
+                const num = typeof value === "number" ? value : Number(value ?? 0);
+                return `$${num.toFixed(0)}`;
+              }}
               fill="oklch(0.985 0 0)" // Color blanco para las etiquetas
               fontSize={12}
             />
