@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { useRouter } from 'next/navigation'; // Importar useRouter
+import { useClerk } from "@clerk/nextjs"; // Importar useClerk
 import { updateTowerDetails, getTowerDetails } from "@/app/actions/tower"; // Import getTowerDetails
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +35,15 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter(); // Inicializar useRouter
+  const { signOut } = useClerk(); // Obtener la función signOut de Clerk
+
+  const handleSignOut = async () => {
+    if (onClose) {
+      onClose(); // Cerrar el modal antes de redirigir
+    }
+    await signOut({ redirectUrl: '/home' }); // Redirigir a /home después de cerrar sesión
+  };
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -133,9 +144,16 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
           <h3 className="text-2xl font-bold text-white leading-tight">
             {userProfile.fullName}
           </h3>
-          <p className="text-base text-yellow-400 mt-1">
+          <p className="text-base text-yellow-400 mt-0 mb-1">
             Calificación: {userProfile.avgRating}
           </p>
+          <button
+            type="button"
+            onClick={handleSignOut} // Llamar a nuestra función handleSignOut
+            className="text-sm text-red-400 hover:text-red-500"
+          >
+            Cerrar Sesión
+          </button>
         </div>
         <Image
           src={userProfile.imageUrl}
