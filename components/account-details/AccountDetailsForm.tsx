@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { updateTowerDetails } from "@/app/actions/tower";
-import { Button } from "@/components/ui/button"; // Asumiendo que usas shadcn/ui
+import { updateTowerDetails, getTowerDetails } from "@/app/actions/tower"; // Import getTowerDetails
+import { Button } from "@/components/ui/button";
 
 interface UserProfileProps {
   imageUrl: string;
@@ -19,38 +19,71 @@ interface TowerDataProps {
 }
 
 interface AccountDetailsFormProps {
-  userProfile: UserProfileProps;
-  towerData: TowerDataProps;
+  initialUserProfile?: UserProfileProps;
+  initialTowerData?: TowerDataProps;
+  onClose?: () => void;
 }
 
-export default function AccountDetailsForm({ userProfile, towerData }: AccountDetailsFormProps) {
-  const [formData, setFormData] = useState(towerData);
+export default function AccountDetailsForm({ initialUserProfile, initialTowerData, onClose }: AccountDetailsFormProps) {
+  const [userProfile, setUserProfile] = useState<UserProfileProps | null>(initialUserProfile || null);
+  const [towerData, setTowerData] = useState<TowerDataProps | null>(initialTowerData || null);
+  const [formData, setFormData] = useState<TowerDataProps | null>(initialTowerData || null);
+  const [isLoading, setIsLoading] = useState(!initialTowerData);
   const [isDirty, setIsDirty] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    const result = await getTowerDetails();
+    if (result) {
+      setUserProfile(result.userProfile);
+      setTowerData(result.towerData);
+      setFormData(result.towerData);
+    } else {
+      setError("No se pudieron cargar los detalles de la cuenta. Asegúrate de estar logueado.");
+    }
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    // Verificar si hay cambios comparando con los datos iniciales
-    const changed = Object.keys(formData).some(
-      (key) => formData[key as keyof TowerDataProps] !== towerData[key as keyof TowerDataProps]
-    );
-    setIsDirty(changed);
+    if (!initialTowerData) {
+      fetchData();
+    }
+  }, [initialTowerData, fetchData]);
+
+  useEffect(() => {
+    if (formData && towerData) {
+      const changed = Object.keys(formData).some(
+        (key) => formData[key as keyof TowerDataProps] !== towerData[key as keyof TowerDataProps]
+      );
+      setIsDirty(changed);
+    } else {
+      setIsDirty(false);
+    }
   }, [formData, towerData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setStatusMessage(null); // Limpiar mensaje de estado al editar
+    setFormData((prev) => (prev ? { ...prev, [name]: value } : null));
+    setStatusMessage(null);
   };
 
   const handleCancel = () => {
-    setFormData(towerData); // Restablecer al estado inicial
-    setIsDirty(false);
-    setStatusMessage(null);
+    if (towerData) {
+      setFormData(towerData);
+      setIsDirty(false);
+      setStatusMessage(null);
+    }
+    onClose?.();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData || !towerData) return;
+
     setIsSubmitting(true);
     setStatusMessage(null);
 
@@ -58,17 +91,40 @@ export default function AccountDetailsForm({ userProfile, towerData }: AccountDe
 
     if (result.success) {
       setStatusMessage({ type: 'success', message: '¡Detalles actualizados exitosamente!' });
-      // towerData no se actualiza automáticamente con la revalidación en el cliente,
-      // pero podemos forzar la actualización del estado inicial para que isDirty se recalcule correctamente
-      // En un caso real, podrías querer refetchear los props o redirigir
-      // Para este ejemplo, solo reiniciamos la suciedad del formulario.
-      setFormData(prev => ({...prev, ...result.data})); // Actualiza formData con los nuevos datos si la respuesta los incluye
-      setIsDirty(false); 
+      setTowerData(prev => (prev ? { ...prev, ...result.data } : null));
+      setFormData(prev => (prev ? { ...prev, ...result.data } : null));
+      setIsDirty(false);
     } else {
       setStatusMessage({ type: 'error', message: result.error || 'Error al actualizar detalles.' });
     }
     setIsSubmitting(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-48">
+        <p className="text-slate-400">Cargando detalles de la cuenta...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-4 bg-red-600/20 text-red-400 rounded-lg">
+        <p>{error}</p>
+        <Button onClick={onClose} className="mt-4">Cerrar</Button>
+      </div>
+    );
+  }
+
+  if (!userProfile || !formData) {
+    return (
+      <div className="text-center p-4 bg-red-600/20 text-red-400 rounded-lg">
+        <p>No se pudo obtener la información completa de la cuenta.</p>
+        <Button onClick={onClose} className="mt-4">Cerrar</Button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -100,7 +156,7 @@ export default function AccountDetailsForm({ userProfile, towerData }: AccountDe
             type="text"
             id="full_name"
             name="full_name"
-            value={formData.full_name}
+            value={formData.full_name || ''}
             onChange={handleChange}
             className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
             required
@@ -115,7 +171,7 @@ export default function AccountDetailsForm({ userProfile, towerData }: AccountDe
             type="email"
             id="email"
             name="email"
-            value={formData.email}
+            value={formData.email || ''}
             onChange={handleChange}
             className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
             required
@@ -130,7 +186,7 @@ export default function AccountDetailsForm({ userProfile, towerData }: AccountDe
             type="text"
             id="payments_alias"
             name="payments_alias"
-            value={formData.payments_alias}
+            value={formData.payments_alias || ''}
             onChange={handleChange}
             className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
           />

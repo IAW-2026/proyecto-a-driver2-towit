@@ -1,13 +1,27 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { auth, currentUser, clerkClient } from "@clerk/nextjs/server"; // Importamos auth, currentUser, clerkClient
 import { revalidatePath } from "next/cache";
-import { clerkClient } from "@clerk/nextjs/server"; // Importamos clerkClient
 
 interface UpdateTowerDetailsResult {
   success: boolean;
   data?: any;
   error?: string;
+}
+
+interface TowerDetails {
+  userProfile: {
+    imageUrl: string;
+    fullName: string;
+    avgRating: number; // Mocked as per existing code
+  };
+  towerData: {
+    clerk_id: string;
+    email: string;
+    full_name: string;
+    payments_alias: string;
+  };
 }
 
 export async function updateTowerDetails(
@@ -59,4 +73,41 @@ export async function updateTowerDetails(
     console.error("Error al actualizar detalles de Tower:", error);
     return { success: false, error: error.message || "Failed to update Tower details" };
   }
+}
+
+export async function getTowerDetails(): Promise<TowerDetails | null> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const clerkUser = await currentUser();
+
+  if (!clerkUser) {
+    return null;
+  }
+
+  const tower = await prisma.tower.findUnique({
+    where: { clerk_id: userId },
+  });
+
+  if (!tower) {
+    return null;
+  }
+
+  const userProfile = {
+    imageUrl: clerkUser.imageUrl,
+    fullName: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
+    avgRating: 4.8, // Mockeado
+  };
+
+  const towerData = {
+    clerk_id: tower.clerk_id,
+    email: tower.email,
+    full_name: tower.full_name,
+    payments_alias: tower.payments_alias,
+  };
+
+  return { userProfile, towerData };
 }

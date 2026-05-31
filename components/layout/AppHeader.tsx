@@ -2,9 +2,11 @@
 
 import { SignInButton, SignUpButton, UserAvatar, useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useAccountDetailsModal } from "@/components/providers/AccountDetailsModalProvider"; // Importar el hook
 
 export default function AppHeader() {
   const { isSignedIn } = useUser();
+  const { openModal } = useAccountDetailsModal(); // Usar el hook para obtener openModal
 
   return (
     <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-50">
@@ -32,11 +34,15 @@ export default function AppHeader() {
             <>
               <Link href="/trips" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
                 Mis Viajes
-              </Link>
-              <Link href="/account-details" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-                Mi Cuenta
-              </Link>
-              <UserAvatar />
+              </Link>              
+              <button
+                onClick={openModal} // Llamar a openModal del contexto
+                className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center justify-between space-x-2 cursor-pointer"
+              >
+                <span>Mi Cuenta</span>
+                <UserAvatar />
+              </button>
+              
             </>
           )}
         </nav>
