@@ -62,58 +62,63 @@ export default function UserProfileSummary() {
   const currentVehicle = vehicles && vehicles.length > 0 ? vehicles[0] : null;
 
   return (
-    <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col items-start h-full justify-between">
-      <div className="flex items-center space-x-4 w-full border-b border-slate-800 pb-4 mb-4">
-        <Image
-          src={user.imageUrl}
-          alt={user.fullName || "User Avatar"}
-          width={60}
-          height={60}
-          className="rounded-full border-2 border-yellow-500 object-cover"
-          loading="eager"
-        />
-        <div className="flex-1">
-          <h2 className="text-xl font-bold text-white leading-tight">
-            {user.fullName}
-          </h2>
-          <p className="text-sm text-yellow-400 mt-1">
-            Calificación: {avgRating}
-          </p>
+    <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full flex-1">
+        {/* Columna 1: Datos de usuario y botón de disponibilidad */}
+        <div className="flex flex-col items-start justify-between">
+          <div className="flex items-center space-x-4 w-full border-b border-slate-800 pb-4 mb-4">
+            <Image
+              src={user.imageUrl}
+              alt={user.fullName || "User Avatar"}
+              width={60}
+              height={60}
+              className="rounded-full border-2 border-yellow-500 object-cover"
+              loading="eager"
+            />
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-white leading-tight">
+                {user.fullName}
+              </h2>
+              <p className="text-sm text-yellow-400 mt-1">
+                Calificación: {avgRating}
+              </p>
+            </div>
+          </div>
+          {/* Botón de disponibilidad */}
+          <Button
+            onClick={handleToggleAvailability}
+            className={`w-full font-bold mt-auto ${ // mt-auto para empujar al final
+              isAvailable
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-white"
+            }`}
+          >
+            {isAvailable ? "Disponible" : "No Disponible"}
+          </Button>
+        </div>
+
+        {/* Columna 2: Vehículo Actual */}
+        <div className="flex flex-col w-full h-full">
+          <h3 className="text-md font-bold text-white mb-2">Vehículo Actual</h3>
+          {currentVehicle ? (
+            <div className="space-y-1 text-slate-400 text-sm flex-1">
+              <p><span className="font-semibold text-white">Marca:</span> {currentVehicle.brand}</p>
+              <p><span className="font-semibold text-white">Modelo:</span> {currentVehicle.model}</p>
+              <p><span className="font-semibold text-white">Año:</span> {currentVehicle.year}</p>
+              <p><span className="font-semibold text-white">Carga Máx.:</span> {currentVehicle.max_load} kg</p>
+            </div>
+          ) : (
+            <div className="text-center p-4 bg-slate-800/50 rounded-lg flex-1 flex flex-col justify-center items-center">
+              <p className="text-slate-400 text-sm mb-3">No tienes vehículos registrados.</p>
+              <Link href="/vehicles" className="w-full">
+                <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold">
+                  Añadir Vehículo
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-
-      <div className="w-full mb-6"> {/* Added mb-6 for spacing before the new button */}
-        <h3 className="text-md font-bold text-white mb-2">Vehículo Actual</h3>
-        {currentVehicle ? (
-          <div className="space-y-1 text-slate-400 text-sm">
-            <p><span className="font-semibold text-white">Marca:</span> {currentVehicle.brand}</p>
-            <p><span className="font-semibold text-white">Modelo:</span> {currentVehicle.model}</p>
-            <p><span className="font-semibold text-white">Año:</span> {currentVehicle.year}</p>
-            <p><span className="font-semibold text-white">Carga Máx.:</span> {currentVehicle.max_load} kg</p>
-          </div>
-        ) : (
-          <div className="text-center p-4 bg-slate-800/50 rounded-lg">
-            <p className="text-slate-400 text-sm mb-3">No tienes vehículos registrados.</p>
-            <Link href="/vehicles">
-              <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold">
-                Añadir Vehículo
-              </Button>
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Botón de disponibilidad */}
-      <Button
-        onClick={handleToggleAvailability}
-        className={`w-full font-bold ${
-          isAvailable
-            ? "bg-green-600 hover:bg-green-500 text-white"
-            : "bg-slate-700 hover:bg-slate-600 text-white"
-        }`}
-      >
-        {isAvailable ? "Disponible" : "No Disponible"}
-      </Button>
     </div>
   );
 }
