@@ -13,7 +13,7 @@ export default function MonthlyTripsSummary() {
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 h-full flex flex-col">
       <h3 className="text-lg font-bold text-white mb-4">Viajes este mes</h3>
-      <div className="flex items-center justify-between md:justify-around text-sm flex-1">
+      <div className="flex items-center justify-between lg:justify-around text-sm flex-1 flex-wrap">
         <p className="text-4xl font-extrabold text-yellow-500">{currentMonthTrips}</p>
         <div className="flex">
           {isIncrease ? (

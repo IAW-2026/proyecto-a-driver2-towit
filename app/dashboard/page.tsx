@@ -24,29 +24,29 @@ export default async function DashboardPage() {
       <main className="flex-1 p-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-white mb-8">Dashboard</h1>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 grid-flow-row-dense">
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 grid-flow-row-dense">
             {/* Sección 1: Resumen de detalles de usuario (3 columnas de ancho, 1 fila de alto) */}
-            <div className="md:col-span-3 md:row-span-1 h-full">
+            <div className="lg:col-span-3 lg:row-span-1 h-full">
               <UserProfileSummary />
             </div>
 
             {/* Sección 2: Cantidad de viajes realizados en el mes (1 columna de ancho, 1 fila de alto) */}
-            <div className="md:col-span-1 md:row-span-1 h-full">
+            <div className="lg:col-span-1 lg:row-span-1 h-full">
               <MonthlyTripsSummary />
             </div>
 
             {/* Sección 3: Listado de viajes (2 columnas de ancho, 2 filas de alto) */}
-            <div className="md:col-span-2 md:row-span-2">
+            <div className="lg:col-span-2 lg:row-span-2">
               <RecentTripsList />
             </div>
 
             {/* Sección 4: Resumen de ganancias de la última semana (4 columnas de ancho, 2 filas de alto) */}
-            <div className="md:col-span-4 md:row-span-2 h-full">
+            <div className="lg:col-span-4 lg:row-span-2 h-full">
               <WeeklyEarningsChart />
             </div>
 
             {/* Sección 5: Listado de pagos desembolsados (2 columnas de ancho, 1 fila de alto) */}
-            <div className="md:col-span-2 md:row-span-1">
+            <div className="lg:col-span-2 lg:row-span-1">
               <RecentPaymentsList />
             </div>
           </div>
