@@ -81,6 +81,72 @@ export async function getAllAssignments(): Promise<AdminActionResponse> {
 }
 
 /**
+ * Obtiene los detalles del administrador actualmente logueado.
+ * @returns Los detalles del administrador o null si no está logueado o no es administrador.
+ */
+export async function getAdminDetails(): Promise<
+  | {
+      userProfile: {
+        imageUrl: string;
+        fullName: string;
+        avgRating: number; // Mocked for consistency with TowerDetails
+      };
+      adminData: {
+        admin_id: string; // ID de Prisma
+        clerk_id: string;
+        email: string;
+        full_name: string;
+      };
+    }
+  | null
+> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const client = await clerkClient();
+  const clerkUser = await client.users.getUser(userId);
+
+  // Asegurarse de que el usuario es un administrador
+  if (clerkUser.publicMetadata?.role !== 'admin') {
+    return null;
+  }
+
+  try {
+    const admin = await prisma.admin.findUnique({
+      where: { clerk_id: userId },
+    });
+
+    if (!admin) {
+      console.error(`No se encontró registro de Admin en Prisma para clerk_id: ${userId}`);
+      return null;
+    }
+
+    // Datos del perfil del usuario de Clerk
+    const userProfile = {
+      imageUrl: clerkUser.imageUrl,
+      fullName: clerkUser.firstName && clerkUser.lastName ? `${clerkUser.firstName} ${clerkUser.lastName}` : clerkUser.emailAddresses[0]?.emailAddress || 'Admin',
+      avgRating: 5.0, // Calificación mockeada para admins
+    };
+
+    // Datos específicos del administrador de Prisma
+    const adminData = {
+      admin_id: admin.admin_id,
+      clerk_id: admin.clerk_id,
+      email: admin.email,
+      full_name: admin.full_name,
+    };
+
+    return { userProfile, adminData };
+  } catch (error: any) {
+    console.error("Error al obtener los detalles del administrador:", error);
+    return null;
+  }
+}
+
+/**
  * Obtiene todos los registros de la tabla Admin.
  * Requiere rol de administrador.
  */
@@ -113,6 +179,16 @@ export async function updateAdmin(
     return { success: false, error: "No autorizado. Solo administradores pueden actualizar administradores." };
   }
   try {
+    // Primero, obtener el clerk_id asociado al admin_id de Prisma
+    const existingAdmin = await prisma.admin.findUnique({
+      where: { admin_id: adminId },
+      select: { clerk_id: true, full_name: true, email: true }, // También obtenemos el nombre completo y email actuales para comparar
+    });
+
+    if (!existingAdmin) {
+      return { success: false, error: "Administrador no encontrado en la base de datos." };
+    }
+
     const updatedAdmin = await prisma.admin.update({
       where: { admin_id: adminId },
       data: {
