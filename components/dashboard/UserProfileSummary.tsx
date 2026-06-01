@@ -117,15 +117,35 @@ h-full">
               </p>
             </div>
           </div>
-          <Button
-            onClick={handleToggleAvailability}
-            className={`w-full font-bold mt-auto ${isAvailable
-                ? "bg-green-600 hover:bg-green-500 text-white"
-                : "bg-slate-700 hover:bg-slate-600 text-white"
-              }`}
-          >
-            {isAvailable ? "Disponible" : "No Disponible"}
-          </Button>
+          <div className="flex gap-4 w-full mt-auto">
+            <Button
+              onClick={handleToggleAvailability}
+              className={`flex-1 font-bold ${isAvailable
+                  ? "bg-green-600 hover:bg-green-500 text-white"
+                  : "bg-slate-700 hover:bg-slate-600 text-white"
+                }`}
+            >
+              {isAvailable ? "Disponible" : "No Disponible"}
+            </Button>
+            {isAvailable ? (
+              <Link href="/service" className="flex-1">
+                <Button
+                  className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
+                >
+                  Empezar
+                </Button>
+              </Link>
+            ) : (
+              <div className="flex-1">
+                <Button
+                  className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
+                  disabled
+                >
+                  Empezar
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex flex-col w-full h-full">
           <h3 className="text-md font-bold text-white mb-2">Vehículo Actual</h3>
