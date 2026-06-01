@@ -194,13 +194,14 @@ export async function createUser(formData: {
   firstName: string;
   lastName: string;
   emailAddress: string;
+  password: string; // Añadido el campo password
   role: 'tower' | 'admin';
 }): Promise<AdminActionResponse> {
   if (!await isAdmin()) {
     return { success: false, error: "No autorizado. Solo administradores pueden crear usuarios." };
   }
 
-  const { firstName, lastName, emailAddress, role } = formData;
+  const { firstName, lastName, emailAddress, password, role } = formData; // Desestructurado password
 
   try {
     // 1. Crear usuario en Clerk
@@ -209,6 +210,7 @@ export async function createUser(formData: {
       firstName,
       lastName,
       emailAddress: [emailAddress],
+      password: password, // Pasamos la contraseña a Clerk
       publicMetadata: {
         role: role,
       },
