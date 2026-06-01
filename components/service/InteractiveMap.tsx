@@ -9,6 +9,19 @@ import { useUser } from "@clerk/nextjs";
 import { useNoVehicleErrorModal } from "@/components/providers/NoVehicleErrorModalProvider";
 import { getTowerVehicles } from "@/app/actions/vehicle";
 
+// Componente para re-centrar el mapa cuando la posición cambia
+function MapRecenter({ position }: { position: L.LatLngExpression }) {
+  const map = useMap();
+  useEffect(() => {
+    // map.flyTo anima el movimiento a la nueva posición
+    map.flyTo(position, map.getZoom(), {
+      animate: true,
+      duration: 1.5, // Duración de la animación en segundos
+    });
+  }, [position, map]); // Se ejecuta cada vez que 'position' o 'map' cambian
+  return null;
+}
+
 export default function InteractiveMap() {
   // Mover la configuración de iconos de Leaflet a un useEffect para asegurar que se ejecute solo en el cliente
   useEffect(() => {
@@ -74,18 +87,16 @@ export default function InteractiveMap() {
     // Por ejemplo: updateDriverAvailability(user.id, newAvailability ? 'AVAILABLE' : 'UNAVAILABLE');
   };
 
-  const mapCenter = useMemo(() => currentPosition, [currentPosition]);
-
   return (
     <div className="relative flex-1 w-full h-full">
       <MapContainer
-        center={mapCenter}
+        center={currentPosition} // El centro inicial del mapa será la posición actual (por defecto o real)
         zoom={13}
         scrollWheelZoom={true}
         zoomControl={false} // Deshabilitar el control de zoom por defecto
         className="h-full w-full z-0"
       >
-        {/* MapUpdater eliminado, MapContainer gestiona el centro directamente */}
+        <MapRecenter position={currentPosition} /> {/* Componente para re-centrar el mapa dinámicamente */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
