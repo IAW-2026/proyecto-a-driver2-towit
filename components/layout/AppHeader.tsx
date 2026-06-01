@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button"; // Importar Button
 import { MenuIcon } from "lucide-react"; // Importar MenuIcon
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"; // Importar Dialog y DialogTrigger (desde components/ui/sheet.tsx)
 import MobileMenu from "./MobileMenu"; // Importar el nuevo componente MobileMenu
+import { useAccountDetailsModal } from "@/components/providers/AccountDetailsModalProvider"; // Importar el hook
 
 export default function AppHeader() {
   const { isSignedIn = false } = useUser();
   const router = useRouter(); // Inicializar useRouter
   const pathname = usePathname(); // Obtener la ruta actual
   const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar la apertura del menú móvil
+  const { openModal: openAccountDetailsModal } = useAccountDetailsModal(); // Obtener la función para abrir el modal
 
   const handleOpenMenu = () => setIsMenuOpen(true);
   const handleCloseMenu = () => setIsMenuOpen(false);
@@ -77,7 +79,7 @@ export default function AppHeader() {
               )}
               {showAccountDetailsLink && (
                 <button
-                  onClick={() => router.push('/account-details')}
+                  onClick={openAccountDetailsModal}
                   className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center justify-between space-x-2 cursor-pointer"
                 >
                   <span>Mi Cuenta</span>
