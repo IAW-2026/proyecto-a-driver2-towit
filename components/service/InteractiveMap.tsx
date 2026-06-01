@@ -27,32 +27,41 @@ interface ServiceRequest {
 function MapRecenter({
   currentPosition,
   serviceOrigin,
-  simulationTarget, // Añadir simulationTarget aquí
+  simulationTarget,
+  isSimulatingMovement, // Nuevo prop: para saber si estamos en simulación
 }: {
   currentPosition: L.LatLngExpression;
   serviceOrigin: L.LatLngExpression | null;
-  simulationTarget: L.LatLngExpression | null; // Nuevo prop para el destino de la simulación
+  simulationTarget: L.LatLngExpression | null;
+  isSimulatingMovement: boolean; // Tipo para el nuevo prop
 }) {
   const map = useMap();
   useEffect(() => {
-    const target = simulationTarget || serviceOrigin; // Usar el destino de simulación si existe, de lo contrario el origen del servicio
+    const target = simulationTarget || serviceOrigin;
 
-    if (target) {
-      // Si hay un objetivo (origen de servicio o destino de simulación), centrar el mapa entre la posición actual y el objetivo
+    if (isSimulatingMovement) {
+      // Durante la simulación, solo se mueve la vista para seguir al marcador, manteniendo el zoom actual.
+      map.panTo(currentPosition, {
+        animate: true,
+        duration: 0.5, // Animación más rápida para seguir el marcador
+      });
+    } else if (target) {
+      // Si no estamos simulando y hay un objetivo (origen de servicio o destino de simulación),
+      // centrar el mapa entre la posición actual y el objetivo, ajustando el zoom.
       const bounds = L.latLngBounds([currentPosition, target]);
       map.flyToBounds(bounds, {
         animate: true,
         duration: 1.5,
-        padding: L.point(50, 50), // Añadir padding para que los marcadores no queden en los bordes
+        padding: L.point(50, 50),
       });
     } else {
-      // Si no hay objetivo, centrar solo en la posición actual
+      // Si no hay objetivo y no estamos simulando, centrar solo en la posición actual, manteniendo el zoom.
       map.flyTo(currentPosition, map.getZoom(), {
         animate: true,
         duration: 1.5,
       });
     }
-  }, [currentPosition, serviceOrigin, simulationTarget, map]);
+  }, [currentPosition, serviceOrigin, simulationTarget, isSimulatingMovement, map]);
   return null;
 }
 
@@ -83,11 +92,30 @@ export default function InteractiveMap() {
   }), []);
 
 
+  // Componente interno para actualizar el zoom del mapa
+  const MapEventUpdater = () => {
+    const map = useMap();
+    useEffect(() => {
+      setMapZoom(map.getZoom()); // Inicializar el zoom cuando el mapa esté listo
+
+      const handleZoomEnd = () => {
+        setMapZoom(map.getZoom());
+      };
+
+      map.on('zoomend', handleZoomEnd);
+      return () => {
+        map.off('zoomend', handleZoomEnd);
+      };
+    }, [map]);
+    return null;
+  };
+
   const { user, isLoaded } = useUser();
   const [isAvailable, setIsAvailable] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<L.LatLngExpression>([
     -34.6037, -58.3816,
   ]); // Por defecto, centro de Buenos Aires
+  const [mapZoom, setMapZoom] = useState(17); // Añadir estado para el nivel de zoom del mapa
   const [hasVehicle, setHasVehicle] = useState(false);
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
 
@@ -266,7 +294,7 @@ export default function InteractiveMap() {
   }, [isAvailable, hasVehicle, currentServiceRequest, scheduleNewRequest, clearAllTimers, isSimulatingMovement]);
 
 
-  // Efecto para dibujar la ruta cuando las posiciones cambian (tanto para solicitud activa como para simulación)
+  // Efecto para dibujar la ruta cuando las posiciones cambian (tanto para solicitud activa como para simulación) o el zoom del mapa
   useEffect(() => {
     if (isSimulatingMovement && destinationForSimulation) {
       fetchRoute(currentPosition, destinationForSimulation);
@@ -275,7 +303,7 @@ export default function InteractiveMap() {
     } else {
       setRouteCoordinates([]); // Limpiar la ruta si no hay solicitud y no hay simulación
     }
-  }, [currentPosition, serviceOriginPosition, currentServiceRequest, destinationForSimulation, isSimulatingMovement, fetchRoute]); // Añadir dependencias de simulación
+  }, [currentPosition, serviceOriginPosition, currentServiceRequest, destinationForSimulation, isSimulatingMovement, fetchRoute, mapZoom]); // Añadir mapZoom como dependencia
 
   // Efecto para la simulación de movimiento del conductor a lo largo de la ruta
   useEffect(() => {
@@ -431,17 +459,18 @@ export default function InteractiveMap() {
     <div className="relative flex-1 w-full h-full">
       <MapContainer
         center={currentPosition} // El centro inicial del mapa será la posición actual (por defecto o real)
-        zoom={17}
+        zoom={mapZoom} // Usar el estado de zoom
         scrollWheelZoom={true}
         zoomControl={false} // Deshabilitar el control de zoom por defecto
         className="h-full w-full z-0"
       >
+        <MapEventUpdater /> {/* Añadir el componente para escuchar eventos de zoom */}
         <MapRecenter
           currentPosition={currentPosition}
           serviceOrigin={serviceOriginPosition}
-          simulationTarget={destinationForSimulation} // Pasar el destino de la simulación
-        />{" "}
-        {/* Componente para re-centrar el mapa dinámicamente */}
+          simulationTarget={destinationForSimulation}
+          isSimulatingMovement={isSimulatingMovement} // Pasar el estado de simulación
+        />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
