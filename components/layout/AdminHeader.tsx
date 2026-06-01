@@ -15,7 +15,7 @@ export default function AdminHeader() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-black tracking-wider text-yellow-500">Tow<span className="text-white">It</span></span>
-            <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Admin Dashboard</span>
+            <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Admin</span>
           </div>
           <p className="text-sm text-slate-400">Cargando...</p>
         </div>
@@ -30,7 +30,7 @@ export default function AdminHeader() {
           {/* El título siempre apunta al dashboard de admin */}
           <Link href="/admin/dashboard" className="flex items-center gap-2">
             <span className="text-2xl font-black tracking-wider text-yellow-500">Tow<span className="text-white">It</span></span>
-            <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Admin Dashboard</span>
+            <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Admin</span>
           </Link>
         </div>
 
