@@ -1,8 +1,18 @@
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { UserButton } from "@clerk/nextjs";
+import React from "react";
 
-export default function ServiceHeader() {
+interface ServiceHeaderProps {
+  isAvailable: boolean;
+  setIsAvailable: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export default function ServiceHeader({ isAvailable, setIsAvailable }: ServiceHeaderProps) {
+  const handleToggleAvailability = () => {
+    setIsAvailable(prev => !prev);
+  };
+
   return (
     <header className="absolute top-0 left-0 w-full z-[1000] p-4 bg-slate-950/85 shadow-lg">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -15,7 +25,16 @@ export default function ServiceHeader() {
           </Link>
         </div>
         <div className="flex items-center gap-4">
-          <UserButton /> {/* Botón de usuario de Clerk */}
+          <Button
+            onClick={handleToggleAvailability}
+            className={`font-bold ${
+              isAvailable
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-white"
+            }`}
+          >
+            {isAvailable ? "Disponible" : "No Disponible"}
+          </Button>
         </div>
       </div>
     </header>

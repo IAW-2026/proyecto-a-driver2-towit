@@ -70,7 +70,7 @@ export default function ServicePageClient() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
-      <ServiceHeader />
+      <ServiceHeader isAvailable={isAvailable} setIsAvailable={setIsAvailable} />
       <div className="flex-1 w-full h-full">
         <DynamicInteractiveMap
           isAvailable={isAvailable}
