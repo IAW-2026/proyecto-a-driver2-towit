@@ -95,7 +95,7 @@ export default function InteractiveMap() {
       </MapContainer>
 
       {/* Botón de Disponibilidad superpuesto */}
-      <div className="absolute top-4 right-4 z-[1001]">
+      <div className="absolute top-16 mt-4 right-4 z-[1001]">
         <Button
           onClick={handleToggleAvailability}
           className={`font-bold ${isAvailable
