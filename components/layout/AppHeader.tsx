@@ -50,8 +50,11 @@ export default function AppHeader() {
               <Link href="/vehicles" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
                 Mis Vehículos
               </Link>
+              <Link href="/payments" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+                Mis Liquidaciones
+              </Link>
               <button
-                onClick={() => router.push('/account-details')} // Redirigir directamente a la página
+                onClick={() => router.push('/account-details')}
                 className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center justify-between space-x-2 cursor-pointer"
               >
                 <span>Mi Cuenta</span>

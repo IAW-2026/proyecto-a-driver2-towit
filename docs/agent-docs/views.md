@@ -11,5 +11,6 @@
 - /account-details: donde se dispone la información del usuario. Requiere autenticación como tower.
 - /vehicles: listado de vehículos del tower, con opciones para añadir, editar y eliminar. Requiere autenticación como tower.
 - /trips/{id}: contiene los detalles sobre un viaje.
+- /payments: contiene el listado de liquidaciones recibidas. Requiere autenticación como tower.
 - /payments/{id}: contiene los detalles de una entrada en el historial de pagos recibidos.
 

@@ -63,6 +63,11 @@ export default function MobileMenu({ isSignedIn, onClose }: MobileMenuProps) {
               </Button>
             </DialogClose>
             <DialogClose asChild>
+              <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/payments")}>
+                Mis Liquidaciones
+              </Button>
+            </DialogClose>
+            <DialogClose asChild>
               <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/account-details")}>
                 Mi Cuenta
               </Button>
