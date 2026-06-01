@@ -98,8 +98,9 @@ export default function InteractiveMap() {
 
   // Referencia para el ID del temporizador de la simulación de movimiento
   const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  // Referencia para almacenar la posición de inicio de la simulación
-  const simulationStartPositionRef = useRef<L.LatLngExpression | null>(null);
+  // Referencias para la simulación de movimiento a lo largo de la ruta
+  const simulationProgressRef = useRef(0); // 0 a 1, representando el progreso a lo largo de la ruta
+  const totalRouteDistanceRef = useRef(0); // Almacena la distancia total de la ruta actual (en metros)
 
   const serviceOriginPosition = useMemo(() => {
     if (currentServiceRequest) {
@@ -175,9 +176,10 @@ export default function InteractiveMap() {
     setIsSimulatingMovement(false); // Asegurarse de detener la simulación
     setDestinationForSimulation(null); // Limpiar el destino de la simulación
     setIsAvailable(false); // Forzar a no disponible en un reseteo completo
-    simulationStartPositionRef.current = null; // Limpiar la referencia de posición inicial
+    totalRouteDistanceRef.current = 0; // Resetear la distancia total de la ruta
+    simulationProgressRef.current = 0; // Resetear el progreso de la simulación
     console.log("Todos los temporizadores y estados (incluida simulación) han sido limpiados.");
-  }, [clearServiceRequestState, simulationStartPositionRef]); // Depende de clearServiceRequestState y simulationStartPositionRef
+  }, [clearServiceRequestState]); // Depende de clearServiceRequestState
 
   // Función para programar una nueva solicitud
   const scheduleNewRequest = useCallback(() => {
@@ -275,65 +277,102 @@ export default function InteractiveMap() {
     }
   }, [currentPosition, serviceOriginPosition, currentServiceRequest, destinationForSimulation, isSimulatingMovement, fetchRoute]); // Añadir dependencias de simulación
 
-  // Efecto para la simulación de movimiento del conductor
+  // Efecto para la simulación de movimiento del conductor a lo largo de la ruta
   useEffect(() => {
-    if (isSimulatingMovement && destinationForSimulation) {
-      // Capturar la posición inicial para la simulación SOLO cuando comienza
-      if (!simulationStartPositionRef.current) {
-        simulationStartPositionRef.current = currentPosition;
-        console.log("SIMULACION: Posición inicial capturada:", currentPosition);
+    // Definir constantes para la duración y el intervalo aquí, para que sean parte del closure del efecto
+    const SIMULATION_TOTAL_DURATION = 15000; // 15 segundos para toda la ruta
+    const SIMULATION_UPDATE_INTERVAL = 100; // Actualizar cada 100 ms
+
+    // Si la simulación está activa Y tenemos un destino Y tenemos una ruta válida con al menos dos puntos
+    if (isSimulatingMovement && destinationForSimulation && routeCoordinates.length > 1) {
+      console.log("SIMULACION: Iniciando simulación de movimiento a lo largo de la ruta.");
+
+      // Calcular la distancia total de la ruta si no ha sido calculada o si es una nueva simulación
+      if (totalRouteDistanceRef.current === 0 || simulationProgressRef.current === 0) {
+        let distance = 0;
+        for (let i = 0; i < routeCoordinates.length - 1; i++) {
+          const p1 = L.latLng(routeCoordinates[i] as L.LatLngTuple);
+          const p2 = L.latLng(routeCoordinates[i + 1] as L.LatLngTuple);
+          distance += p1.distanceTo(p2); // Distancia en metros
+        }
+        totalRouteDistanceRef.current = distance;
+        simulationProgressRef.current = 0; // Resetear el progreso para una nueva simulación
       }
 
-      const startCoords = simulationStartPositionRef.current; // Usar la posición capturada
-      const endCoords = destinationForSimulation;
-
-      if (!Array.isArray(startCoords) || !Array.isArray(endCoords)) {
-        console.error("Coordenadas de inicio o fin no válidas para simulación de movimiento.");
+      if (totalRouteDistanceRef.current === 0) {
+        console.warn("SIMULACION: Distancia total de la ruta es 0 o muy pequeña. Deteniendo simulación.");
         setIsSimulatingMovement(false);
-        // Limpiar la referencia de posición inicial en caso de error
-        simulationStartPositionRef.current = null;
+        setDestinationForSimulation(null);
+        setIsAvailable(true);
+        clearServiceRequestState();
         return;
       }
 
-      const totalDuration = 10000; // 10 segundos
-      const updateInterval = 100; // Actualizar cada 100 ms
-      const totalSteps = totalDuration / updateInterval;
-      let currentStep = 0;
+      // Limpiar cualquier intervalo existente para evitar duplicados
+      if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
+      }
 
-      // Calcular las diferencias basadas en la posición inicial capturada
-      const latDiff = (endCoords[0] - startCoords[0]) / totalSteps;
-      const lngDiff = (endCoords[1] - startCoords[1]) / totalSteps;
-      console.log("SIMULACION: startCoords", startCoords, "endCoords", endCoords);
-      console.log("SIMULACION: latDiff", latDiff, "lngDiff", lngDiff);
-      console.log("SIMULACION: Estableciendo el intervalo de simulación."); // Log para el establecimiento del intervalo
+      const totalSteps = SIMULATION_TOTAL_DURATION / SIMULATION_UPDATE_INTERVAL;
+      const progressPerStep = 1 / totalSteps; // Cuánto progreso (de 0 a 1) avanzamos por cada paso
 
       simulationIntervalRef.current = setInterval(() => {
-        console.log(`SIMULACION: Intervalo de movimiento ejecutándose. Paso: ${currentStep}`); // Log dentro del callback del intervalo
-        if (currentStep < totalSteps) {
-          setCurrentPosition((prevPos) => {
-            const currentLat = (prevPos as number[])[0];
-            const currentLng = (prevPos as number[])[1];
-            
-            const newPos: L.LatLngExpression = [
-              currentLat + latDiff,
-              currentLng + lngDiff,
-            ];
-            // Log detallado de la actualización de posición
-            console.log(`SIMULACION: Paso ${currentStep} - Actualizando posición: De [${currentLat}, ${currentLng}] a [${newPos[0]}, ${newPos[1]}]`);
-            return newPos;
-          });
-          currentStep++;
-        } else {
-          // Simulación completa o muy cerca del destino
-          setCurrentPosition(endCoords); // Ajustar a la posición final
-          setIsSimulatingMovement(false); // Detener explícitamente la simulación
-          setDestinationForSimulation(null); // Limpiar el destino
-          setIsAvailable(true); // Una vez completado el viaje, el conductor vuelve a estar disponible
-          clearServiceRequestState(); // Asegurarse de que no haya residuos de solicitud
-          simulationStartPositionRef.current = null; // Limpiar la referencia al finalizar
+        simulationProgressRef.current += progressPerStep;
+
+        if (simulationProgressRef.current >= 1) {
+          // Simulación terminada
+          setCurrentPosition(destinationForSimulation); // Ajustar a la posición final exacta
+          setIsSimulatingMovement(false);
+          setDestinationForSimulation(null);
+          setIsAvailable(true);
+          clearServiceRequestState();
+          totalRouteDistanceRef.current = 0; // Resetear para la próxima ruta
+          simulationProgressRef.current = 0; // Resetear para la próxima ruta
+          if (simulationIntervalRef.current) {
+            clearInterval(simulationIntervalRef.current);
+            simulationIntervalRef.current = null;
+          }
           console.log("Simulación de movimiento completada. Conductor ahora disponible.");
+          return;
         }
-      }, updateInterval);
+
+        // Encontrar la posición actual a lo largo de la ruta basada en simulationProgressRef.current
+        const targetDistance = totalRouteDistanceRef.current * simulationProgressRef.current;
+        let accumulatedDistance = 0;
+        let segmentStart: L.LatLng = L.latLng(routeCoordinates[0] as L.LatLngTuple); // Valor por defecto
+        let segmentEnd: L.LatLng = L.latLng(routeCoordinates[0] as L.LatLngTuple); // Valor por defecto
+        let segmentFraction = 0;
+        let currentPointIndex = 0;
+
+        for (let i = 0; i < routeCoordinates.length - 1; i++) {
+          const p1 = L.latLng(routeCoordinates[i] as L.LatLngTuple);
+          const p2 = L.latLng(routeCoordinates[i + 1] as L.LatLngTuple);
+          const segmentLength = p1.distanceTo(p2);
+
+          if (accumulatedDistance + segmentLength >= targetDistance) {
+            // La posición objetivo está dentro de este segmento
+            segmentStart = p1;
+            segmentEnd = p2;
+            segmentFraction = (targetDistance - accumulatedDistance) / segmentLength;
+            currentPointIndex = i;
+            break;
+          }
+          accumulatedDistance += segmentLength;
+          currentPointIndex = i + 1; // Mover al siguiente punto si no se encontró en el segmento actual
+        }
+
+        // Interpolación lineal dentro del segmento actual
+        // Manejar el caso de que la ruta solo tenga dos puntos o que el targetDistance caiga exactamente en el final de un segmento.
+        if (segmentStart && segmentEnd && segmentStart !== segmentEnd) { // Asegurarse de que el segmento es válido
+          const interpolatedLat = segmentStart.lat + (segmentEnd.lat - segmentStart.lat) * segmentFraction;
+          const interpolatedLng = segmentStart.lng + (segmentEnd.lng - segmentStart.lng) * segmentFraction;
+          setCurrentPosition([interpolatedLat, interpolatedLng]);
+        } else {
+          // Esto podría ocurrir si el targetDistance es 0 o si el segmento tiene longitud 0
+          // En ese caso, la posición debe ser el inicio del segmento (o el punto actual de la ruta si ya se ha movido)
+          setCurrentPosition(routeCoordinates[currentPointIndex] || routeCoordinates[0]);
+        }
+      }, SIMULATION_UPDATE_INTERVAL);
     }
 
     return () => {
@@ -341,10 +380,10 @@ export default function InteractiveMap() {
         clearInterval(simulationIntervalRef.current);
         simulationIntervalRef.current = null;
       }
-      // También limpiar la referencia de posición inicial si el efecto se limpia por otras razones
-      simulationStartPositionRef.current = null;
+      // Considerar si es necesario resetear totalRouteDistanceRef y simulationProgressRef aquí
+      // Solo se resetean al final de una simulación exitosa o al iniciar una nueva
     };
-  }, [isSimulatingMovement, destinationForSimulation, clearServiceRequestState, setIsAvailable]); // currentPosition no es una dependencia para evitar re-crear el intervalo. clearAllTimers ya no se llama al final.
+  }, [isSimulatingMovement, destinationForSimulation, routeCoordinates, clearServiceRequestState, setIsAvailable]);
 
   const handleToggleAvailability = () => {
     if (!hasVehicle) {
