@@ -83,18 +83,18 @@ export default function ServicePageClient() {
   // Handler para aceptar una solicitud
   const handleAcceptRequest = useCallback((tripId: string) => {
     if (currentRequest && currentRequest.tripId === tripId) {
-      console.log(`Solicitud ${tripId} aceptada. (Flujo de viaje aún no implementado)`);
-      // OMITIDO: No cambia isAvailable ni acceptedTrip, ni inicia el movimiento.
-      // Esto se implementará en etapas posteriores.
+      console.log(`Solicitud ${tripId} aceptada.`);
+      setIsAvailable(false); // Cambiar a no disponible
+      setAcceptedTrip(currentRequest); // Establecer el viaje aceptado
       
       // Limpiar el temporizador de aceptación actual
       if (acceptanceTimer) {
         clearTimeout(acceptanceTimer);
         setAcceptanceTimer(null);
       }
-      setCurrentRequest(null); // Ocultar la tarjeta de solicitud, ya que se "aceptó"
+      setCurrentRequest(null); // Ocultar la tarjeta de solicitud
     }
-  }, [currentRequest, acceptanceTimer]);
+  }, [currentRequest, acceptanceTimer, setIsAvailable, setAcceptedTrip]); // Añadir dependencias necesarias
 
   // Handler para cuando el viaje termina (OMITIDO TEMPORALMENTE)
   const onTripEnd = useCallback(() => {
