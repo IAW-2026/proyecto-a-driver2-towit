@@ -46,57 +46,68 @@ export default function UserCreationForm() {
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800">
       <h2 className="text-xl font-bold text-white mb-4">Crear Nuevo Usuario</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-slate-300 mb-1">Nombre</label>
-          <Input
-            id="firstName"
-            name="firstName"
-            type="text"
-            value={formData.firstName}
-            onChange={handleChange}
-            required
-            disabled={isLoading}
-          />
-        </div>
-        <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-slate-300 mb-1">Apellido</label>
-          <Input
-            id="lastName"
-            name="lastName"
-            type="text"
-            value={formData.lastName}
-            onChange={handleChange}
-            required
-            disabled={isLoading}
-          />
-        </div>
-        <div>
-          <label htmlFor="emailAddress" className="block text-sm font-medium text-slate-300 mb-1">Email</label>
-          <Input
-            id="emailAddress"
-            name="emailAddress"
-            type="email"
-            value={formData.emailAddress}
-            onChange={handleChange}
-            required
-            disabled={isLoading}
-          />
-        </div>
-        <div>
-          <label htmlFor="role" className="block text-sm font-medium text-slate-300 mb-1">Rol</label>
-          <select
-            id="role"
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="w-full p-3 bg-slate-800/70 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            required
+        <div className="flex xl:flex-row xl:items-end gap-4 justify-end flex-wrap xl:flex-nowrap">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 w-full">
+            <div>
+              <Input
+                id="firstName"
+                name="firstName"
+                type="text"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+                placeholder="Nombre"
+              />
+            </div>
+            <div>
+              <Input
+                id="lastName"
+                name="lastName"
+                type="text"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+                placeholder="Apellido"
+              />
+            </div>
+            <div>
+              <Input
+                id="emailAddress"
+                name="emailAddress"
+                type="email"
+                value={formData.emailAddress}
+                onChange={handleChange}
+                required
+                disabled={isLoading}
+                placeholder="Email"
+              />
+            </div>
+            <div>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full p-3.5 bg-slate-800/70 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                required
+                disabled={isLoading}
+              >
+                <option value="" disabled hidden>Rol</option>
+                <option value="tower">Tower</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <Button
+            type="submit"
+            className="md:w-auto w-full xl:w-auto bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold p-3.5 h-auto"
             disabled={isLoading}
           >
-            <option value="tower">Tower</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
+            {isLoading ? 'Creando...' : 'Crear'}
+          </Button>
+        </div> {/* Cierre del div de flex para inputs y botón */}
 
         {statusMessage && (
           <div
@@ -107,14 +118,6 @@ export default function UserCreationForm() {
             {statusMessage.message}
           </div>
         )}
-
-        <Button
-          type="submit"
-          className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Creando...' : 'Crear Usuario'}
-        </Button>
       </form>
     </div>
   );
