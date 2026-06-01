@@ -240,14 +240,15 @@ export default function InteractiveMap({
     return () => clearInterval(animation); // Función de limpieza
   }, [clearRoute, onTripEnd]);
 
-  // === Efecto para manejar solicitudes entrantes (OMITIDO TEMPORALMENTE) ===
+  // === Efecto para manejar solicitudes entrantes (dibujar ruta al origen de la solicitud) ===
   useEffect(() => {
-    // La lógica de solicitudes está omitida temporalmente según el requerimiento del usuario.
-    // if (currentRequest && isAvailable && isMapLoaded && map.current && driverMarker.current) {
-    //   drawRoute(driverLocation, currentRequest.originCoordinates);
-    // } else if (!currentRequest && !acceptedTrip && isMapLoaded) {
-    //   clearRoute();
-    // }
+    if (currentRequest && isAvailable && isMapLoaded && map.current && driverMarker.current) {
+      // Al recibir una solicitud, se traza la ruta desde su ubicación en el mapa hacia la ubicación de la solicitud
+      drawRoute(driverLocation, currentRequest.originCoordinates);
+    } else if (!currentRequest && !acceptedTrip && isMapLoaded) {
+      // Si no hay solicitud actual y no hay viaje aceptado, limpiar cualquier ruta existente
+      clearRoute();
+    }
   }, [currentRequest, isAvailable, driverLocation, drawRoute, clearRoute, acceptedTrip, isMapLoaded]);
 
   // === Efecto para manejar el viaje aceptado (OMITIDO TEMPORALMENTE) ===
