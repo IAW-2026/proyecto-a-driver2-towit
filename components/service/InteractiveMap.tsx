@@ -72,10 +72,10 @@ export default function InteractiveMap() {
     delete L.Icon.Default.prototype._getIconUrl;
 
     L.Icon.Default.mergeOptions({
-      iconRetinaUrl: '/leaflet/images/marker-icon-2x.png',
-      iconUrl: '/leaflet/images/marker-icon.png',
+      iconRetinaUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
       shadowUrl: '/leaflet/images/marker-shadow.png',
-      iconSize: [25, 41],   // Tamaño del icono
+      iconSize: [40, 40],   // Tamaño del icono
       iconAnchor: [12, 41], // Punto del icono que corresponde a la ubicación del marcador
       popupAnchor: [1, -34], // Punto desde el que se abrirán los popups
       shadowSize: [41, 41]  // Tamaño de la sombra
@@ -83,9 +83,9 @@ export default function InteractiveMap() {
   }, []); // Dependencias vacías para que se ejecute solo una vez al montar
 
   const serviceMarkerIcon = useMemo(() => new L.Icon({
-    iconUrl: '/leaflet/images/marker-icon.png', // Un nuevo icono para los pedidos de servicio
-    iconRetinaUrl: '/leaflet/images/marker-icon-2x.png',
-    iconSize: [25, 41],   // Tamaño del icono
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png', // Un nuevo icono para los pedidos de servicio
+    iconRetinaUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
+    iconSize: [50, 50],   // Tamaño del icono
     iconAnchor: [12, 41], // Punto del icono que corresponde a la ubicación del marcador
     popupAnchor: [1, -34], // Punto desde el que se abrirán los popups
     shadowSize: [41, 41]  // Tamaño de la sombra]
