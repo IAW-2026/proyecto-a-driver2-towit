@@ -29,7 +29,7 @@ export default function UserProfileSummary() {
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
-  const [isAvailable, setIsAvailable] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(true); // El usuario entra disponible por defecto
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
 
   // Usa una referencia para rastrear si ya se ha realizado la petición para el userId actual.           
@@ -144,24 +144,14 @@ h-full">
             >
               {isAvailable ? "Disponible" : "No Disponible"}
             </Button>
-            {isAvailable ? (
-              <Link href="/service" className="flex-1">
-                <Button
-                  className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
-                >
-                  Empezar
-                </Button>
-              </Link>
-            ) : (
-              <div className="flex-1">
-                <Button
-                  className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
-                  disabled
-                >
-                  Empezar
-                </Button>
-              </div>
-            )}
+            <Link href="/service" className="flex-1">
+              <Button
+                className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
+                disabled={!isAvailable} // El botón "Empezar" se deshabilita si no está disponible
+              >
+                Empezar
+              </Button>
+            </Link>
           </div>
         </div>
         <div className="flex flex-col w-full h-full">

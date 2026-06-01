@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, Marker, useMap, ZoomControl, Polyline } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import * as L from "leaflet";
-import { Button } from "@/components/ui/button";
-import { useUser } from "@clerk/nextjs";
-import { useNoVehicleErrorModal } from "@/components/providers/NoVehicleErrorModalProvider";
-import { getTowerVehicles } from "@/app/actions/vehicle";
-import ServiceRequestCard from "./ServiceRequestCard";
-import mockServiceRequests from "@/lib/mockServiceRequests.json"; // Importar el archivo JSON
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import mapboxgl, { Map, Marker } from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+import * as turf from "@turf/turf";
+// No se necesita `polyline` de @mapbox/polyline directamente para GeoJSON, Mapbox GL JS lo maneja.
 
-// Interfaz para los datos del pedido de servicio
+// Definir las coordenadas del centro de Bahía Blanca
+const BAHIA_BLANCA_CENTER = { lat: -38.7196, lng: -62.2651 }; // Plaza Rivadavia
+
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
+
+interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
 interface ServiceRequest {
   tripId: string;
   customerName: string;
@@ -20,510 +24,259 @@ interface ServiceRequest {
   vehiclePlate: string;
   originAddress: string;
   serviceValue: number;
-  originCoordinates: { lat: number; lng: number };
+  originCoordinates: Coordinates;
 }
 
-// Componente para re-centrar el mapa cuando la posición o la solicitud de servicio cambian
-function MapRecenter({
-  currentPosition,
-  serviceOrigin,
-  simulationTarget,
-  isSimulatingMovement, // Nuevo prop: para saber si estamos en simulación
-}: {
-  currentPosition: L.LatLngExpression;
-  serviceOrigin: L.LatLngExpression | null;
-  simulationTarget: L.LatLngExpression | null;
-  isSimulatingMovement: boolean; // Tipo para el nuevo prop
-}) {
-  const map = useMap();
-  useEffect(() => {
-    const target = simulationTarget || serviceOrigin;
-
-    if (isSimulatingMovement) {
-      // Durante la simulación, solo se mueve la vista para seguir al marcador, manteniendo el zoom actual.
-      map.panTo(currentPosition, {
-        animate: true,
-        duration: 0.5, // Animación más rápida para seguir el marcador
-      });
-    } else if (target) {
-      // Si no estamos simulando y hay un objetivo (origen de servicio o destino de simulación),
-      // centrar el mapa entre la posición actual y el objetivo, ajustando el zoom.
-      const bounds = L.latLngBounds([currentPosition, target]);
-      map.flyToBounds(bounds, {
-        animate: true,
-        duration: 1.5,
-        padding: L.point(50, 50),
-      });
-    } else {
-      // Si no hay objetivo y no estamos simulando, centrar solo en la posición actual, manteniendo el zoom.
-      map.flyTo(currentPosition, map.getZoom(), {
-        animate: true,
-        duration: 1.5,
-      });
-    }
-  }, [currentPosition, serviceOrigin, simulationTarget, isSimulatingMovement, map]);
-  return null;
+interface InteractiveMapProps {
+  isAvailable: boolean;
+  setIsAvailable: React.Dispatch<React.SetStateAction<boolean>>;
+  currentRequest: ServiceRequest | null;
+  setCurrentRequest: React.Dispatch<React.SetStateAction<ServiceRequest | null>>;
+  acceptedTrip: ServiceRequest | null;
+  setAcceptedTrip: React.Dispatch<React.SetStateAction<ServiceRequest | null>>;
+  onTripEnd: () => void;
 }
 
-export default function InteractiveMap() {
-  // Mover la configuración de iconos de Leaflet a un useEffect para asegurar que se ejecute solo en el cliente
+export default function InteractiveMap({
+  isAvailable,
+  setIsAvailable,
+  currentRequest,
+  setCurrentRequest,
+  acceptedTrip,
+  setAcceptedTrip,
+  onTripEnd,
+}: InteractiveMapProps) {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<Map | null>(null);
+  const driverMarker = useRef<Marker | null>(null);
+  const routeSourceId = "route";
+  const routeLayerId = "route-line";
+
+  // Estado local para la posición actual del conductor
+  const [driverLocation, setDriverLocation] = useState<Coordinates>(BAHIA_BLANCA_CENTER); // Valor inicial, será actualizado por geolocalización
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+
+  // === Inicialización del mapa ===
   useEffect(() => {
-    // @ts-ignore
-    delete L.Icon.Default.prototype._getIconUrl;
-
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
-      iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
-      shadowUrl: '/leaflet/images/marker-shadow.png',
-      iconSize: [40, 40],   // Tamaño del icono
-      iconAnchor: [12, 41], // Punto del icono que corresponde a la ubicación del marcador
-      popupAnchor: [1, -34], // Punto desde el que se abrirán los popups
-      shadowSize: [41, 41]  // Tamaño de la sombra
-    });
-  }, []); // Dependencias vacías para que se ejecute solo una vez al montar
-
-  const serviceMarkerIcon = useMemo(() => new L.Icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png', // Un nuevo icono para los pedidos de servicio
-    iconRetinaUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
-    iconSize: [50, 50],   // Tamaño del icono
-    iconAnchor: [12, 41], // Punto del icono que corresponde a la ubicación del marcador
-    popupAnchor: [1, -34], // Punto desde el que se abrirán los popups
-    shadowSize: [41, 41]  // Tamaño de la sombra]
-  }), []);
-
-
-  // Componente interno para actualizar el zoom del mapa
-  const MapEventUpdater = () => {
-    const map = useMap();
-    useEffect(() => {
-      setMapZoom(map.getZoom()); // Inicializar el zoom cuando el mapa esté listo
-
-      const handleZoomEnd = () => {
-        setMapZoom(map.getZoom());
-      };
-
-      map.on('zoomend', handleZoomEnd);
-      return () => {
-        map.off('zoomend', handleZoomEnd);
-      };
-    }, [map]);
-    return null;
-  };
-
-  const { user, isLoaded } = useUser();
-  const [isAvailable, setIsAvailable] = useState(false);
-  const [currentPosition, setCurrentPosition] = useState<L.LatLngExpression>([
-    -34.6037, -58.3816,
-  ]); // Por defecto, centro de Buenos Aires
-  const [mapZoom, setMapZoom] = useState(17); // Añadir estado para el nivel de zoom del mapa
-  const [hasVehicle, setHasVehicle] = useState(false);
-  const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
-
-  const [currentServiceRequest, setCurrentServiceRequest] = useState<ServiceRequest | null>(null); // Inicializar como null
-  const [routeCoordinates, setRouteCoordinates] = useState<L.LatLngExpression[]>([]); // Estado para las coordenadas de la ruta
-  const [isSimulatingMovement, setIsSimulatingMovement] = useState(false); // Nuevo estado para controlar la simulación de movimiento
-  const [destinationForSimulation, setDestinationForSimulation] = useState<L.LatLngExpression | null>(null); // Destino final de la simulación
-
-  // Referencia para el ID del temporizador de la simulación de movimiento
-  const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  // Referencias para la simulación de movimiento a lo largo de la ruta
-  const simulationProgressRef = useRef(0); // 0 a 1, representando el progreso a lo largo de la ruta
-  const totalRouteDistanceRef = useRef(0); // Almacena la distancia total de la ruta actual (en metros)
-
-  const serviceOriginPosition = useMemo(() => {
-    if (currentServiceRequest) {
-      return [
-        currentServiceRequest.originCoordinates.lat,
-        currentServiceRequest.originCoordinates.lng,
-      ] as L.LatLngExpression;
-    }
-    return null;
-  }, [currentServiceRequest]);
-
-  // Función para obtener la ruta de OSRM
-  const fetchRoute = useCallback(async (start: L.LatLngExpression, end: L.LatLngExpression) => {
-    if (!Array.isArray(start) || !Array.isArray(end)) {
-      console.error("Coordenadas de inicio o fin no válidas para la ruta.");
-      setRouteCoordinates([]);
+    if (map.current) return; // Inicializar el mapa solo una vez
+    if (!mapContainer.current) {
       return;
     }
 
-    const startCoords = `${start[1]},${start[0]}`; // OSRM espera longitud, latitud
-    const endCoords = `${end[1]},${end[0]}`;     // OSRM espera longitud, latitud
-    const url = `https://router.project-osrm.org/route/v1/driving/${startCoords};${endCoords}?geometries=geojson`;
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/navigation-day-v1",
+      center: [BAHIA_BLANCA_CENTER.lng, BAHIA_BLANCA_CENTER.lat],
+      zoom: 12,
+      pitch: 45,
+    });
 
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Error de OSRM: ${response.statusText}`);
-      }
-      const data = await response.json();
+    map.current.on("load", () => {
+      // Agregar una fuente y capa para la ruta
+      map.current!.addSource(routeSourceId, {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        },
+      });
 
-      if (data.routes && data.routes.length > 0) {
-        const routeGeoJSON = data.routes[0].geometry.coordinates;
-        // OSRM devuelve [lng, lat], Leaflet espera [lat, lng]
-        const formattedCoordinates = routeGeoJSON.map((coord: [number, number]) => [coord[1], coord[0]]);
-        setRouteCoordinates(formattedCoordinates);
-      } else {
-        setRouteCoordinates([]);
-        console.warn("No se encontró una ruta.");
-      }
-    } catch (error) {
-      console.error("Error al obtener la ruta:", error);
-      setRouteCoordinates([]);
-    }
+      map.current!.addLayer({
+        id: routeLayerId,
+        type: "line",
+        source: routeSourceId,
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#888", // Color por defecto, se actualizará
+          "line-width": 6,
+          "line-opacity": 0.75,
+        },
+      });
+
+      // Agregar marcador del conductor
+      const el = document.createElement('div');
+      el.style.backgroundColor = '#007bff'; // Círculo azul para el conductor
+      el.style.width = '24px';
+      el.style.height = '24px';
+      el.style.borderRadius = '50%';
+      el.style.border = '2px solid #fff';
+      el.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.5)';
+      el.style.display = 'flex';
+      el.style.alignItems = 'center';
+      el.style.justifyContent = 'center';
+      el.style.color = '#fff';
+      el.style.fontWeight = 'bold';
+      // Puedes reemplazar con un icono real si lo deseas, ej: el.style.backgroundImage = 'url(/driver-icon.png)';
+
+      driverMarker.current = new mapboxgl.Marker({
+        element: el,
+        anchor: 'center',
+      })
+        .setLngLat([driverLocation.lng, driverLocation.lat])
+        .addTo(map.current!);
+
+      setIsMapLoaded(true); // El mapa y sus fuentes/capas están listos
+    });
+
+    // Limpiar al desmontar
+    return () => {
+      map.current?.remove();
+      map.current = null; // También limpia la referencia
+    };
   }, []);
 
-  // Referencias para los IDs de los temporizadores
-  // Referencias para los IDs de los temporizadores de solicitudes
-  const scheduleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const acceptTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Función para limpiar solo los temporizadores y el estado de la solicitud
-  const clearServiceRequestState = useCallback(() => {
-    if (scheduleTimerRef.current) {
-      clearTimeout(scheduleTimerRef.current);
-      scheduleTimerRef.current = null;
-    }
-    if (acceptTimerRef.current) {
-      clearTimeout(acceptTimerRef.current);
-      acceptTimerRef.current = null;
-    }
-    setCurrentServiceRequest(null);
-    setRouteCoordinates([]); // Limpiar la ruta asociada a la solicitud
-    console.log("Temporizadores de solicitud y solicitud actual limpiados.");
-  }, []);
-
-  // Función para limpiar todos los estados y detener cualquier proceso (reseteo completo)
-  const clearAllTimers = useCallback(() => {
-    clearServiceRequestState(); // Limpiar lo relacionado con la solicitud
-    if (simulationIntervalRef.current) {
-      clearInterval(simulationIntervalRef.current);
-      simulationIntervalRef.current = null;
-    }
-    setIsSimulatingMovement(false); // Asegurarse de detener la simulación
-    setDestinationForSimulation(null); // Limpiar el destino de la simulación
-    setIsAvailable(false); // Forzar a no disponible en un reseteo completo
-    totalRouteDistanceRef.current = 0; // Resetear la distancia total de la ruta
-    simulationProgressRef.current = 0; // Resetear el progreso de la simulación
-    console.log("Todos los temporizadores y estados (incluida simulación) han sido limpiados.");
-  }, [clearServiceRequestState]); // Depende de clearServiceRequestState
-
-  // Función para programar una nueva solicitud
-  const scheduleNewRequest = useCallback(() => {
-    // Asegurarse de que no haya temporizadores pendientes antes de programar una nueva
-    clearServiceRequestState(); // Usar la limpieza granular
-
-    if (isAvailable && hasVehicle) {
-      const delay = Math.floor(Math.random() * (15 - 5 + 1) + 5) * 1000; // Retraso aleatorio de 5 a 15 segundos
-      console.log(`Programando nueva solicitud en ${delay / 1000} segundos.`);
-
-      scheduleTimerRef.current = setTimeout(() => {
-        const randomIndex = Math.floor(Math.random() * mockServiceRequests.length);
-        const randomRequest = mockServiceRequests[randomIndex];
-        setCurrentServiceRequest(randomRequest);
-        console.log(`Nueva solicitud ${randomRequest.tripId} mostrada.`);
-
-        // Establece un temporizador de 5 segundos para que la solicitud sea aceptada
-        acceptTimerRef.current = setTimeout(() => {
-          console.log(`Solicitud ${randomRequest.tripId} caducó.`);
-          clearAllTimers(); // La solicitud caduca, se limpia y se permite programar otra
-        }, 5000); // 5 segundos para aceptar
-      }, delay);
-    }
-  }, [isAvailable, hasVehicle, clearAllTimers]);
-
-  // Efecto para verificar vehículos del Tower al cargar o cambiar el usuario
+  // === Obtener ubicación del usuario al cargar el mapa ===
   useEffect(() => {
-    if (isLoaded && user?.id) {
-      const checkVehicles = async () => {
-        const result = await getTowerVehicles();
-        if (result.success && result.data && (result.data as any[]).length > 0) {
-          setHasVehicle(true);
-        } else {
-          setHasVehicle(false);
-          setIsAvailable(false); // Si no hay vehículo, no puede estar disponible
-          clearAllTimers(); // Limpia cualquier solicitud pendiente
-        }
-      };
-      checkVehicles();
-    }
-  }, [isLoaded, user?.id, clearAllTimers]);
+    if (!isMapLoaded) return; // Asegurarse de que el mapa esté cargado antes de obtener la ubicación
 
-  // Efecto para obtener la ubicación actual del usuario
-  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setCurrentPosition([position.coords.latitude, position.coords.longitude]);
+          const { latitude, longitude } = position.coords;
+          const userCoords = { lat: latitude, lng: longitude };
+          setDriverLocation(userCoords); // Actualizar la posición inicial del conductor
+          map.current?.flyTo({ center: [longitude, latitude], zoom: 14, speed: 1.2 }); // Centrar y hacer zoom al usuario
         },
         (error) => {
-          console.error("Error al obtener geolocalización:", error.code, error.message);
+          console.error("Mapbox: Error getting user location:", error);
+          // Si falla la geolocalización, el marcador ya estará en BAHIA_BLANCA_CENTER
+          map.current?.flyTo({ center: [BAHIA_BLANCA_CENTER.lng, BAHIA_BLANCA_CENTER.lat], zoom: 12, speed: 1.2 });
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
-      console.warn("La geolocalización no es compatible con este navegador.");
+      console.log("Mapbox: Geolocation is not supported by this browser.");
+      // Si no hay soporte, el marcador ya estará en BAHIA_BLANCA_CENTER
+      map.current?.flyTo({ center: [BAHIA_BLANCA_CENTER.lng, BAHIA_BLANCA_CENTER.lat], zoom: 12, speed: 1.2 });
     }
-  }, []);
+  }, [isMapLoaded]); // Ejecutar solo cuando el mapa esté completamente cargado
 
-  // Efecto de limpieza global para los temporizadores (al desmontar el componente)
-  useEffect(() => {
-    return () => {
-      clearAllTimers(); // Resetea todo al desmontar
-    };
-  }, [clearAllTimers]);
+  // === Función para dibujar la ruta ===
+  const drawRoute = useCallback(async (origin: Coordinates, destination: Coordinates) => {
+    if (!map.current || !isMapLoaded) return; // Añadir verificación de isMapLoaded
 
+    // Ajustar el orden de las coordenadas para la API de Mapbox (lng, lat)
+    const query = await fetch(
+      `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`,
+      { method: "GET" }
+    );
+    const json = await query.json();
+    const data = json.routes[0];
+    const route = data.geometry; // Ya es GeoJSON LineString
 
-  // Efecto principal para gestionar el flujo de solicitudes de servicio
-  useEffect(() => {
-    // Si el conductor está disponible, tiene vehículo, no hay solicitud activa Y no hay temporizadores de solicitud
-    // Y NO se está simulando movimiento.
-    if (isAvailable && hasVehicle && !currentServiceRequest && !scheduleTimerRef.current && !acceptTimerRef.current && !isSimulatingMovement) {
-      scheduleNewRequest();
-    } 
-    // Si NO está disponible O NO tiene vehículo, Y NO se está simulando movimiento,
-    // entonces se detiene el flujo de solicitudes y la simulación.
-    // Esto previene que clearAllTimers() detenga una simulación en curso si isAvailable se vuelve false
-    // como parte del inicio de la simulación.
-    else if ((!isAvailable || !hasVehicle) && !isSimulatingMovement) {
-      clearAllTimers();
+    const routeSource = map.current.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
+    if (routeSource) {
+      routeSource.setData(route);
+      map.current.setPaintProperty(routeLayerId, 'line-color', '#FFC107'); // Amarillo para la ruta activa
     }
-    // Si isSimulatingMovement es true, simplemente se deja que la simulación termine por su cuenta,
-    // este useEffect no interfiere con ella.
-  }, [isAvailable, hasVehicle, currentServiceRequest, scheduleNewRequest, clearAllTimers, isSimulatingMovement]);
 
-
-  // Efecto para dibujar la ruta cuando las posiciones cambian (tanto para solicitud activa como para simulación) o el zoom del mapa
-  useEffect(() => {
-    if (isSimulatingMovement && destinationForSimulation) {
-      fetchRoute(currentPosition, destinationForSimulation);
-    } else if (currentServiceRequest && serviceOriginPosition) {
-      fetchRoute(currentPosition, serviceOriginPosition);
-    } else {
-      setRouteCoordinates([]); // Limpiar la ruta si no hay solicitud y no hay simulación
+    // Ajustar el mapa para que muestre la ruta completa
+    const bounds = new mapboxgl.LngLatBounds();
+    for (const coord of route.coordinates) {
+      bounds.extend(coord as mapboxgl.LngLatLike);
     }
-  }, [currentPosition, serviceOriginPosition, currentServiceRequest, destinationForSimulation, isSimulatingMovement, fetchRoute, mapZoom]); // Añadir mapZoom como dependencia
+    map.current.fitBounds(bounds, {
+      padding: 100,
+      duration: 1000,
+    });
 
-  // Efecto para la simulación de movimiento del conductor a lo largo de la ruta
-  useEffect(() => {
-    // Definir constantes para la duración y el intervalo aquí, para que sean parte del closure del efecto
-    const SIMULATION_TOTAL_DURATION = 15000; // 15 segundos para toda la ruta
-    const SIMULATION_UPDATE_INTERVAL = 100; // Actualizar cada 100 ms
+    return route; // Devolver la ruta GeoJSON para la simulación
+  }, [isMapLoaded]); // Añadir isMapLoaded a las dependencias
 
-    // Si la simulación está activa Y tenemos un destino Y tenemos una ruta válida con al menos dos puntos
-    if (isSimulatingMovement && destinationForSimulation && routeCoordinates.length > 1) {
-      console.log("SIMULACION: Iniciando simulación de movimiento a lo largo de la ruta.");
+  // === Función para borrar la ruta ===
+  const clearRoute = useCallback(() => {
+    if (!map.current || !isMapLoaded) return; // Asegurarse de que el mapa esté cargado
+    const routeSource = map.current.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
+    if (routeSource) {
+      routeSource.setData({
+        type: "FeatureCollection",
+        features: [],
+      });
+      map.current.setPaintProperty(routeLayerId, 'line-color', '#888'); // Restablecer color por defecto
+    }
+  }, [isMapLoaded]); // Añadir isMapLoaded a las dependencias
 
-      // Calcular la distancia total de la ruta si no ha sido calculada o si es una nueva simulación
-      if (totalRouteDistanceRef.current === 0 || simulationProgressRef.current === 0) {
-        let distance = 0;
-        for (let i = 0; i < routeCoordinates.length - 1; i++) {
-          const p1 = L.latLng(routeCoordinates[i] as L.LatLngTuple);
-          const p2 = L.latLng(routeCoordinates[i + 1] as L.LatLngTuple);
-          distance += p1.distanceTo(p2); // Distancia en metros
-        }
-        totalRouteDistanceRef.current = distance;
-        simulationProgressRef.current = 0; // Resetear el progreso para una nueva simulación
-      }
+  // === Simulación del movimiento del conductor ===
+  const SIMULATION_TOTAL_DURATION = 10000; // 10 segundos
+  const SIMULATION_UPDATE_INTERVAL = 100; // Actualizar cada 100 ms
 
-      if (totalRouteDistanceRef.current === 0) {
-        console.warn("SIMULACION: Distancia total de la ruta es 0 o muy pequeña. Deteniendo simulación.");
-        setIsSimulatingMovement(false);
-        setDestinationForSimulation(null);
-        setIsAvailable(true);
-        clearServiceRequestState();
+  const simulateDriverMovement = useCallback((route: GeoJSON.Feature<GeoJSON.LineString>) => {
+    if (!map.current || !driverMarker.current) return;
+
+    // isAvailable ya debería ser false al aceptar el viaje en ServicePageClient
+
+    const line = turf.lineString(route.geometry.coordinates);
+    const totalDistance = turf.length(line, { units: 'kilometers' });
+    const steps = SIMULATION_TOTAL_DURATION / SIMULATION_UPDATE_INTERVAL;
+    let currentStep = 0;
+
+    const animation = setInterval(() => {
+      if (currentStep >= steps) {
+        clearInterval(animation);
+        const finalPosition = route.geometry.coordinates[route.geometry.coordinates.length - 1];
+        setDriverLocation({ lng: finalPosition[0], lat: finalPosition[1] }); // Posición final
+        driverMarker.current!.setLngLat(finalPosition as mapboxgl.LngLatLike);
+        clearRoute();
+        onTripEnd(); // Notificar al componente padre que el viaje ha terminado (4. la ruta se borre al llegar al destino y vuelva a estado disponible)
         return;
       }
 
-      // Limpiar cualquier intervalo existente para evitar duplicados
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-      }
+      const distanceCovered = (currentStep / steps) * totalDistance;
+      const along = turf.along(line, distanceCovered, { units: 'kilometers' });
+      const newLngLat = along.geometry.coordinates as [number, number];
 
-      const totalSteps = SIMULATION_TOTAL_DURATION / SIMULATION_UPDATE_INTERVAL;
-      const progressPerStep = 1 / totalSteps; // Cuánto progreso (de 0 a 1) avanzamos por cada paso
+      setDriverLocation({ lng: newLngLat[0], lat: newLngLat[1] });
+      driverMarker.current!.setLngLat(newLngLat as mapboxgl.LngLatLike);
 
-      simulationIntervalRef.current = setInterval(() => {
-        simulationProgressRef.current += progressPerStep;
+      // Centrar el mapa en el conductor (opcional, depende de la UX deseada)
+      // map.current!.setCenter(newLngLat as mapboxgl.LngLatLike);
 
-        if (simulationProgressRef.current >= 1) {
-          // Simulación terminada: limpiar estados de simulación y hacer que el conductor esté disponible
-          setCurrentPosition(destinationForSimulation); // Ajustar a la posición final exacta
+      currentStep++;
+    }, SIMULATION_UPDATE_INTERVAL);
 
-          if (simulationIntervalRef.current) {
-            clearInterval(simulationIntervalRef.current);
-            simulationIntervalRef.current = null;
-          }
+    return () => clearInterval(animation); // Función de limpieza
+  }, [clearRoute, onTripEnd]);
 
-          setIsSimulatingMovement(false);
-          setDestinationForSimulation(null);
-          setRouteCoordinates([]); // Asegurar que la ruta se borre de inmediato
-          totalRouteDistanceRef.current = 0; // Resetear para la próxima ruta
-          simulationProgressRef.current = 0; // Resetear para la próxima ruta
-          setIsAvailable(true); // Conductor disponible una vez completado el servicio
-          console.log("Simulación de movimiento completada. Conductor ahora disponible y ruta borrada.");
-          return; // Salir del intervalo
-        }
+  // === Efecto para manejar solicitudes entrantes (OMITIDO TEMPORALMENTE) ===
+  useEffect(() => {
+    // La lógica de solicitudes está omitida temporalmente según el requerimiento del usuario.
+    // if (currentRequest && isAvailable && isMapLoaded && map.current && driverMarker.current) {
+    //   drawRoute(driverLocation, currentRequest.originCoordinates);
+    // } else if (!currentRequest && !acceptedTrip && isMapLoaded) {
+    //   clearRoute();
+    // }
+  }, [currentRequest, isAvailable, driverLocation, drawRoute, clearRoute, acceptedTrip, isMapLoaded]);
 
-        // Encontrar la posición actual a lo largo de la ruta basada en simulationProgressRef.current
-        const targetDistance = totalRouteDistanceRef.current * simulationProgressRef.current;
-        let accumulatedDistance = 0;
-        let segmentStart: L.LatLng = L.latLng(routeCoordinates[0] as L.LatLngTuple); // Valor por defecto
-        let segmentEnd: L.LatLng = L.latLng(routeCoordinates[0] as L.LatLngTuple); // Valor por defecto
-        let segmentFraction = 0;
-        let currentPointIndex = 0;
+  // === Efecto para manejar el viaje aceptado (OMITIDO TEMPORALMENTE) ===
+  useEffect(() => {
+    // La lógica de viaje aceptado está omitida temporalmente según el requerimiento del usuario.
+    // let cleanupSim: (() => void) | undefined;
+    // if (acceptedTrip && isMapLoaded && map.current && driverMarker.current) {
+    //   async function startTripSimulation() {
+    //     const route = await drawRoute(driverLocation, acceptedTrip!.originCoordinates);
+    //     if (route) {
+    //       cleanupSim = simulateDriverMovement(route);
+    //     }
+    //   }
+    //   startTripSimulation();
+    // }
+    // return () => {
+    //   if (cleanupSim) cleanupSim();
+    // };
+  }, [acceptedTrip, driverLocation, drawRoute, simulateDriverMovement, isMapLoaded]);
 
-        for (let i = 0; i < routeCoordinates.length - 1; i++) {
-          const p1 = L.latLng(routeCoordinates[i] as L.LatLngTuple);
-          const p2 = L.latLng(routeCoordinates[i + 1] as L.LatLngTuple);
-          const segmentLength = p1.distanceTo(p2);
-
-          if (accumulatedDistance + segmentLength >= targetDistance) {
-            // La posición objetivo está dentro de este segmento
-            segmentStart = p1;
-            segmentEnd = p2;
-            segmentFraction = (targetDistance - accumulatedDistance) / segmentLength;
-            currentPointIndex = i;
-            break;
-          }
-          accumulatedDistance += segmentLength;
-          currentPointIndex = i + 1; // Mover al siguiente punto si no se encontró en el segmento actual
-        }
-
-        // Interpolación lineal dentro del segmento actual
-        // Manejar el caso de que la ruta solo tenga dos puntos o que el targetDistance caiga exactamente en el final de un segmento.
-        if (segmentStart && segmentEnd && segmentStart !== segmentEnd) { // Asegurarse de que el segmento es válido
-          const interpolatedLat = segmentStart.lat + (segmentEnd.lat - segmentStart.lat) * segmentFraction;
-          const interpolatedLng = segmentStart.lng + (segmentEnd.lng - segmentStart.lng) * segmentFraction;
-          setCurrentPosition([interpolatedLat, interpolatedLng]);
-        } else {
-          // Esto podría ocurrir si el targetDistance es 0 o si el segmento tiene longitud 0
-          // En ese caso, la posición debe ser el inicio del segmento (o el punto actual de la ruta si ya se ha movido)
-          setCurrentPosition(routeCoordinates[currentPointIndex] || routeCoordinates[0]);
-        }
-      }, SIMULATION_UPDATE_INTERVAL);
+  // Asegurarse de que el marcador del conductor esté siempre en `driverLocation`
+  useEffect(() => {
+    if (driverMarker.current) {
+      driverMarker.current.setLngLat([driverLocation.lng, driverLocation.lat]);
     }
+  }, [driverLocation]);
 
-    return () => {
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-        simulationIntervalRef.current = null;
-      }
-      // Considerar si es necesario resetear totalRouteDistanceRef y simulationProgressRef aquí
-      // Solo se resetean al final de una simulación exitosa o al iniciar una nueva
-    };
-  }, [isSimulatingMovement, destinationForSimulation, routeCoordinates, clearServiceRequestState, setIsAvailable]);
 
-  const handleToggleAvailability = () => {
-    if (!hasVehicle) {
-      openNoVehicleErrorModal();
-      return;
-    }
-    const newAvailability = !isAvailable;
-    setIsAvailable(newAvailability);
-
-    console.log(`Mock: Actualizando disponibilidad para el usuario ${user?.id} a ${newAvailability}`);
-    // Aquí se integraría con Redis para actualizar el estado del conductor
-    // Por ejemplo: updateDriverAvailability(user.id, newAvailability ? 'AVAILABLE' : 'UNAVAILABLE');
-  };
-
-  const handleAcceptServiceRequest = (tripId: string) => {
-    console.log(`Pedido ${tripId} aceptado!`);
-    
-    // 1. Capturar el destino de la solicitud ANTES de limpiar currentServiceRequest
-    let targetDestination: L.LatLngExpression | null = null;
-    if (currentServiceRequest) {
-      targetDestination = [
-        currentServiceRequest.originCoordinates.lat,
-        currentServiceRequest.originCoordinates.lng,
-      ];
-    } else {
-      console.error("No se encontró currentServiceRequest al aceptar. La simulación no puede iniciar.");
-      return; // No hay solicitud, no se puede aceptar
-    }
-
-    // 2. Limpiar solo el estado de la solicitud pendiente
-    clearServiceRequestState(); 
-    
-    // 3. Establecer el estado para iniciar la simulación
-    setIsAvailable(false); // El conductor pasa a no disponible para nuevas solicitudes
-    setDestinationForSimulation(targetDestination); // Establecer el destino de la simulación
-    setIsSimulatingMovement(true); // Iniciar la simulación de movimiento
-
-    console.log("Simulación de movimiento iniciada con destino:", targetDestination);
-
-    // Aquí se integraría la lógica para iniciar el viaje real,
-    // enviar notificaciones, etc.
-  };
-
-  return (
-    <div className="relative flex-1 w-full h-full">
-      <MapContainer
-        center={currentPosition} // El centro inicial del mapa será la posición actual (por defecto o real)
-        zoom={mapZoom} // Usar el estado de zoom
-        scrollWheelZoom={true}
-        zoomControl={false} // Deshabilitar el control de zoom por defecto
-        className="h-full w-full z-0"
-      >
-        <MapEventUpdater /> {/* Añadir el componente para escuchar eventos de zoom */}
-        <MapRecenter
-          currentPosition={currentPosition}
-          serviceOrigin={serviceOriginPosition}
-          simulationTarget={destinationForSimulation}
-          isSimulatingMovement={isSimulatingMovement} // Pasar el estado de simulación
-        />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={currentPosition}></Marker>
-        {serviceOriginPosition && (
-          <Marker position={serviceOriginPosition} icon={serviceMarkerIcon}></Marker>
-        )}
-        {routeCoordinates.length > 0 && (
-          <Polyline positions={routeCoordinates} color="#4F46E5" weight={5} /> // Color azul para la ruta
-        )}
-        <ZoomControl position="bottomright" /> {/* Añadir control de zoom en la parte inferior derecha */}
-      </MapContainer>
-
-      {/* Botón de Disponibilidad superpuesto */}
-      <div className="absolute top-16 mt-4 right-4 z-[1001]">
-        <Button
-          onClick={handleToggleAvailability}
-          className={`font-bold ${
-            isSimulatingMovement // Si se está simulando movimiento
-              ? "bg-indigo-600 text-white cursor-not-allowed"
-              : currentServiceRequest // Si hay una solicitud activa, mostrar color de "Solicitud Activa"
-                ? "bg-yellow-600 text-slate-950 cursor-not-allowed"
-                : (isAvailable // Si está disponible, mostrar "Disponible", sino "No Disponible"
-                    ? "bg-green-600 hover:bg-green-500 text-white"
-                    : "bg-slate-400 hover:bg-slate-600 text-white"
-                  )
-          }`}
-          disabled={!hasVehicle || currentServiceRequest !== null || isSimulatingMovement} // Deshabilitar si no hay vehículo, hay una solicitud activa o está simulando movimiento
-        >
-          {!hasVehicle // Si no tiene vehículo
-            ? "Añadir Vehículo para Activar"
-            : isSimulatingMovement // Si se está simulando movimiento
-              ? "En Camino"
-              : (currentServiceRequest // Si hay una solicitud activa
-                  ? "Solicitud Activa"
-                  : (isAvailable ? "Esperando Solicitud" : "No Disponible") // Si está disponible o no
-                )
-          }
-        </Button>
-      </div>
-
-      {/* Tarjeta de Pedido de Servicio superpuesta */}
-      {currentServiceRequest && ( // Mostrar la tarjeta si hay un pedido activo
-        <div className="absolute bottom-4 left-4 z-[1001] w-[90%] max-w-sm"> {/* Posicionado a la izquierda */}
-          <ServiceRequestCard
-            {...currentServiceRequest} // Pasar los datos de la solicitud aleatoria
-            onAccept={handleAcceptServiceRequest} // Usar la nueva función de aceptación
-          />
-        </div>
-      )}
-    </div>
-  );
+  // Añadimos un min-h fijo temporalmente para asegurarnos de que el div tenga altura.
+  // Si esto funciona, el problema está en que h-full no está calculando correctamente la altura.
+  return <div ref={mapContainer} className="w-full h-full relative overflow-hidden" data-testid="mapbox-container" />;
 }
