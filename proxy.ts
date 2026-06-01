@@ -15,7 +15,7 @@ const isTowerRoute = createRouteMatcher([
   '/trips(.*)', // Incluye /trips y /trips/[id]
   '/account-details',
   '/vehicles(.*)', // Incluye /vehicles y sub-rutas de gestión de vehículos
-  '/payments',
+  '/payments(.*)',
 ]);
 
 const isAdminRoute = createRouteMatcher([

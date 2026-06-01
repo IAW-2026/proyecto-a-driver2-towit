@@ -2,14 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from "next/link"; // Asegúrate de importar Link si lo vas a usar para ir al detalle
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale'; // Importa el locale español para format
 import { Button } from "@/components/ui/button";
+import mockPaymentsData from '@/lib/mocks/payments.json'; // Importa el archivo JSON
 
 interface Payment {
-  id: string;
-  date: string;
-  amount: number;
+  id: string; // Para mostrar en la tabla, puede ser external_id o un ID interno si lo necesitamos
+  valor: number;
+  fecha: string;
+  estado: string; // Siempre "Completado" según la descripción
+  external_id: string;
   status: string;
-  tripId: string; // Referencia al viaje asociado
+  trip_id: string; // Referencia al viaje asociado
 }
 
 export default function PaymentList() {
@@ -17,32 +22,18 @@ export default function PaymentList() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para mockear la carga de pagos
   useEffect(() => {
-    const fetchMockPayments = async () => {
-      setIsLoading(true);
-      setError(null);
-      // Simula una llamada a API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const mockData: Payment[] = [
-        { id: "pay_001", date: "2026-05-29", amount: 150.00, status: "Completado", tripId: "trip_ABC" },
-        { id: "pay_002", date: "2026-05-28", amount: 120.50, status: "Completado", tripId: "trip_DEF" },
-        { id: "pay_003", date: "2026-05-27", amount: 200.00, status: "Completado", tripId: "trip_GHI" },
-        // Puedes dejar este array vacío para probar el estado sin pagos:
-        // []
-      ];
-
-      if (mockData.length > 0) {
-        setPayments(mockData);
-      } else {
-        // En un caso real, podrías simular un error o simplemente devolver un array vacío
-        setPayments([]);
-      }
+    // Como es un mock local, la carga es instantánea
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Usar los datos importados directamente
+      setPayments(mockPaymentsData as Payment[]); // Castear para asegurar el tipo
       setIsLoading(false);
-    };
-
-    fetchMockPayments();
+    } catch (err: any) {
+      setError("Error al cargar las liquidaciones: " + err.message);
+      setIsLoading(false);
+    }
   }, []);
 
   if (isLoading) {
@@ -75,8 +66,11 @@ export default function PaymentList() {
         {payments.map((payment) => (
           <li key={payment.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 flex items-center justify-between">
             <div>
-              <p className="text-white text-lg font-semibold">-${payment.amount.toFixed(2)}</p>
-              <p className="text-slate-400 text-sm">{payment.date} - {payment.status}</p>
+              <p className="text-white text-lg font-semibold">-${payment.valor.toFixed(2)}</p>
+              <p className="text-slate-400 text-sm">
+                {format(new Date(payment.fecha), 'dd/MM/yyyy', { locale: es })} - {payment.estado}
+              </p>
+              <p className="text-slate-400 text-xs mt-1">ID Transacción: {payment.external_id}</p>
             </div>
             <Link href={`/payments/${payment.id}`}>
               <Button variant="secondary" size="sm">
