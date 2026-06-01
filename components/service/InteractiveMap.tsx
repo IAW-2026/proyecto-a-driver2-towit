@@ -348,20 +348,22 @@ export default function InteractiveMap() {
         simulationProgressRef.current += progressPerStep;
 
         if (simulationProgressRef.current >= 1) {
-          // Simulación terminada
+          // Simulación terminada: limpiar estados de simulación y hacer que el conductor esté disponible
           setCurrentPosition(destinationForSimulation); // Ajustar a la posición final exacta
-          setIsSimulatingMovement(false);
-          setDestinationForSimulation(null);
-          setIsAvailable(true);
-          clearServiceRequestState();
-          totalRouteDistanceRef.current = 0; // Resetear para la próxima ruta
-          simulationProgressRef.current = 0; // Resetear para la próxima ruta
+
           if (simulationIntervalRef.current) {
             clearInterval(simulationIntervalRef.current);
             simulationIntervalRef.current = null;
           }
-          console.log("Simulación de movimiento completada. Conductor ahora disponible.");
-          return;
+
+          setIsSimulatingMovement(false);
+          setDestinationForSimulation(null);
+          setRouteCoordinates([]); // Asegurar que la ruta se borre de inmediato
+          totalRouteDistanceRef.current = 0; // Resetear para la próxima ruta
+          simulationProgressRef.current = 0; // Resetear para la próxima ruta
+          setIsAvailable(true); // Conductor disponible una vez completado el servicio
+          console.log("Simulación de movimiento completada. Conductor ahora disponible y ruta borrada.");
+          return; // Salir del intervalo
         }
 
         // Encontrar la posición actual a lo largo de la ruta basada en simulationProgressRef.current
