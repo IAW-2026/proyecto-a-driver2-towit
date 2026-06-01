@@ -31,18 +31,18 @@ export default function UserCreationForm() {
       setStatusMessage({ type: 'error', message: "La contraseña debe tener al menos 8 caracteres." });
       return false;
     }
-    if (!/[A-Z]/.test(formData.password)) {
-      setStatusMessage({ type: 'error', message: "La contraseña debe contener al menos una letra mayúscula." });
-      return false;
-    }
-    if (!/[a-z]/.test(formData.password)) {
-      setStatusMessage({ type: 'error', message: "La contraseña debe contener al menos una letra minúscula." });
-      return false;
-    }
-    if (!/[0-9]/.test(formData.password)) {
-      setStatusMessage({ type: 'error', message: "La contraseña debe contener al menos un número." });
-      return false;
-    }
+    // if (!/[A-Z]/.test(formData.password)) {
+    //   setStatusMessage({ type: 'error', message: "La contraseña debe contener al menos una letra mayúscula." });
+    //   return false;
+    // }
+    // if (!/[a-z]/.test(formData.password)) {
+    //   setStatusMessage({ type: 'error', message: "La contraseña debe contener al menos una letra minúscula." });
+    //   return false;
+    // }
+    // if (!/[0-9]/.test(formData.password)) {
+    //   setStatusMessage({ type: 'error', message: "La contraseña debe contener al menos un número." });
+    //   return false;
+    // }
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
       setStatusMessage({ type: 'error', message: "La contraseña debe contener al menos un caracter especial (!@#$%^&*)." });
       return false;
