@@ -29,10 +29,10 @@ export default function ServiceRequestCard({
   };
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-[1001] bg-slate-900/90 backdrop-blur-sm p-6 rounded-lg shadow-2xl border border-slate-700 text-white">
-      <h3 className="text-xl font-bold text-yellow-400 mb-4">Nuevo Pedido de Servicio</h3>
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[95%] md:w-[90%] max-w-sm z-[1001] bg-slate-950/80 backdrop-blur-sm p-6 rounded-lg shadow-2xl border border-slate-700 text-white">
+      <h3 className="text-xl font-bold text-yellow-400 mb-2 md:mb-4">Nueva solicitud</h3>
       
-      <div className="space-y-3 mb-6">
+      <div className="md:space-y-3 mb-3 md:mb-6">
         <p className="text-lg">
           <span className="font-semibold">Cliente:</span> {customerName}
           {customerRating && (
@@ -40,21 +40,21 @@ export default function ServiceRequestCard({
           )}
         </p>
         <p className="text-base text-slate-300">
-          <span className="font-semibold">Vehículo:</span> {vehicleModel} (Patente: {vehiclePlate})
+          <span className="font-semibold">Vehículo:</span> {vehicleModel} ({vehiclePlate})
         </p>
         <p className="text-base text-slate-300">
-          <span className="font-semibold">Recoger en:</span> {originAddress}
+          <span className="font-semibold">Dirección:</span> {originAddress}
         </p>
-        <p className="text-xl font-bold text-green-400">
-          <span className="font-semibold text-white">Valor:</span> ${serviceValue.toFixed(2)}
+        <p className="text-right text-2xl font-bold text-green-400">
+          ${serviceValue.toFixed(2)}
         </p>
       </div>
 
       <Button
         onClick={handleAcceptClick}
-        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 text-lg"
+        className="w-full bg-green-600/70 hover:bg-green-500/90 text-white font-bold py-3 text-lg"
       >
-        Aceptar Pedido
+        Aceptar
       </Button>
     </div>
   );
