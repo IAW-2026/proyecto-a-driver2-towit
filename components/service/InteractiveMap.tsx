@@ -91,7 +91,7 @@ export default function InteractiveMap() {
     <div className="relative flex-1 w-full h-full">
       <MapContainer
         center={currentPosition} // El centro inicial del mapa será la posición actual (por defecto o real)
-        zoom={13}
+        zoom={17}
         scrollWheelZoom={true}
         zoomControl={false} // Deshabilitar el control de zoom por defecto
         className="h-full w-full z-0"
@@ -111,7 +111,7 @@ export default function InteractiveMap() {
           onClick={handleToggleAvailability}
           className={`font-bold ${isAvailable
             ? "bg-green-600 hover:bg-green-500 text-white"
-            : "bg-slate-700 hover:bg-slate-600 text-white"
+            : "bg-slate-400 hover:bg-slate-600 text-white"
           }`}
           disabled={!hasVehicle} // Deshabilitar si no hay vehículo registrado
         >
