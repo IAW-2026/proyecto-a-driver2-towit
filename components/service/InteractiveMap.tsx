@@ -49,6 +49,7 @@ export default function InteractiveMap({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const driverMarker = useRef<Marker | null>(null);
+  const destinationMarker = useRef<Marker | null>(null); // Nuevo: marcador para el destino del pedido
   const routeSourceId = "route";
   const routeLayerId = "route-line";
 
@@ -183,6 +184,28 @@ export default function InteractiveMap({
       duration: 1000,
     });
 
+    // Añadir marcador de destino (diferente color)
+    if (destinationMarker.current) {
+      destinationMarker.current.remove(); // Limpiar el marcador anterior si existe
+    }
+    const destinationEl = document.createElement('div');
+    destinationEl.style.backgroundColor = '#dc3545'; // Rojo para el destino
+    destinationEl.style.width = '24px';
+    destinationEl.style.height = '24px';
+    destinationEl.style.borderRadius = '50%';
+    destinationEl.style.border = '2px solid #fff';
+    destinationEl.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.5)';
+    destinationEl.style.display = 'flex';
+    destinationEl.style.alignItems = 'center';
+    destinationEl.style.justifyContent = 'center';
+
+    destinationMarker.current = new mapboxgl.Marker({
+      element: destinationEl,
+      anchor: 'center',
+    })
+      .setLngLat([destination.lng, destination.lat])
+      .addTo(map.current!);
+
     return route; // Devolver la ruta GeoJSON para la simulación
   }, [isMapLoaded]); // Añadir isMapLoaded a las dependencias
 
@@ -196,6 +219,11 @@ export default function InteractiveMap({
         features: [],
       });
       map.current.setPaintProperty(routeLayerId, 'line-color', '#888'); // Restablecer color por defecto
+    }
+    // Eliminar también el marcador de destino
+    if (destinationMarker.current) {
+      destinationMarker.current.remove();
+      destinationMarker.current = null;
     }
   }, [isMapLoaded]); // Añadir isMapLoaded a las dependencias
 
