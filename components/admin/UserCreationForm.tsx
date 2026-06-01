@@ -102,7 +102,7 @@ export default function UserCreationForm() {
           </div>
           <Button
             type="submit"
-            className="md:w-auto w-full xl:w-auto bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold p-3.5 h-auto"
+            className="md:w-auto w-full xl:w-auto bg-green-600/70 hover:bg-green-500 text-green-950 font-bold p-3.5 h-auto"
             disabled={isLoading}
           >
             {isLoading ? 'Creando...' : 'Crear'}

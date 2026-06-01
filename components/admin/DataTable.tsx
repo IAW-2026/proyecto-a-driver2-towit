@@ -54,7 +54,17 @@ export default function DataTable<T extends Record<string, any>>({
             {data.map((row, rowIndex) => (
               <tr key={rowIndex} className="hover:bg-slate-800 transition-colors">
                 {headers.map((header) => (
-                  <td key={`${rowIndex}-${header}`} className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                  <td
+                    key={`${rowIndex}-${header}`}
+                    className="px-6 py-4 whitespace-nowrap text-sm text-slate-400 md:max-w-6 overflow-x-hidden"
+                    title={
+                      (header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
+                        ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : typeof row[header] === 'object' && row[header] !== null
+                          ? JSON.stringify(row[header])
+                          : String(row[header])
+                    }
+                  >
                     {(header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
                       ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                       : typeof row[header] === 'object' && row[header] !== null
