@@ -58,6 +58,13 @@ export default function InteractiveMap({
   // Estado local para la posición actual del conductor
   const [driverLocation, setDriverLocation] = useState<Coordinates>(BAHIA_BLANCA_CENTER); // Valor inicial, será actualizado por geolocalización
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [currentTripStage, setCurrentTripStage] = useState<'idle' | 'to_origin' | 'to_destination'>('idle');
+  const currentTripStageRef = useRef(currentTripStage); // Ref para acceder al estado más reciente
+  
+  // Sincronizar el ref con el estado
+  useEffect(() => {
+    currentTripStageRef.current = currentTripStage;
+  }, [currentTripStage]);
 
   // === Inicialización del mapa ===
   useEffect(() => {
@@ -173,7 +180,7 @@ export default function InteractiveMap({
     const data = json.routes && json.routes.length > 0 ? json.routes[0] : null;
 
     if (!data || !data.geometry || !data.geometry.coordinates || data.geometry.coordinates.length === 0) {
-      console.error("Mapbox: No se encontró una ruta válida o la geometría está incompleta. Respuesta API:", json);
+      console.error("Mapbox: No se encontró una ruta válida o la geometría está incompleta. Origen:", origin, "Destino:", destination, "Respuesta API:", json);
       clearRoute(); // Limpiar cualquier ruta o marcador existente en caso de error
       return null; // Devolver null si no hay ruta válida
     }
@@ -221,9 +228,9 @@ export default function InteractiveMap({
     // Devolver la ruta envuelta en un Feature de GeoJSON para que coincida con la expectativa
     return {
       type: "Feature",
-      geometry: route,
+      geometry: route, // 'route' es ya un GeoJSON.LineString
       properties: {},
-    };
+    } as GeoJSON.Feature<GeoJSON.LineString>; // Cast explícito al tipo esperado
   }, [isMapLoaded]); // Añadir isMapLoaded a las dependencias
 
   // === Función para borrar la ruta ===
@@ -271,8 +278,20 @@ export default function InteractiveMap({
         const finalPosition = route.geometry.coordinates[route.geometry.coordinates.length - 1];
         setDriverLocation({ lng: finalPosition[0], lat: finalPosition[1] }); // Posición final
         driverMarker.current!.setLngLat(finalPosition as mapboxgl.LngLatLike);
-        clearRoute();
-        onTripEnd(); // Notificar al componente padre que el viaje ha terminado (4. la ruta se borre al llegar al destino y vuelva a estado disponible)
+
+        // Usar el ref para obtener el estado más reciente de currentTripStage
+        if (currentTripStageRef.current === 'to_origin') {
+          // Llegó al origen del servicio, ahora ir al destino final
+          console.log("Mapbox: Llegada al origen del servicio. Transicionando a 'to_destination'."); // Mensaje de transición
+          setCurrentTripStage('to_destination'); // Cambiar el estado para iniciar la segunda etapa
+          // La ruta no se limpia aquí, permanece en el mapa como se pidió.
+        } else if (currentTripStageRef.current === 'to_destination') {
+          // Llegó al destino final
+          console.log("Mapbox: Llegada al destino final. Viaje completado. Reseteando a 'idle'.");
+          clearRoute(); // Limpiar la ruta y el marcador de destino
+          onTripEnd(); // Notificar al padre que el viaje completo ha terminado (vuelve a disponible)
+          setCurrentTripStage('idle'); // Restablecer el estado
+        }
         return;
       }
 
@@ -290,49 +309,81 @@ export default function InteractiveMap({
     }, SIMULATION_UPDATE_INTERVAL);
 
     return () => clearInterval(animation); // Función de limpieza
-  }, [clearRoute, onTripEnd]);
+  }, [clearRoute, onTripEnd, setCurrentTripStage, currentTripStageRef]); // currentTripStage removido, añadido setCurrentTripStage y currentTripStageRef
 
   // === Efecto para manejar solicitudes entrantes (dibujar ruta al origen de la solicitud) ===
   useEffect(() => {
-    if (currentRequest && isAvailable && isMapLoaded && map.current && driverMarker.current) {
-      // Al recibir una solicitud, se traza la ruta desde su ubicación en el mapa hacia la ubicación de la solicitud
-      drawRoute(driverLocation, currentRequest.originCoordinates);
-    } else if (!currentRequest && !acceptedTrip && isMapLoaded) {
-      // Si no hay solicitud actual y no hay viaje aceptado, limpiar cualquier ruta existente
-      clearRoute();
+    // Solo dibujar o limpiar ruta de solicitud si no hay un viaje activo
+    if (currentTripStage === 'idle') {
+      if (currentRequest && isAvailable && isMapLoaded && map.current && driverMarker.current) {
+        // Al recibir una solicitud, se traza la ruta desde su ubicación en el mapa hacia la ubicación de la solicitud
+        drawRoute(driverLocation, currentRequest.originCoordinates);
+      } else if (!currentRequest && !acceptedTrip && isMapLoaded) {
+        // Si no hay solicitud actual y no hay viaje aceptado, limpiar cualquier ruta existente
+        clearRoute();
+      }
     }
-  }, [currentRequest, isAvailable, driverLocation, drawRoute, clearRoute, acceptedTrip, isMapLoaded]);
+  }, [currentRequest, isAvailable, driverLocation, drawRoute, clearRoute, acceptedTrip, isMapLoaded, currentTripStage]);
 
-  // === Efecto para manejar el viaje aceptado (iniciar simulación) ===
+  // === Efecto para manejar el inicio del viaje (primera etapa: al origen del servicio) ===
   useEffect(() => {
     let cleanupSim: (() => void) | undefined;
 
-    if (acceptedTrip && isMapLoaded && map.current && driverMarker.current) {
-      // 3. al aceptar, cambia de estado a no disponible, la ruta permanezca en el mapa y el ícono que representa al conductor se mueva hacia el destino, respetando el trayecto en un total de 10 segundos
-      // isAvailable ya se establece en false en ServicePageClient al aceptar.
+    // Solo iniciar si hay un acceptedTrip, el mapa está cargado y NO estamos ya en un viaje
+    if (acceptedTrip && isMapLoaded && map.current && driverMarker.current && currentTripStage === 'idle') {
+      setCurrentTripStage('to_origin'); // Establecer la primera etapa del viaje
 
-      // Dibujar la ruta desde la ubicación actual del conductor hasta el origen del servicio
-      async function startTripSimulation() {
-        const originCoords = driverLocation;
-        const destinationCoords = acceptedTrip!.originCoordinates;
-        
+      async function startFirstLegSimulation() {
+        const originCoords = driverLocation; // Ubicación actual del conductor
+        const destinationCoords = acceptedTrip!.originCoordinates; // Origen del servicio
+
         const route = await drawRoute(originCoords, destinationCoords);
-        
-        // Solo iniciar la simulación si se obtuvo una ruta válida con geometría y coordenadas
+
         if (route && route.geometry && route.geometry.coordinates) {
           cleanupSim = simulateDriverMovement(route);
         } else {
-          console.error("No se pudo iniciar la simulación de movimiento: Ruta inválida o incompleta.");
-          onTripEnd(); // Finalizar el "viaje" si no se puede simular (vuelve a disponible)
+          console.error("Mapbox: No se pudo iniciar la simulación de la PRIMERA ETAPA: Ruta inválida o incompleta.");
+          onTripEnd(); // Finalizar el "viaje" si no se puede simular
+          setCurrentTripStage('idle'); // Restablecer estado
         }
       }
-      startTripSimulation();
+      startFirstLegSimulation();
     }
 
     return () => {
       if (cleanupSim) cleanupSim();
     };
-  }, [drawRoute, simulateDriverMovement, acceptedTrip, isMapLoaded]); // Reordenar dependencias para consistencia
+  }, [acceptedTrip, isMapLoaded, currentTripStage, drawRoute, simulateDriverMovement, onTripEnd]); // 'driverLocation' removido de las dependencias
+
+  // === Efecto para manejar la segunda etapa del viaje (al destino final del servicio) ===
+  useEffect(() => {
+    let cleanupSim: (() => void) | undefined;
+    if (currentTripStage === 'to_destination' && acceptedTrip && isMapLoaded && map.current && driverMarker.current) {
+      console.log("Mapbox: Iniciando cuenta atrás de 2 segundos para el viaje al destino final...");
+      const delayTimeout = setTimeout(async () => {
+        console.log("Mapbox: Iniciando simulación del viaje al destino final.");
+        // Dibujar la ruta desde el ORIGEN del servicio (donde está ahora) hasta el DESTINO final del servicio
+        const originCoords = acceptedTrip.originCoordinates; // El conductor está en el origen del servicio
+        const destinationCoords = acceptedTrip.destinationCoordinates; // Destino final del servicio
+
+        const route = await drawRoute(originCoords, destinationCoords);
+
+        if (route && route.geometry && route.geometry.coordinates) {
+          cleanupSim = simulateDriverMovement(route);
+        } else {
+          console.error("Mapbox: No se pudo iniciar la simulación de la SEGUNDA ETAPA: Ruta inválida o incompleta.");
+          onTripEnd(); // Finalizar el "viaje" si no se puede simular
+          setCurrentTripStage('idle'); // Restablecer estado
+        }
+      }, 2000); // Esperar 2 segundos
+
+      return () => {
+        clearTimeout(delayTimeout);
+        if (cleanupSim) cleanupSim();
+      };
+    }
+  }, [currentTripStage, acceptedTrip, isMapLoaded, drawRoute, simulateDriverMovement, onTripEnd]);
+
 
   // Asegurarse de que el marcador del conductor esté siempre en `driverLocation`
   useEffect(() => {
