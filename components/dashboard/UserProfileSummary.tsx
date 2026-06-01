@@ -6,10 +6,18 @@ import { getTowerVehicles } from "@/app/actions/vehicle"; // Usar la nueva Serve
 import { useEffect, useState, useRef } from "react"; // Importa useRef
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useNoVehicleErrorModal } from "@/components/providers/NoVehicleErrorModalProvider";
 
 interface Vehicle {
   vehicle_id: string;
+  createdAt: Date; // Asumiendo que createdAt está disponible para ordenar
   brand: string;
   model: string;
   year: number;
@@ -20,6 +28,7 @@ export default function UserProfileSummary() {
   const { user, isLoaded } = useUser();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState(false);
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
 
@@ -52,11 +61,18 @@ export default function UserProfileSummary() {
       setIsLoadingVehicles(true);
       try {
         const result = await getTowerVehicles(); // Llamar a la nueva Server Action
-        if (result.success && result.data) {
-          setVehicles(result.data as Vehicle[]);
+        if (result.success && result.data && (result.data as Vehicle[]).length > 0) {
+          const fetchedVehicles = result.data as Vehicle[];
+          setVehicles(fetchedVehicles);
+          // Seleccionar el vehículo más recientemente añadido (el último si está ordenado ascendentemente por createdAt)
+          // Asumiendo que result.data ya viene ordenado por createdAt en orden ascendente o el último es el más reciente.
+          // Si no, necesitaríamos ordenar aquí:
+          // const sortedVehicles = [...fetchedVehicles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          setSelectedVehicleId(fetchedVehicles[fetchedVehicles.length - 1].vehicle_id);
         } else {
           console.error("Error al obtener vehículos del Tower:", result.error);
           setVehicles([]); // Asegurarse de que vehicles sea un array vacío en caso de error
+          setSelectedVehicleId(null); // No hay vehículo seleccionado si no hay ninguno
         }
       } catch (error) {
         console.error("Excepción al obtener vehículos del Tower:", error);
@@ -92,7 +108,7 @@ border border-slate-800">
   }
 
   const avgRating = 4.8;
-  const currentVehicle = vehicles && vehicles.length > 0 ? vehicles[0] : null;
+  const currentVehicle = vehicles?.find(v => v.vehicle_id === selectedVehicleId) || null;
 
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col       
@@ -124,6 +140,7 @@ h-full">
                   ? "bg-green-600 hover:bg-green-500 text-white"
                   : "bg-slate-700 hover:bg-slate-600 text-white"
                 }`}
+              disabled={!selectedVehicleId} // Deshabilitar si no hay vehículo seleccionado
             >
               {isAvailable ? "Disponible" : "No Disponible"}
             </Button>
@@ -148,14 +165,33 @@ h-full">
           </div>
         </div>
         <div className="flex flex-col w-full h-full">
-          <h3 className="text-md font-bold text-white mb-2">Vehículo Actual</h3>
-          {currentVehicle ? (
-            <div className="space-y-1 text-slate-400 text-sm flex-1">
-              <p><span className="font-semibold text-white">Marca:</span> {currentVehicle.brand}</p>
-              <p><span className="font-semibold text-white">Modelo:</span> {currentVehicle.model}</p>
-              <p><span className="font-semibold text-white">Año:</span> {currentVehicle.year}</p>
-              <p><span className="font-semibold text-white">Carga Máx.:</span> {currentVehicle.max_load}
-                kg</p>
+          <h3 className="text-md font-bold text-white mb-2">Mis Vehículos</h3>
+          {vehicles && vehicles.length > 0 ? (
+            <div className="flex flex-col space-y-4 flex-1">
+              <Select
+                value={selectedVehicleId || ''}
+                onValueChange={(value) => setSelectedVehicleId(value)}
+              >
+                <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                  <SelectValue placeholder="Seleccionar vehículo" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                  {vehicles.map((vehicle) => (
+                    <SelectItem key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
+                      {vehicle.brand} {vehicle.model} ({vehicle.year})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {currentVehicle && (
+                <div className="space-y-1 text-slate-400 text-sm mt-4">
+                  <p><span className="font-semibold text-white">Marca:</span> {currentVehicle.brand}</p>
+                  <p><span className="font-semibold text-white">Modelo:</span> {currentVehicle.model}</p>
+                  <p><span className="font-semibold text-white">Año:</span> {currentVehicle.year}</p>
+                  <p><span className="font-semibold text-white">Carga Máx.:</span> {currentVehicle.max_load} kg</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center p-4 bg-slate-800/50 rounded-lg flex-1 flex flex-col              
