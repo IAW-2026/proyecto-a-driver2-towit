@@ -172,10 +172,10 @@ h-full">
                 value={selectedVehicleId || ''}
                 onValueChange={(value) => setSelectedVehicleId(value)}
               >
-                <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                <SelectTrigger className="w-full bg-slate-900/70 border-slate-700 text-white">
                   <SelectValue placeholder="Seleccionar vehículo" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                <SelectContent className="bg-slate-900/90 border-slate-700 text-white">
                   {vehicles.map((vehicle) => (
                     <SelectItem key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
                       {vehicle.brand} {vehicle.model} ({vehicle.year})
