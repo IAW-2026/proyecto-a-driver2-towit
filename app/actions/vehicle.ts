@@ -173,19 +173,9 @@ export async function deleteVehicle(vehicleId: string): Promise<VehicleActionRes
   }
 
   try {
-    const tower = await prisma.tower.findUnique({
-      where: { clerk_id: userId },
-      select: { tower_id: true },
-    });
-
-    if (!tower) {
-      return { success: false, error: "No se encontró el perfil de Tower." };
-    }
-
     await prisma.vehicle.delete({
       where: {
         vehicle_id: vehicleId,
-        tower_id: tower.tower_id, // Asegurarse de que el vehículo pertenece al Tower actual
       },
     });
     revalidatePath("/vehicles");

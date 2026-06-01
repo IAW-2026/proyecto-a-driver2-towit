@@ -100,6 +100,93 @@ export async function getAllAdmins(): Promise<AdminActionResponse> {
 }
 
 /**
+ * Actualiza un registro de la tabla Admin.
+ * Requiere rol de administrador.
+ * @param adminId El ID de Prisma del administrador a actualizar.
+ * @param data Los campos a actualizar (full_name, email).
+ */
+export async function updateAdmin(
+  adminId: string,
+  data: { full_name?: string; email?: string }
+): Promise<AdminActionResponse> {
+  if (!await isAdmin()) {
+    return { success: false, error: "No autorizado. Solo administradores pueden actualizar administradores." };
+  }
+  try {
+    const updatedAdmin = await prisma.admin.update({
+      where: { admin_id: adminId },
+      data: {
+        full_name: data.full_name,
+        email: data.email,
+      },
+    });
+
+    // Opcional: Si el email o nombre completo del Admin cambia, también actualizar en Clerk
+    if (updatedAdmin.clerk_id && (data.full_name !== undefined || data.email !== undefined)) {
+      const clerkUpdateParams: { firstName?: string; lastName?: string; emailAddress?: string } = {};
+      if (data.full_name !== undefined) {
+        const nameParts = data.full_name.split(' ');
+        clerkUpdateParams.firstName = nameParts[0] || '';
+        clerkUpdateParams.lastName = nameParts.slice(1).join(' ') || '';
+      }
+      if (data.email !== undefined) {
+        clerkUpdateParams.emailAddress = data.email;
+      }
+
+      if (Object.keys(clerkUpdateParams).length > 0) {
+        const client = await clerkClient();
+        client.users.updateUser(updatedAdmin.clerk_id, clerkUpdateParams);
+        console.log(`Clerk user ${updatedAdmin.clerk_id} (Admin) updated from admin dashboard.`);
+      }
+    }
+
+    revalidatePath("/admin");
+    return { success: true, data: updatedAdmin };
+  } catch (error: any) {
+    console.error(`Error al actualizar Admin ${adminId}:`, error);
+    return { success: false, error: error.message || "Error al actualizar el administrador." };
+  }
+}
+
+/**
+ * Elimina un registro de la tabla Admin.
+ * Requiere rol de administrador.
+ * @param adminId El ID de Prisma del administrador a eliminar.
+ */
+export async function deleteAdmin(adminId: string): Promise<AdminActionResponse> {
+  if (!await isAdmin()) {
+    return { success: false, error: "No autorizado. Solo administradores pueden eliminar administradores." };
+  }
+  try {
+    const adminToDelete = await prisma.admin.findUnique({
+      where: { admin_id: adminId },
+      select: { clerk_id: true },
+    });
+
+    if (!adminToDelete) {
+      return { success: false, error: "Administrador no encontrado." };
+    }
+
+    // 1. Eliminar de Clerk
+    await clerkClient().then((client) => client.users.deleteUser(adminToDelete.clerk_id));
+    console.log(`Clerk user ${adminToDelete.clerk_id} (Admin) deleted.`);
+
+    // 2. Eliminar de la base de datos de Neon (esto también se gestiona por el webhook user.deleted,
+    // pero lo hacemos explícitamente aquí por si acaso, y para mantener la coherencia del flujo de acción directa).
+    await prisma.admin.delete({
+      where: { admin_id: adminId },
+    });
+    console.log(`Admin ${adminId} deleted from Neon database.`);
+
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error al eliminar Admin ${adminId}:`, error);
+    return { success: false, error: error.message || "Error al eliminar el administrador." };
+  }
+}
+
+/**
  * Crea un nuevo usuario (Tower o Admin) en Clerk y en la base de datos de Prisma.
  * Requiere rol de administrador.
  */
