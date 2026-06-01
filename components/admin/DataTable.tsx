@@ -1,12 +1,23 @@
 import React from 'react';
+import { Button } from "@/components/ui/button";
 
 interface DataTableProps<T extends Record<string, any>> {
   title: string;
   data: T[];
   emptyMessage?: string;
+  idFieldName: string; // Nombre del campo que contiene el ID único de la fila
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export default function DataTable<T extends Record<string, any>>({ title, data, emptyMessage = "No hay datos para mostrar." }: DataTableProps<T>) {
+export default function DataTable<T extends Record<string, any>>({
+  title,
+  data,
+  emptyMessage = "No hay datos para mostrar.",
+  idFieldName,
+  onEdit,
+  onDelete,
+}: DataTableProps<T>) {
   if (!data || data.length === 0) {
     return (
       <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 h-full flex flex-col">
@@ -16,7 +27,7 @@ export default function DataTable<T extends Record<string, any>>({ title, data, 
     );
   }
 
-  const headers = Object.keys(data[0]);
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
 
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 h-full flex flex-col">
@@ -34,6 +45,9 @@ export default function DataTable<T extends Record<string, any>>({ title, data, 
                   {header.replace(/_/g, ' ')}
                 </th>
               ))}
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
@@ -48,6 +62,24 @@ export default function DataTable<T extends Record<string, any>>({ title, data, 
                         : String(row[header])}
                   </td>
                 ))}
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onEdit(row[idFieldName] as string)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => onDelete(row[idFieldName] as string)}
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

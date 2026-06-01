@@ -23,6 +23,15 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const handleEditTower = (id: string) => { console.log(`Editando Tower con ID: ${id}`); /* Lógica para abrir modal de edición de Tower */ };
+  const handleDeleteTower = (id: string) => { console.log(`Eliminando Tower con ID: ${id}`); /* Lógica para abrir modal de confirmación de eliminación de Tower */ };
+
+  const handleEditVehicle = (id: string) => { console.log(`Editando Vehículo con ID: ${id}`); /* Lógica para abrir modal de edición de Vehicle */ };
+  const handleDeleteVehicle = (id: string) => { console.log(`Eliminando Vehículo con ID: ${id}`); /* Lógica para abrir modal de confirmación de eliminación de Vehicle */ };
+
+  const handleEditAdmin = (id: string) => { console.log(`Editando Admin con ID: ${id}`); /* Lógica para abrir modal de edición de Admin */ };
+  const handleDeleteAdmin = (id: string) => { console.log(`Eliminando Admin con ID: ${id}`); /* Lógica para abrir modal de confirmación de eliminación de Admin */ };
+
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
@@ -95,9 +104,30 @@ export default function AdminDashboard() {
 
       <h2 className="text-2xl font-bold text-white pt-4">Datos de la Base de Datos</h2>
 
-      <DataTable title="Towers" data={data.towers} emptyMessage="No hay towers registrados." />
-      <DataTable title="Vehículos" data={data.vehicles} emptyMessage="No hay vehículos registrados." />
-      <DataTable title="Administradores" data={data.admins} emptyMessage="No hay administradores registrados." />
+      <DataTable
+        title="Administradores"
+        data={data.admins}
+        emptyMessage="No hay administradores registrados."
+        idFieldName="admin_id"
+        onEdit={handleEditAdmin}
+        onDelete={handleDeleteAdmin}
+      />
+      <DataTable
+        title="Towers"
+        data={data.towers}
+        emptyMessage="No hay towers registrados."
+        idFieldName="tower_id"
+        onEdit={handleEditTower}
+        onDelete={handleDeleteTower}
+      />
+      <DataTable
+        title="Vehículos"
+        data={data.vehicles}
+        emptyMessage="No hay vehículos registrados."
+        idFieldName="vehicle_id"
+        onEdit={handleEditVehicle}
+        onDelete={handleDeleteVehicle}
+      />
       {/* Añadir DataTable para Assignments cuando el modelo esté implementado */}
       {data.assignments.length === 0 && (
         <p className="text-slate-400 text-center">Nota: El modelo de Assignments aún no está implementado en la base de datos.</p>
