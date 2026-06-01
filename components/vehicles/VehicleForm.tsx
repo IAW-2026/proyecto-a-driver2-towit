@@ -102,9 +102,6 @@ export default function VehicleForm({ vehicle, onClose, onSuccess }: VehicleForm
           <DialogTitle className="text-xl font-bold text-white">
             {vehicle ? "Editar Vehículo" : "Añadir Nuevo Vehículo"}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
-            {vehicle ? "Modifica los detalles de tu vehículo." : "Introduce los detalles de tu nuevo vehículo de remolque."}
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -174,7 +171,7 @@ export default function VehicleForm({ vehicle, onClose, onSuccess }: VehicleForm
 
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center gap-2 pt-4 border-t bg-transparent border-slate-800 mt-8">
           {/* Eliminado: Botón de eliminar */}
-          <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 sm:ml-auto w-full sm:w-auto">
             <Button
               type="button"
               variant="outline"

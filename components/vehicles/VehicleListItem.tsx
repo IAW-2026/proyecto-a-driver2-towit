@@ -50,12 +50,12 @@ export default function VehicleListItem({ vehicle, onVehicleUpdated, onVehicleDe
   };
 
   return (
-    <li className="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-      <div className="flex-1 min-w-0">
+    <li className="flex flex-wrap items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+      <div className="md:flex-1 min-w-0 w-full md:w-auto">
         <p className="text-white text-lg font-semibold truncate">{vehicle.brand} {vehicle.model}</p>
         <p className="text-slate-400 text-sm">{vehicle.year} - {vehicle.max_load} kg Max.</p>
       </div>
-      <div className="flex gap-2 ml-4">
+      <div className="flex gap-2 ml-4 justify-end w-full md:w-auto">
         <Button
           variant="secondary"
           size="sm"
@@ -75,7 +75,7 @@ export default function VehicleListItem({ vehicle, onVehicleUpdated, onVehicleDe
       </div>
 
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="w-full max-w-2xl bg-slate-900/70 p-8 rounded-lg shadow-lg border border-slate-800 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-9/10 sm:w-4/5 md:w-full md:max-w-lg bg-slate-900/70 md:p-8 rounded-lg shadow-lg border border-slate-800 max-h-[90vh] overflow-y-auto">
           <VehicleForm
             vehicle={vehicle}
             onClose={handleCloseEditModal}
@@ -89,14 +89,14 @@ export default function VehicleListItem({ vehicle, onVehicleUpdated, onVehicleDe
 
       {/* Confirmación de eliminación */}
       <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
-        <DialogContent className="max-w-md bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800">
+        <DialogContent className="w-9/10 sm:w-4/5 md:max-w-md bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white">Confirmar Eliminación</DialogTitle>
             <DialogDescription className="text-slate-400">
               Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 p-2 pt-4">
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 p-2 pt-4 bg-transparent">
             <DialogClose asChild>
               <Button
                 type="button"

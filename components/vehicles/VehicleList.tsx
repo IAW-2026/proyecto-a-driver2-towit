@@ -52,7 +52,7 @@ export default function VehicleList() {
 
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col">
-      <div className="flex justify-end mb-6">
+      <div className="flex justify-center md:justify-end mb-4 md:mb-6">
         <Button
           onClick={() => setShowAddModal(true)}
           className="bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold"
@@ -77,7 +77,7 @@ export default function VehicleList() {
       )}
 
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="w-full max-w-2xl bg-slate-900/70 p-8 rounded-lg shadow-lg border border-slate-800 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm bg-slate-900/70 p-8 rounded-lg shadow-lg border border-slate-800 max-h-[90vh] overflow-y-auto">
           <VehicleForm
             onClose={() => setShowAddModal(false)}
             onSuccess={handleVehicleChange}
