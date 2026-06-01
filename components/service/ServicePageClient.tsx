@@ -25,6 +25,8 @@ interface ServiceRequest {
   originAddress: string;
   serviceValue: number;
   originCoordinates: Coordinates;
+  destinationAddress: string; // Nuevo campo
+  destinationCoordinates: Coordinates; // Nuevo campo
 }
 
 export default function ServicePageClient() {
@@ -121,6 +123,8 @@ export default function ServicePageClient() {
           <ServiceRequestCard
             {...currentRequest}
             onAccept={handleAcceptRequest}
+            // Asegurarse de pasar la dirección de destino a la tarjeta
+            destinationAddress={currentRequest.destinationAddress}
           />
         )}
       </div>

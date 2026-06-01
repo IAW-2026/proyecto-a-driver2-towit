@@ -9,6 +9,7 @@ interface ServiceRequestCardProps {
   vehicleModel: string;
   vehiclePlate: string; // Patente
   originAddress: string;
+  destinationAddress: string; // Nuevo: dirección de destino
   serviceValue: number;
   onAccept: (tripId: string) => void; // Función para manejar la aceptación del pedido
   tripId: string; // ID del viaje asociado al pedido
@@ -20,6 +21,7 @@ export default function ServiceRequestCard({
   vehicleModel,
   vehiclePlate,
   originAddress,
+  destinationAddress, // Nuevo: desestructurar la dirección de destino
   serviceValue,
   onAccept,
   tripId,
@@ -43,7 +45,10 @@ export default function ServiceRequestCard({
           <span className="font-semibold">Vehículo:</span> {vehicleModel} ({vehiclePlate})
         </p>
         <p className="text-base text-slate-300">
-          <span className="font-semibold">Dirección:</span> {originAddress}
+          <span className="font-semibold">Origen:</span> {originAddress}
+        </p>
+        <p className="text-base text-slate-300">
+          <span className="font-semibold">Destino:</span> {destinationAddress}
         </p>
         <p className="text-right text-2xl font-bold text-green-400">
           ${serviceValue.toFixed(2)}
