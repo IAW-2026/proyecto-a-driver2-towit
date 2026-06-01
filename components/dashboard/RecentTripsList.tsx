@@ -3,13 +3,33 @@
 import Link from "next/link";
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import mockTripsData from '@/lib/mocks/trips.json'; // Importa el archivo JSON
+
+interface Customer {
+  full_name: string;
+}
+
+interface Coordinates {
+  lat: string;
+  long: string;
+}
+
+interface Trip {
+  id: string;
+  date: string;
+  time: string; // Incluir la hora para ordenar correctamente
+  customer: Customer;
+  destination: Coordinates;
+  status: string;
+}
 
 export default function RecentTripsList() {
-  // Datos mockeados
-  const recentTrips = [
-    { id: "trip_001", date: "2026-05-28", customer: "Juan Pérez", destination: "Av. Libertador 1234" },
-    { id: "trip_002", date: "2026-05-27", customer: "María López", destination: "Calle Falsa 123" },
-  ];
+  // Obtener los últimos 2 viajes del JSON
+  const recentTrips: Trip[] = mockTripsData
+    .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime()) // Ordenar por fecha y hora descendente
+    .slice(0, 2) as Trip[]; // Tomar los dos más recientes
 
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full">
@@ -17,8 +37,10 @@ export default function RecentTripsList() {
       <ul className="space-y-3 flex-1">
         {recentTrips.map((trip) => (
           <li key={trip.id} className="border-b border-slate-800 pb-3 last:border-b-0 last:pb-0">
-            <p className="text-white text-base">{trip.customer}</p>
-            <p className="text-slate-400 text-sm">{trip.date} - {trip.destination}</p>
+            <p className="text-white text-base">{trip.customer.full_name}</p>
+            <p className="text-slate-400 text-sm">
+              {format(new Date(`${trip.date}T${trip.time}`), 'dd/MM/yyyy - HH:mm', { locale: es })} - Destino: Lat {trip.destination.lat}, Long {trip.destination.long}
+            </p>
           </li>
         ))}
       </ul>

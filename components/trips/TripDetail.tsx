@@ -5,82 +5,61 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils"; // Importar la utilidad cn
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import mockTripsData from '@/lib/mocks/trips.json'; // Importa el archivo JSON
+
+interface Customer {
+  customer_id: string;
+  full_name: string;
+}
+
+interface Vehicle {
+  vehicle_id: string;
+  brand: string;
+  model: string;
+  year: number;
+  weight: number;
+}
+
+interface Coordinates {
+  lat: string;
+  long: string;
+}
 
 interface TripDetailData {
-  id: string;
+  id: string; // trip_id del JSON
+  tower_id: string;
+  customer: Customer;
+  vehicle: Vehicle;
+  origin: Coordinates;
+  destination: Coordinates;
   date: string;
-  customerName: string;
-  customerRating: number | null;
-  origin: string; // e.g., "Calle Falsa 123"
-  destination: string; // e.g., "Av. Siempreviva 742"
+  time: string;
   status: string;
   amount: number;
-  vehicle: {
-    brand: string;
-    model: string;
-    year: number;
-  };
+  // customerRating: number | null; // La calificación del cliente vendría de Feedback App
   receiptLink: string; // Placeholder for now
   reportCustomerLink: string; // Placeholder for now
 }
 
-const mockTripDetails: Record<string, TripDetailData> = {
-  "trip_001": {
-    id: "trip_001",
-    date: "2026-05-29",
-    customerName: "Juan Pérez",
-    customerRating: 4.5,
-    origin: "Av. Libertador 1234, CABA",
-    destination: "Av. Corrientes 800, CABA",
-    status: "Completado",
-    amount: 150.00,
-    vehicle: { brand: "Ford", model: "Fiesta", year: 2015 },
-    receiptLink: "/payments/receipt/pay_001",
-    reportCustomerLink: "/feedback/report/customer/trip_001",
-  },
-  "trip_002": {
-    id: "trip_002",
-    date: "2026-05-28",
-    customerName: "María López",
-    customerRating: 3.9,
-    origin: "Calle Falsa 123, Bernal",
-    destination: "Quilmes Centro",
-    status: "Completado",
-    amount: 120.50,
-    vehicle: { brand: "Chevrolet", model: "Corsa", year: 2010 },
-    receiptLink: "/payments/receipt/pay_002",
-    reportCustomerLink: "/feedback/report/customer/trip_002",
-  },
-  "trip_003": {
-    id: "trip_003",
-    date: "2026-05-27",
-    customerName: "Carlos Gómez",
-    customerRating: null, // No calificado
-    origin: "Ruta 2 Km 50, La Plata",
-    destination: "City Bell",
-    status: "Cancelado",
-    amount: 0.00,
-    vehicle: { brand: "Volkswagen", model: "Gol", year: 2018 },
-    receiptLink: "#",
-    reportCustomerLink: "/feedback/report/customer/trip_003",
-  },
-  "trip_004": {
-    id: "trip_004",
-    date: "2026-05-26",
-    customerName: "Ana Fernández",
-    customerRating: 5.0,
-    origin: "Diagonal Norte 500, CABA",
-    destination: "Obelisco, CABA",
-    status: "Completado",
-    amount: 200.00,
-    vehicle: { brand: "Toyota", model: "Corolla", year: 2020 },
-    receiptLink: "/payments/receipt/pay_004",
-    reportCustomerLink: "/feedback/report/customer/trip_004",
-  },
-};
-
 // Define un viaje mockeado de fallback que se usará para la vista previa.
-const FALLBACK_MOCK_TRIP: TripDetailData = mockTripDetails["trip_001"];
+// Usamos el primer elemento del JSON para el fallback, o un objeto vacío si el JSON está vacío.
+const FALLBACK_MOCK_TRIP: TripDetailData = (mockTripsData[0] || {
+  id: "trip_fallback",
+  tower_id: "tower_fallback_id",
+  customer: { customer_id: "cust_fallback_id", full_name: "Cliente de Ejemplo" },
+  vehicle: { vehicle_id: "veh_fallback_id", brand: "Marca", model: "Modelo", year: 2000, weight: 1000 },
+  origin: { lat: "-34.0000", long: "-58.0000" },
+  destination: { lat: "-34.1000", long: "-58.1000" },
+  date: "2026-01-01",
+  time: "12:00",
+  status: "Completado",
+  amount: 100.00,
+  receiptLink: "#",
+  reportCustomerLink: "#"
+}) as TripDetailData;
+
 
 interface TripDetailProps {
   tripId: string;
@@ -105,20 +84,21 @@ const RenderTripContent: React.FC<{ tripData: TripDetailData; isMock?: boolean }
           <strong className="text-white">ID del Viaje:</strong> {tripData.id}
         </p>
         <p>
-          <strong className="text-white">Fecha:</strong> {tripData.date}
+          <strong className="text-white">Fecha y Hora:</strong> {format(new Date(`${tripData.date}T${tripData.time}`), 'dd/MM/yyyy - HH:mm', { locale: es })}
         </p>
         <p>
-          <strong className="text-white">Cliente:</strong> {tripData.customerName}
+          <strong className="text-white">Cliente:</strong> {tripData.customer.full_name}
         </p>
-        <p>
+        {/* La calificación del cliente se obtendría de Feedback App, por ahora se omite */}
+        {/* <p>
           <strong className="text-white">Calificación del Cliente:</strong>{" "}
           {tripData.customerRating !== null ? `${tripData.customerRating}/5` : "No calificado"}
+        </p> */}
+        <p className="md:col-span-2">
+          <strong className="text-white">Origen:</strong> Lat {tripData.origin.lat}, Long {tripData.origin.long}
         </p>
         <p className="md:col-span-2">
-          <strong className="text-white">Origen:</strong> {tripData.origin}
-        </p>
-        <p className="md:col-span-2">
-          <strong className="text-white">Destino:</strong> {tripData.destination}
+          <strong className="text-white">Destino:</strong> Lat {tripData.destination.lat}, Long {tripData.destination.long}
         </p>
         <p>
           <strong className="text-white">Estado:</strong> {tripData.status}
@@ -137,6 +117,9 @@ const RenderTripContent: React.FC<{ tripData: TripDetailData; isMock?: boolean }
           <p>
             <strong className="text-white">Año:</strong> {tripData.vehicle.year}
           </p>
+          <p>
+            <strong className="text-white">Peso:</strong> {tripData.vehicle.weight} kg
+          </p>
         </div>
       </div>
 
@@ -145,7 +128,7 @@ const RenderTripContent: React.FC<{ tripData: TripDetailData; isMock?: boolean }
           Volver a Mis Viajes
         </Button>
         <div className="flex flex-col sm:flex-row gap-4">
-          <Link href={tripData.receiptLink} passHref>
+          <Link href={tripData.receiptLink || ""} passHref>
             <Button variant="secondary" className="w-full sm:w-auto">
               Ver Recibo
             </Button>
@@ -169,23 +152,25 @@ export default function TripDetail({ tripId }: TripDetailProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTripDetails = async () => {
-      setIsLoading(true);
-      setError(null);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simula latencia de API
-
-      const foundTrip = mockTripDetails[tripId];
-
+    setIsLoading(true);
+    setError(null);
+    try {
+      const foundTrip = mockTripsData.find(t => t.id === tripId) as TripDetailData | undefined;
       if (foundTrip) {
         setTrip(foundTrip);
+        // Aquí podrías mockear receiptLink y reportCustomerLink si fueran dinámicos,
+        // pero por ahora, los hardcodeamos en el mock JSON si es necesario.
+        // Si no están en el JSON, se podrían generar aquí.
+        foundTrip.receiptLink = `/payments/${foundTrip.id}`; // Asumimos un enlace directo al pago
+        foundTrip.reportCustomerLink = `/feedback/report/${foundTrip.customer.customer_id}`; // Placeholder
       } else {
         setError("Viaje no encontrado.");
-        setTrip(null); // Asegurar que trip es null si no se encuentra
       }
       setIsLoading(false);
-    };
-
-    fetchTripDetails();
+    } catch (err: any) {
+      setError("Error al cargar los detalles del viaje: " + err.message);
+      setIsLoading(false);
+    }
   }, [tripId]);
 
   if (isLoading) {

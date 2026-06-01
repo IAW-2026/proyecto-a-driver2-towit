@@ -11,7 +11,7 @@ export default async function TripsDetailPage({ params }: { params: { id: string
     redirect("/home"); // Redirigir si el usuario no está autenticado
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">

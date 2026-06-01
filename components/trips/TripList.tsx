@@ -2,15 +2,40 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from "next/link";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
+import mockTripsData from '@/lib/mocks/trips.json'; // Importa el archivo JSON
+
+interface Customer {
+  customer_id: string;
+  full_name: string;
+}
+
+interface Vehicle {
+  vehicle_id: string;
+  brand: string;
+  model: string;
+  year: number;
+  weight: number;
+}
+
+interface Coordinates {
+  lat: string;
+  long: string;
+}
 
 interface Trip {
-  id: string;
+  id: string; // trip_id del JSON
+  tower_id: string;
+  customer: Customer;
+  vehicle: Vehicle;
+  origin: Coordinates;
+  destination: Coordinates;
   date: string;
-  customerName: string;
-  destination: string;
+  time: string;
   status: string;
-  amount: number;
+  amount: number; // Agregado para mantener la consistencia con el display existente
 }
 
 export default function TripList() {
@@ -19,35 +44,23 @@ export default function TripList() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchMockTrips = async () => {
-      setIsLoading(true);
-      setError(null);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const mockData: Trip[] = [
-        { id: "trip_001", date: "2026-05-29", customerName: "Juan Pérez", destination: "Av. Libertador 1234", status: "Completado", amount: 150.00 },
-        { id: "trip_002", date: "2026-05-28", customerName: "María López", destination: "Calle Falsa 123", status: "Completado", amount: 120.50 },
-        { id: "trip_003", date: "2026-05-27", customerName: "Carlos Gómez", destination: "Ruta 2 Km 50", status: "Cancelado", amount: 0.00 },
-        { id: "trip_004", date: "2026-05-26", customerName: "Ana Fernández", destination: "Diagonal Norte 500", status: "Completado", amount: 200.00 },
-        // Puedes dejar este array vacío para probar el estado sin viajes:
-        // []
-      ];
-
-      if (mockData.length > 0) {
-        setTrips(mockData);
-      } else {
-        setTrips([]);
-      }
+    // Como es un mock local, la carga es instantánea
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Usar los datos importados directamente
+      setTrips(mockTripsData as Trip[]); // Castear para asegurar el tipo
       setIsLoading(false);
-    };
-
-    fetchMockTrips();
+    } catch (err: any) {
+      setError("Error al cargar los viajes: " + err.message);
+      setIsLoading(false);
+    }
   }, []);
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center p-8 bg-slate-900/70 rounded-lg shadow-lg border border-slate-800">
-        <p className="text-slate-400">Cargando viajes...</p>
+        <p className="text-slate-400">Cargando historial de viajes...</p>
       </div>
     );
   }
@@ -74,8 +87,10 @@ export default function TripList() {
         {trips.map((trip) => (
           <li key={trip.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-white text-lg font-semibold truncate">{trip.customerName}</p>
-              <p className="text-slate-400 text-sm">{trip.date} - {trip.destination}</p>
+              <p className="text-white text-lg font-semibold truncate">{trip.customer.full_name}</p>
+              <p className="text-slate-400 text-sm">
+                {format(new Date(`${trip.date}T${trip.time}`), 'dd/MM/yyyy - HH:mm', { locale: es })} - Destino: Lat {trip.destination.lat}, Long {trip.destination.long}
+              </p>
               <p className="text-slate-500 text-xs mt-1">Status: {trip.status}</p>
             </div>
             <Link href={`/trips/${trip.id}`} className="shrink-0">
