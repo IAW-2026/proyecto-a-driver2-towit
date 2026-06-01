@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, Marker, useMap, ZoomControl } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, ZoomControl, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,7 @@ export default function InteractiveMap() {
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
 
   const [currentServiceRequest, setCurrentServiceRequest] = useState<ServiceRequest | null>(null); // Inicializar como null
+  const [routeCoordinates, setRouteCoordinates] = useState<L.LatLngExpression[]>([]); // Estado para las coordenadas de la ruta
 
   const serviceOriginPosition = useMemo(() => {
     if (currentServiceRequest) {
@@ -98,6 +99,40 @@ export default function InteractiveMap() {
     }
     return null;
   }, [currentServiceRequest]);
+
+  // Función para obtener la ruta de OSRM
+  const fetchRoute = useCallback(async (start: L.LatLngExpression, end: L.LatLngExpression) => {
+    if (!Array.isArray(start) || !Array.isArray(end)) {
+      console.error("Coordenadas de inicio o fin no válidas para la ruta.");
+      setRouteCoordinates([]);
+      return;
+    }
+
+    const startCoords = `${start[1]},${start[0]}`; // OSRM espera longitud, latitud
+    const endCoords = `${end[1]},${end[0]}`;     // OSRM espera longitud, latitud
+    const url = `https://router.project-osrm.org/route/v1/driving/${startCoords};${endCoords}?geometries=geojson`;
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error de OSRM: ${response.statusText}`);
+      }
+      const data = await response.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const routeGeoJSON = data.routes[0].geometry.coordinates;
+        // OSRM devuelve [lng, lat], Leaflet espera [lat, lng]
+        const formattedCoordinates = routeGeoJSON.map((coord: [number, number]) => [coord[1], coord[0]]);
+        setRouteCoordinates(formattedCoordinates);
+      } else {
+        setRouteCoordinates([]);
+        console.warn("No se encontró una ruta.");
+      }
+    } catch (error) {
+      console.error("Error al obtener la ruta:", error);
+      setRouteCoordinates([]);
+    }
+  }, []);
 
   // Referencias para los IDs de los temporizadores
   const scheduleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -114,6 +149,7 @@ export default function InteractiveMap() {
       acceptTimerRef.current = null;
     }
     setCurrentServiceRequest(null);
+    setRouteCoordinates([]); // Limpiar la ruta también
     console.log("Todos los temporizadores y la solicitud actual han sido limpiados.");
   }, []);
 
@@ -194,6 +230,14 @@ export default function InteractiveMap() {
     // No necesitamos una función de limpieza aquí, ya que el useEffect global de limpieza y clearAllTimers se encargan.
   }, [isAvailable, hasVehicle, currentServiceRequest, scheduleNewRequest, clearAllTimers]);
 
+  // Efecto para dibujar la ruta cuando las posiciones cambian
+  useEffect(() => {
+    if (currentServiceRequest && serviceOriginPosition) {
+      fetchRoute(currentPosition, serviceOriginPosition);
+    } else {
+      setRouteCoordinates([]); // Limpiar la ruta si no hay solicitud
+    }
+  }, [currentPosition, serviceOriginPosition, currentServiceRequest, fetchRoute]);
 
   const handleToggleAvailability = () => {
     if (!hasVehicle) {
@@ -237,6 +281,9 @@ export default function InteractiveMap() {
         <Marker position={currentPosition}></Marker>
         {serviceOriginPosition && (
           <Marker position={serviceOriginPosition} icon={serviceMarkerIcon}></Marker>
+        )}
+        {routeCoordinates.length > 0 && (
+          <Polyline positions={routeCoordinates} color="#4F46E5" weight={5} /> // Color azul para la ruta
         )}
         <ZoomControl position="bottomright" /> {/* Añadir control de zoom en la parte inferior derecha */}
       </MapContainer>
