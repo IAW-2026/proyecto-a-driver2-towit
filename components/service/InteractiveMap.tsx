@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
 import { useNoVehicleErrorModal } from "@/components/providers/NoVehicleErrorModalProvider";
 import { getTowerVehicles } from "@/app/actions/vehicle";
+import ServiceRequestCard from "./ServiceRequestCard"; // Importar el componente de pedido de servicio
 
 // Componente para re-centrar el mapa cuando la posición cambia
 function MapRecenter({ position }: { position: L.LatLngExpression }) {
@@ -43,6 +44,18 @@ export default function InteractiveMap() {
   ]); // Por defecto, centro de Buenos Aires
   const [hasVehicle, setHasVehicle] = useState(false);
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
+  const [showServiceRequestCard, setShowServiceRequestCard] = useState(true); // Estado para mostrar/ocultar la tarjeta de pedido
+
+  // Datos mock para el pedido de servicio
+  const mockServiceRequest = {
+    tripId: "mock_trip_123",
+    customerName: "Juan Pérez",
+    customerRating: 4.5,
+    vehicleModel: "Ford Fiesta",
+    vehiclePlate: "AA 123 BB",
+    originAddress: "Av. Corrientes 800, CABA",
+    serviceValue: 15000.00,
+  };
 
   useEffect(() => {
     if (isLoaded && user?.id) {
@@ -118,6 +131,20 @@ export default function InteractiveMap() {
           {isAvailable ? "Disponible" : "No Disponible"}
         </Button>
       </div>
+
+      {/* Tarjeta de Pedido de Servicio superpuesta */}
+      {showServiceRequestCard && (
+        <div className="absolute bottom-4 left-4 z-[1001] w-[90%] max-w-sm"> {/* Posicionado a la izquierda */}
+          <ServiceRequestCard
+            {...mockServiceRequest}
+            onAccept={(tripId) => {
+              console.log(`Pedido ${tripId} aceptado!`);
+              // Lógica para manejar la aceptación del pedido
+              setShowServiceRequestCard(false); // Ocultar la tarjeta después de aceptar
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
