@@ -2,21 +2,33 @@
 
 import { SignInButton, SignUpButton, UserAvatar, useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { useAccountDetailsModal } from "@/components/providers/AccountDetailsModalProvider"; // Importar el hook
+import { useRouter } from "next/navigation"; // Importar useRouter
+import { useState } from "react"; // Importar useState
+import { Button } from "@/components/ui/button"; // Importar Button
+import { MenuIcon } from "lucide-react"; // Importar MenuIcon
+import { Dialog, DialogTrigger } from "@/components/ui/dialog"; // Importar Dialog y DialogTrigger (desde components/ui/sheet.tsx)
+import MobileMenu from "./MobileMenu"; // Importar el nuevo componente MobileMenu
 
 export default function AppHeader() {
-  const { isSignedIn } = useUser();
-  const { openModal } = useAccountDetailsModal(); // Usar el hook para obtener openModal
+  const { isSignedIn = false } = useUser();
+  const router = useRouter(); // Inicializar useRouter
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar la apertura del menú móvil
+
+  const handleOpenMenu = () => setIsMenuOpen(true);
+  const handleCloseMenu = () => setIsMenuOpen(false);
 
   return (
     <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-black tracking-wider text-yellow-500">Tow<span className="text-white">It</span></span>
-          <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Towers</span>
+          <Link href="/home" className="flex items-center gap-2"> {/* Enlace al inicio */}
+            <span className="text-2xl font-black tracking-wider text-yellow-500">Tow<span className="text-white">It</span></span>
+            <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Towers</span>
+          </Link>
         </div>
 
-        <nav className="flex items-center gap-4">
+        {/* Navegación para escritorio */}
+        <nav className="hidden md:flex items-center gap-4">
           {!isSignedIn ? (
             <>
               <SignInButton mode="modal">
@@ -39,7 +51,7 @@ export default function AppHeader() {
                 Mis Vehículos
               </Link>
               <button
-                onClick={openModal} // Llamar a openModal del contexto
+                onClick={() => router.push('/account-details')} // Redirigir directamente a la página
                 className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center justify-between space-x-2 cursor-pointer"
               >
                 <span>Mi Cuenta</span>
@@ -48,6 +60,19 @@ export default function AppHeader() {
             </>
           )}
         </nav>
+
+        {/* Menú móvil */}
+        <div className="md:hidden flex items-center">
+          <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={handleOpenMenu}>
+                <MenuIcon className="size-6 text-white" />
+                <span className="sr-only">Toggle Menu</span>
+              </Button>
+            </DialogTrigger>
+            <MobileMenu isSignedIn={isSignedIn} onClose={handleCloseMenu} />
+          </Dialog>
+        </div>
       </div>
     </header>
   );
