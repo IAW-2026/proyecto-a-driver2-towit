@@ -165,9 +165,9 @@ h-full">
           </div>
         </div>
         <div className="flex flex-col w-full h-full">
-          <h3 className="text-md font-bold text-white mb-2">Mis Vehículos</h3>
+          <h3 className="text-md font-bold text-white mb-2">Vehículo Actual</h3>
           {vehicles && vehicles.length > 0 ? (
-            <div className="flex flex-col space-y-4 flex-1">
+            <div className="flex flex-col space-y-2 flex-1">
               <Select
                 value={selectedVehicleId || ''}
                 onValueChange={(value) => setSelectedVehicleId(value)}
@@ -178,20 +178,16 @@ h-full">
                 <SelectContent className="bg-slate-900/90 border-slate-700 text-white">
                   {vehicles.map((vehicle) => (
                     <SelectItem key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
-                      {vehicle.brand} {vehicle.model} ({vehicle.year})
+                      {vehicle.brand} {vehicle.model} ({vehicle.max_load + "kg"})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-
-              {currentVehicle && (
-                <div className="space-y-1 text-slate-400 text-sm mt-4">
-                  <p><span className="font-semibold text-white">Marca:</span> {currentVehicle.brand}</p>
-                  <p><span className="font-semibold text-white">Modelo:</span> {currentVehicle.model}</p>
-                  <p><span className="font-semibold text-white">Año:</span> {currentVehicle.year}</p>
-                  <p><span className="font-semibold text-white">Carga Máx.:</span> {currentVehicle.max_load} kg</p>
-                </div>
-              )}
+              <Link href="/vehicles" className="mt-auto w-full">
+                <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold">
+                  Añadir Vehículos
+                </Button>
+              </Link>
             </div>
           ) : (
             <div className="text-center p-4 bg-slate-800/50 rounded-lg flex-1 flex flex-col              
