@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
 import { useNoVehicleErrorModal } from "@/components/providers/NoVehicleErrorModalProvider";
 import { getTowerVehicles } from "@/app/actions/vehicle";
-
-// Un componente auxiliar para actualizar la vista del mapa, ya que useMap solo funciona dentro de MapContainer
-function MapUpdater({ center, zoom }: { center: L.LatLngExpression; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, zoom);
-  }, [map, center, zoom]);
-  return null;
-}
 
 export default function InteractiveMap() {
   // Mover la configuración de iconos de Leaflet a un useEffect para asegurar que se ejecute solo en el cliente
@@ -91,14 +82,16 @@ export default function InteractiveMap() {
         center={mapCenter}
         zoom={13}
         scrollWheelZoom={true}
+        zoomControl={false} // Deshabilitar el control de zoom por defecto
         className="h-full w-full z-0"
       >
-        <MapUpdater center={mapCenter} zoom={13} />
+        {/* MapUpdater eliminado, MapContainer gestiona el centro directamente */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Marker position={currentPosition}></Marker>
+        <ZoomControl position="bottomright" /> {/* Añadir control de zoom en la parte inferior derecha */}
       </MapContainer>
 
       {/* Botón de Disponibilidad superpuesto */}
