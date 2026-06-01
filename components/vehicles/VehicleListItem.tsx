@@ -96,7 +96,7 @@ export default function VehicleListItem({ vehicle, onVehicleUpdated, onVehicleDe
               Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 bg-slate/70 p-2 pt-4">
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 p-2 pt-4">
             <DialogClose asChild>
               <Button
                 type="button"

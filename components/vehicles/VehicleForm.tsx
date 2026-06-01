@@ -172,7 +172,7 @@ export default function VehicleForm({ vehicle, onClose, onSuccess }: VehicleForm
           </div>
         )}
 
-        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center gap-2 pt-4 border-t border-slate-800 mt-8">
+        <DialogFooter className="flex flex-col sm:flex-row sm:justify-between items-center gap-2 pt-4 border-t bg-transparent border-slate-800 mt-8">
           {/* Eliminado: Botón de eliminar */}
           <div className="flex gap-2 sm:ml-auto w-full sm:w-auto">
             <Button
