@@ -128,12 +128,12 @@ const RenderTripContent: React.FC<{ tripData: TripDetailData; isMock?: boolean }
           Volver a Mis Viajes
         </Button>
         <div className="flex flex-col sm:flex-row gap-4">
-          <Link href={tripData.receiptLink || ""} passHref>
+          <Link href={tripData.receiptLink || "#"} passHref>
             <Button variant="secondary" className="w-full sm:w-auto">
               Ver Recibo
             </Button>
           </Link>
-          <Link href={tripData.reportCustomerLink} passHref>
+          <Link href={tripData.reportCustomerLink || "#"} passHref>
             <Button variant="destructive" className="w-full sm:w-auto">
               Reportar Cliente
             </Button>
