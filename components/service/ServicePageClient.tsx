@@ -13,7 +13,9 @@ export default function ServicePageClient() {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       <ServiceHeader />
-      <DynamicInteractiveMap />
+      <div className="flex-1 w-full h-full"> {/* Contenedor para que el mapa ocupe el espacio restante */}
+        <DynamicInteractiveMap />
+      </div>
     </div>
   );
 }
