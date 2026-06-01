@@ -22,7 +22,7 @@ export default function RecentTripsList() {
           </li>
         ))}
       </ul>
-      <Link href="/trips" className="mt-6 w-full">
+      <Link href="/trips" className="mt-6 w-full block">
         <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold">
           Ver todos los viajes
         </Button>
