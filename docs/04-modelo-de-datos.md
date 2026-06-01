@@ -39,6 +39,7 @@ Posibles valores de status: `pending`, `accepted`, `completed`, `cancelled`
 #### **Admin**
 - `Admin_id: string`
 - `clerk_id: string`
+- `email: string`
 - `full_name: string`
 
 ---
@@ -83,6 +84,7 @@ Posibles valores de status: `pending`, `accepted`, `completed`, `cancelled`
 #### **Admin**
 - `Admin_id: string`
 - `clerk_id: string`
+- `email: string`
 - `full_name: string`
 
 <br>

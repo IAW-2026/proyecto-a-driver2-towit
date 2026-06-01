@@ -52,7 +52,7 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === 'user.created') {
-    const { id, first_name, last_name, email_addresses } = evt.data;
+    const { id, first_name, last_name, email_addresses, public_metadata } = evt.data;
 
     if (!id || !email_addresses || email_addresses.length === 0) {
         console.error('Error: Missing user ID or email addresses in webhook event', evt.data);
@@ -64,28 +64,45 @@ export async function POST(req: Request) {
 
     try {
       const client = await clerkClient();
+      
+      // Determinar el rol. Si public_metadata ya tiene un rol, usarlo. De lo contrario, usar 'tower'.
+      const initialRole = (public_metadata as any)?.role || 'tower';
 
-      // Actualizar el rol del usuario en Clerk
-      await client.users.updateUser(id, {
-        publicMetadata: {
-          role: 'tower',
-        },
-      });
-      console.log(`User ${id} updated with publicMetadata: { role: 'tower' }`);
+      // Actualizar el rol del usuario en Clerk solo si necesita ser establecido o cambiado
+      // Esto evita sobrescribir un rol ya definido por una creación programática (e.g., admin)
+      if (!(public_metadata as any)?.role || (public_metadata as any).role !== initialRole) {
+          await client.users.updateUser(id, {
+              publicMetadata: {
+                  ...(public_metadata as object), // Mantener otros metadatos públicos
+                  role: initialRole,
+              },
+          });
+          console.log(`User ${id} updated with publicMetadata: { role: '${initialRole}' }`);
+      }
 
-      // Guardar el usuario en la base de datos de Neon
-      await prisma.tower.create({
-        data: {
-          clerk_id: id,
-          email: primaryEmail,
-          full_name: fullName,
-        },
-      });
-      console.log(`User ${id} saved to Neon database.`);
+      // Guardar el usuario en la base de datos de Neon según el rol
+      if (initialRole === 'admin') {
+        await prisma.admin.create({
+          data: {
+            clerk_id: id,
+            email: primaryEmail,
+            full_name: fullName,
+          },
+        });
+        console.log(`Admin user ${id} saved to Neon database.`);
+      } else { // 'tower' o rol por defecto
+        await prisma.tower.create({
+          data: {
+            clerk_id: id,
+            email: primaryEmail,
+            full_name: fullName,
+          },
+        });
+        console.log(`Tower user ${id} saved to Neon database.`);
+      }
 
     } catch (error) {
       console.error(`Failed to process user.created event for user ${id}:`, error);
-      // Podrías decidir si retornar un error 500 o simplemente loggear y continuar
       return new Response('Error processing user.created webhook event', { status: 500 });
     }
   } else if (eventType === 'user.deleted') {
@@ -96,10 +113,18 @@ export async function POST(req: Request) {
     }
 
     try {
-      await prisma.tower.delete({
+      // Intentar eliminar de la tabla Tower (no arrojará error si no se encuentra)
+      await prisma.tower.deleteMany({
         where: { clerk_id: id },
       });
-      console.log(`User ${id} deleted from Neon database.`);
+      console.log(`Attempted to delete Tower user ${id} from Neon database.`);
+
+      // Intentar eliminar de la tabla Admin (no arrojará error si no se encuentra)
+      await prisma.admin.deleteMany({
+        where: { clerk_id: id },
+      });
+      console.log(`Attempted to delete Admin user ${id} from Neon database.`);
+
     } catch (error) {
       console.error(`Failed to delete user ${id} from database:`, error);
       return new Response('Error deleting user from database', { status: 500 });

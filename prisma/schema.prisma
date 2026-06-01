@@ -12,16 +12,26 @@ datasource db {
 }
 
 model Tower {
-  tower_id       String       @id @default(uuid())
+  tower_id       String       @id @default(cuid())
   clerk_id       String       @unique
   email          String       @unique
   full_name      String
-  payments_alias String       @default("")
+  payments_alias String?
   vehicles       Vehicle[]
   assignments    Assignment[]
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+}
+
+model Admin {
+  admin_id   String   @id @default(cuid())
+  clerk_id   String   @unique
+  email      String   @unique
+  full_name  String
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Vehicle {
@@ -47,13 +57,4 @@ model Assignment {
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-}
-
-model Admin {
-  admin_id  String   @id @default(uuid())
-  clerk_id  String   @unique
-  full_name String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
