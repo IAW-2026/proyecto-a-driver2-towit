@@ -19,6 +19,23 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
+  "ui": {
+    "tooltip": {
+      "name": "Tooltip",
+      "style": "radix-nova",
+      "props": {
+        "side": {
+          "type": "enum",
+          "default": "top",
+          "options": ["top", "right", "bottom", "left"]
+        },
+        "sideOffset": {
+          "type": "number",
+          "default": 4
+        }
+      }
+    }
+  },
   "menuColor": "default",
   "menuAccent": "subtle",
   "registries": {}

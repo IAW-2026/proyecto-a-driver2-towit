@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DataTableProps<T extends Record<string, any>> {
   title: string;
@@ -57,19 +58,29 @@ export default function DataTable<T extends Record<string, any>>({
                   <td
                     key={`${rowIndex}-${header}`}
                     className="px-6 py-4 whitespace-nowrap text-sm text-slate-400 md:max-w-6 overflow-x-hidden"
-                    title={
-                      (header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
-                        ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                        : typeof row[header] === 'object' && row[header] !== null
-                          ? JSON.stringify(row[header])
-                          : String(row[header])
-                    }
                   >
-                    {(header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
-                      ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                      : typeof row[header] === 'object' && row[header] !== null
-                        ? JSON.stringify(row[header])
-                        : String(row[header])}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="truncate block"> {/* Usar un span para el contenido dentro del td */}
+                            {(header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
+                              ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                              : typeof row[header] === 'object' && row[header] !== null
+                                ? JSON.stringify(row[header])
+                                : String(row[header])}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            {(header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
+                              ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                              : typeof row[header] === 'object' && row[header] !== null
+                                ? JSON.stringify(row[header])
+                                : String(row[header])}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </td>
                 ))}
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
