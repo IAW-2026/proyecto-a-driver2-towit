@@ -25,6 +25,8 @@ interface ServiceRequest {
   originAddress: string;
   serviceValue: number;
   originCoordinates: Coordinates;
+  destinationAddress: string; // Nuevo campo
+  destinationCoordinates: Coordinates; // Nuevo campo
 }
 
 interface InteractiveMapProps {
@@ -160,12 +162,22 @@ export default function InteractiveMap({
     if (!map.current || !isMapLoaded) return; // Añadir verificación de isMapLoaded
 
     // Ajustar el orden de las coordenadas para la API de Mapbox (lng, lat)
-    const query = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`,
-      { method: "GET" }
-    );
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
+    // console.log("Mapbox: Requesting route for:", `Origin: (${origin.lng}, ${origin.lat})`, `Destination: (${destination.lng}, ${destination.lat})`);
+    // console.log("Mapbox: API URL:", url);
+
+    const query = await fetch(url, { method: "GET" });
     const json = await query.json();
-    const data = json.routes[0];
+    // console.log("Mapbox: Raw API response:", json);
+    
+    const data = json.routes && json.routes.length > 0 ? json.routes[0] : null;
+
+    if (!data || !data.geometry || !data.geometry.coordinates || data.geometry.coordinates.length === 0) {
+      console.error("Mapbox: No se encontró una ruta válida o la geometría está incompleta. Respuesta API:", json);
+      clearRoute(); // Limpiar cualquier ruta o marcador existente en caso de error
+      return null; // Devolver null si no hay ruta válida
+    }
+
     const route = data.geometry; // Ya es GeoJSON LineString
 
     const routeSource = map.current.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
@@ -206,7 +218,12 @@ export default function InteractiveMap({
       .setLngLat([destination.lng, destination.lat])
       .addTo(map.current!);
 
-    return route; // Devolver la ruta GeoJSON para la simulación
+    // Devolver la ruta envuelta en un Feature de GeoJSON para que coincida con la expectativa
+    return {
+      type: "Feature",
+      geometry: route,
+      properties: {},
+    };
   }, [isMapLoaded]); // Añadir isMapLoaded a las dependencias
 
   // === Función para borrar la ruta ===
@@ -235,6 +252,13 @@ export default function InteractiveMap({
     if (!map.current || !driverMarker.current) return;
 
     // isAvailable ya debería ser false al aceptar el viaje en ServicePageClient
+
+    // Asegurarse de que route.geometry.coordinates existe antes de usarlo
+    if (!route.geometry || !route.geometry.coordinates || route.geometry.coordinates.length === 0) {
+      console.error("Mapbox: Error en simulateDriverMovement: la ruta recibida no tiene coordenadas válidas.");
+      onTripEnd(); // Terminar el viaje si la ruta es inválida
+      return;
+    }
 
     const line = turf.lineString(route.geometry.coordinates);
     const totalDistance = turf.length(line, { units: 'kilometers' });
@@ -279,23 +303,36 @@ export default function InteractiveMap({
     }
   }, [currentRequest, isAvailable, driverLocation, drawRoute, clearRoute, acceptedTrip, isMapLoaded]);
 
-  // === Efecto para manejar el viaje aceptado (OMITIDO TEMPORALMENTE) ===
+  // === Efecto para manejar el viaje aceptado (iniciar simulación) ===
   useEffect(() => {
-    // La lógica de viaje aceptado está omitida temporalmente según el requerimiento del usuario.
-    // let cleanupSim: (() => void) | undefined;
-    // if (acceptedTrip && isMapLoaded && map.current && driverMarker.current) {
-    //   async function startTripSimulation() {
-    //     const route = await drawRoute(driverLocation, acceptedTrip!.originCoordinates);
-    //     if (route) {
-    //       cleanupSim = simulateDriverMovement(route);
-    //     }
-    //   }
-    //   startTripSimulation();
-    // }
-    // return () => {
-    //   if (cleanupSim) cleanupSim();
-    // };
-  }, [acceptedTrip, driverLocation, drawRoute, simulateDriverMovement, isMapLoaded]);
+    let cleanupSim: (() => void) | undefined;
+
+    if (acceptedTrip && isMapLoaded && map.current && driverMarker.current) {
+      // 3. al aceptar, cambia de estado a no disponible, la ruta permanezca en el mapa y el ícono que representa al conductor se mueva hacia el destino, respetando el trayecto en un total de 10 segundos
+      // isAvailable ya se establece en false en ServicePageClient al aceptar.
+
+      // Dibujar la ruta desde la ubicación actual del conductor hasta el origen del servicio
+      async function startTripSimulation() {
+        const originCoords = driverLocation;
+        const destinationCoords = acceptedTrip!.originCoordinates;
+        
+        const route = await drawRoute(originCoords, destinationCoords);
+        
+        // Solo iniciar la simulación si se obtuvo una ruta válida con geometría y coordenadas
+        if (route && route.geometry && route.geometry.coordinates) {
+          cleanupSim = simulateDriverMovement(route);
+        } else {
+          console.error("No se pudo iniciar la simulación de movimiento: Ruta inválida o incompleta.");
+          onTripEnd(); // Finalizar el "viaje" si no se puede simular (vuelve a disponible)
+        }
+      }
+      startTripSimulation();
+    }
+
+    return () => {
+      if (cleanupSim) cleanupSim();
+    };
+  }, [acceptedTrip, drawRoute, simulateDriverMovement, isMapLoaded]); // 'driverLocation' ha sido removido
 
   // Asegurarse de que el marcador del conductor esté siempre en `driverLocation`
   useEffect(() => {

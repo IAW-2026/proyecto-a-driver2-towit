@@ -98,12 +98,12 @@ export default function ServicePageClient() {
     }
   }, [currentRequest, acceptanceTimer, setIsAvailable, setAcceptedTrip]); // Añadir dependencias necesarias
 
-  // Handler para cuando el viaje termina (OMITIDO TEMPORALMENTE)
+  // Handler para cuando el viaje termina
   const onTripEnd = useCallback(() => {
-    // setIsAvailable(true);
-    // setAcceptedTrip(null);
-    // console.log("Viaje terminado. Conductor disponible de nuevo.");
-  }, []);
+    setIsAvailable(true); // La ruta se borra al llegar al destino y vuelve a estado disponible
+    setAcceptedTrip(null); // Borrar el viaje aceptado
+    console.log("Viaje terminado. Conductor disponible de nuevo.");
+  }, [setIsAvailable, setAcceptedTrip]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
