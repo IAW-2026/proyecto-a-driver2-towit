@@ -35,31 +35,66 @@ export default function ServicePageClient() {
   // Usamos una cola para simular la llegada de múltiples solicitudes
   const [requestQueue, setRequestQueue] = useState<ServiceRequest[]>([]); 
 
-  // Simular la recepción de solicitudes encolando mocks (OMITIDO TEMPORALMENTE)
+  // Usamos un temporizador para la cuenta atrás de la aceptación de la solicitud
+  const [acceptanceTimer, setAcceptanceTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Simular la recepción de solicitudes
   useEffect(() => {
-    // if (!isAvailable || acceptedTrip) return;
-    // const interval = setInterval(() => {
-    //   if (requestQueue.length === 0 && mockServiceRequests.length > 0) {
-    //     setRequestQueue([...mockServiceRequests]);
-    //   }
-    //   if (!currentRequest && requestQueue.length > 0) {
-    //     const nextRequest = requestQueue[0];
-    //     setCurrentRequest(nextRequest);
-    //     setRequestQueue(prev => prev.slice(1));
-    //   }
-    // }, 5000);
-    // return () => clearInterval(interval);
-  }, [isAvailable, currentRequest, acceptedTrip, requestQueue]);
+    let requestInterval: NodeJS.Timeout;
 
+    if (isAvailable && !currentRequest && !acceptedTrip) {
+      // Generar un intervalo aleatorio entre 5 y 10 segundos para la próxima solicitud
+      const randomInterval = Math.floor(Math.random() * (10000 - 5000 + 1)) + 5000; // 5 a 10 segundos
 
-  // Handler para aceptar una solicitud (OMITIDO TEMPORALMENTE)
+      requestInterval = setInterval(() => {
+        // Asegurarse de que mockServiceRequests no esté vacío
+        if (mockServiceRequests.length === 0) {
+          console.warn("mockServiceRequests está vacío. No se pueden generar solicitudes.");
+          return;
+        }
+
+        // Obtener una solicitud aleatoria de los mocks
+        const randomIndex = Math.floor(Math.random() * mockServiceRequests.length);
+        const newRequest = mockServiceRequests[randomIndex];
+
+        setCurrentRequest(newRequest); // Mostrar la nueva solicitud
+
+        // Iniciar el temporizador para la aceptación (10 a 15 segundos)
+        const randomAcceptTime = Math.floor(Math.random() * (15000 - 10000 + 1)) + 10000; // 10 a 15 segundos
+        const timer = setTimeout(() => {
+          console.log(`Solicitud ${newRequest.tripId} expiró por falta de aceptación.`);
+          setCurrentRequest(null); // La solicitud expira
+          setAcceptanceTimer(null);
+        }, randomAcceptTime);
+        setAcceptanceTimer(timer);
+
+      }, randomInterval);
+    }
+
+    return () => {
+      clearInterval(requestInterval);
+      if (acceptanceTimer) {
+        clearTimeout(acceptanceTimer);
+        setAcceptanceTimer(null);
+      }
+    };
+  }, [isAvailable, currentRequest, acceptedTrip, acceptanceTimer]); // Dependencias
+
+  // Handler para aceptar una solicitud
   const handleAcceptRequest = useCallback((tripId: string) => {
-    // if (currentRequest && currentRequest.tripId === tripId) {
-    //   setIsAvailable(false);
-    //   setAcceptedTrip(currentRequest);
-    //   setCurrentRequest(null);
-    // }
-  }, [currentRequest]);
+    if (currentRequest && currentRequest.tripId === tripId) {
+      console.log(`Solicitud ${tripId} aceptada. (Flujo de viaje aún no implementado)`);
+      // OMITIDO: No cambia isAvailable ni acceptedTrip, ni inicia el movimiento.
+      // Esto se implementará en etapas posteriores.
+      
+      // Limpiar el temporizador de aceptación actual
+      if (acceptanceTimer) {
+        clearTimeout(acceptanceTimer);
+        setAcceptanceTimer(null);
+      }
+      setCurrentRequest(null); // Ocultar la tarjeta de solicitud, ya que se "aceptó"
+    }
+  }, [currentRequest, acceptanceTimer]);
 
   // Handler para cuando el viaje termina (OMITIDO TEMPORALMENTE)
   const onTripEnd = useCallback(() => {
@@ -81,13 +116,13 @@ export default function ServicePageClient() {
           setAcceptedTrip={setAcceptedTrip}
           onTripEnd={onTripEnd}
         />
-        {/* La tarjeta de solicitud está omitida temporalmente según el requerimiento del usuario */}
-        {/* {currentRequest && !acceptedTrip && (
+        {/* Mostrar la tarjeta de solicitud solo si hay una solicitud actual y el conductor está disponible */}
+        {currentRequest && isAvailable && (
           <ServiceRequestCard
             {...currentRequest}
             onAccept={handleAcceptRequest}
           />
-        )} */}
+        )}
       </div>
     </div>
   );

@@ -276,7 +276,5 @@ export default function InteractiveMap({
   }, [driverLocation]);
 
 
-  // Añadimos un min-h fijo temporalmente para asegurarnos de que el div tenga altura.
-  // Si esto funciona, el problema está en que h-full no está calculando correctamente la altura.
   return <div ref={mapContainer} className="w-full h-full relative overflow-hidden" data-testid="mapbox-container" />;
 }
