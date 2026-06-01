@@ -50,10 +50,14 @@ export default function MobileMenu({ isSignedIn, onClose }: MobileMenuProps) {
       showCloseButton={true} // Usa el botón de cierre integrado de DialogContent
     >
       <DialogHeader className="pb-4 border-b border-slate-800">
-        <DialogTitle className="text-xl font-black tracking-wider text-yellow-500">Tow<span className="text-white">It</span> <span className="text-sm">Towers</span></DialogTitle>
+        <DialogTitle asChild>
+          <Link href="/home" className="flex items-center gap-2" onClick={onClose}>
+            <span className="text-2xl font-black tracking-wider text-yellow-500">Tow<span className="text-white">It</span></span>
+            <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Towers</span>
+          </Link>
+        </DialogTitle>
         <VisuallyHidden.Root>
           <DialogDescription className="text-slate-400">Menú de navegación</DialogDescription>
-
         </VisuallyHidden.Root>
       </DialogHeader>
       <nav className="flex flex-col gap-4 flex-1">
