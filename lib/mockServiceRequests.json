@@ -1,0 +1,102 @@
+[
+  {
+    "tripId": "mock_trip_001",
+    "customerName": "Ana García",
+    "customerRating": 4.2,
+    "vehicleModel": "Toyota Corolla",
+    "vehiclePlate": "AB 123 CD",
+    "originAddress": "Calle Falsa 123, CABA",
+    "serviceValue": 12000.00,
+    "originCoordinates": { "lat": -34.6037, "lng": -58.3816 }
+  },
+  {
+    "tripId": "mock_trip_002",
+    "customerName": "Pedro López",
+    "customerRating": 3.9,
+    "vehicleModel": "Fiat Palio",
+    "vehiclePlate": "EF 456 GH",
+    "originAddress": "Av. Santa Fe 2000, CABA",
+    "serviceValue": 10500.00,
+    "originCoordinates": { "lat": -34.5937, "lng": -58.4120 }
+  },
+  {
+    "tripId": "mock_trip_003",
+    "customerName": "Sofía Martínez",
+    "customerRating": 4.8,
+    "vehicleModel": "Volkswagen Gol",
+    "vehiclePlate": "IJ 789 KL",
+    "originAddress": "Av. Cabildo 150, CABA",
+    "serviceValue": 13500.00,
+    "originCoordinates": { "lat": -34.5776, "lng": -58.4419 }
+  },
+  {
+    "tripId": "mock_trip_004",
+    "customerName": "Carlos Rodríguez",
+    "customerRating": 4.1,
+    "vehicleModel": "Renault Clio",
+    "vehiclePlate": "MN 012 OP",
+    "originAddress": "Defensa 500, CABA",
+    "serviceValue": 11000.00,
+    "originCoordinates": { "lat": -34.6111, "lng": -58.3725 }
+  },
+  {
+    "tripId": "mock_trip_005",
+    "customerName": "Laura Gómez",
+    "customerRating": 4.6,
+    "vehicleModel": "Chevrolet Onix",
+    "vehiclePlate": "QR 345 ST",
+    "originAddress": "Junín 1000, CABA",
+    "serviceValue": 12800.00,
+    "originCoordinates": { "lat": -34.5947, "lng": -58.3917 }
+  },
+  {
+    "tripId": "mock_trip_006",
+    "customerName": "Diego Fernandez",
+    "customerRating": 3.5,
+    "vehicleModel": "Peugeot 208",
+    "vehiclePlate": "UV 678 WX",
+    "originAddress": "Uriarte 2400, CABA",
+    "serviceValue": 14000.00,
+    "originCoordinates": { "lat": -34.5888, "lng": -58.4287 }
+  },
+  {
+    "tripId": "mock_trip_007",
+    "customerName": "Valeria Castro",
+    "customerRating": 4.9,
+    "vehicleModel": "Honda Civic",
+    "vehiclePlate": "YZ 901 AB",
+    "originAddress": "Av. del Libertador 4000, CABA",
+    "serviceValue": 16000.00,
+    "originCoordinates": { "lat": -34.5684, "lng": -58.4400 }
+  },
+  {
+    "tripId": "mock_trip_008",
+    "customerName": "Ricardo Sosa",
+    "customerRating": 4.0,
+    "vehicleModel": "Toyota Hilux",
+    "vehiclePlate": "CD 234 EF",
+    "originAddress": "Pedro Goyena 500, CABA",
+    "serviceValue": 18000.00,
+    "originCoordinates": { "lat": -34.6247, "lng": -58.4402 }
+  },
+  {
+    "tripId": "mock_trip_009",
+    "customerName": "Mariana Ríos",
+    "customerRating": 4.7,
+    "vehicleModel": "BMW Serie 3",
+    "vehiclePlate": "GH 567 IJ",
+    "originAddress": "Olazábal 2800, CABA",
+    "serviceValue": 20000.00,
+    "originCoordinates": { "lat": -34.5627, "lng": -58.4815 }
+  },
+  {
+    "tripId": "mock_trip_010",
+    "customerName": "Pablo Nuñez",
+    "customerRating": 3.7,
+    "vehicleModel": "Mercedes-Benz Clase C",
+    "vehiclePlate": "KL 890 MN",
+    "originAddress": "Av. Juan B. Justo 900, CABA",
+    "serviceValue": 17500.00,
+    "originCoordinates": { "lat": -34.5956, "lng": -58.4374 }
+  }
+]
