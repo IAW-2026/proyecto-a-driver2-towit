@@ -107,7 +107,7 @@ export async function getTowerDetails(): Promise<TowerDetails | null> {
     clerk_id: tower.clerk_id,
     email: tower.email,
     full_name: tower.full_name,
-    payments_alias: tower.payments_alias,
+    payments_alias: tower.payments_alias || '',
   };
 
   return { userProfile, towerData };

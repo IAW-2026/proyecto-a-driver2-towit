@@ -227,7 +227,7 @@ export async function createUser(formData: {
           full_name: fullName,
         },
       });
-      revalidatePath("/admin");
+      revalidatePath("/admin/dashboard");
       return { success: true, data: { userId: clerkUser.id, role: 'admin' } };
     } else { // 'tower'
       await prisma.tower.create({
@@ -237,7 +237,7 @@ export async function createUser(formData: {
           full_name: fullName,
         },
       });
-      revalidatePath("/admin");
+      revalidatePath("/admin/dashboard");
       return { success: true, data: { userId: clerkUser.id, role: 'tower' } };
     }
   } catch (error: any) {
