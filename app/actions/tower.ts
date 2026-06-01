@@ -134,20 +134,5 @@ export async function deleteTowerAccount(clerkId: string): Promise<UpdateTowerDe
   }
 }
 
-export async function getTowerVehicles(): Promise<Vehicle[] | null> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return null;
-  }
-
-  try {
-    const vehicles = await prisma.vehicle.findMany({
-      where: { tower: { clerk_id: userId } },
-    });
-    return vehicles;
-  } catch (error) {
-    console.error("Error al obtener vehículos del Tower:", error);
-    return null;
-  }
-}
+// Se ha movido getTowerVehicles a app/actions/vehicle.ts para centralizar la lógica de vehículos.
+// Este archivo ya no necesita esa función.

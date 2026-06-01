@@ -34,7 +34,10 @@ export default function AppHeader() {
             <>
               <Link href="/trips" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
                 Mis Viajes
-              </Link>              
+              </Link>
+              <Link href="/vehicles" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+                Mis Vehículos
+              </Link>
               <button
                 onClick={openModal} // Llamar a openModal del contexto
                 className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center justify-between space-x-2 cursor-pointer"
@@ -42,7 +45,6 @@ export default function AppHeader() {
                 <span>Mi Cuenta</span>
                 <UserAvatar />
               </button>
-              
             </>
           )}
         </nav>

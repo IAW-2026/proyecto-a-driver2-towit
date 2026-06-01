@@ -9,6 +9,7 @@
 
 # Pantallas secundarias
 - /account-details: donde se dispone la información del usuario. Requiere autenticación como tower.
+- /vehicles: listado de vehículos del tower, con opciones para añadir, editar y eliminar. Requiere autenticación como tower.
 - /trips/{id}: contiene los detalles sobre un viaje.
 - /payments/{id}: contiene los detalles de una entrada en el historial de pagos recibidos.
 
