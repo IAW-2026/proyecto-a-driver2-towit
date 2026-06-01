@@ -257,11 +257,11 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
         </div>
       )}
 
-      <div className="flex flex-col-reverse md:flex-row md:justify-end gap-4 pt-4 border-t border-slate-800 mt-8">
+      <div className="flex flex-col md:flex-row md:justify-end gap-4 pt-4 border-t border-slate-800 mt-8">
         <Button
           type="button"
           onClick={handleDeleteAccountClick}
-          className="w-full md:w-auto text-xs bg-red-500 text-white hover:bg-red-600 self-start md:mr-auto order-last md:order-first"
+          className="w-full md:w-auto text-xs bg-red-500 text-white hover:bg-red-600 self-start md:mr-auto order-3 md:order-1"
         >
           Eliminar Cuenta
         </Button>
@@ -269,14 +269,14 @@ export default function AccountDetailsForm({ initialUserProfile, initialTowerDat
           type="button"
           onClick={handleCancel}
           disabled={!isDirty || isSubmitting}
-          className="w-full md:w-auto px-6 py-3 rounded-lg text-white bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full md:w-auto px-6 py-3 rounded-lg text-white bg-slate-700 hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-2 md:order-2"
         >
           Cancelar
         </Button>
         <Button
           type="submit"
           disabled={!isDirty || isSubmitting}
-          className="w-full md:w-auto px-6 py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full md:w-auto px-6 py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed order-1 md:order-3"
         >
           {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
         </Button>
