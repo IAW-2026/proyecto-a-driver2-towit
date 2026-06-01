@@ -23,23 +23,38 @@ interface ServiceRequest {
   originCoordinates: { lat: number; lng: number };
 }
 
-// Componente para re-centrar el mapa cuando la posición cambia
-function MapRecenter({ position }: { position: L.LatLngExpression }) {
+// Componente para re-centrar el mapa cuando la posición o la solicitud de servicio cambian
+function MapRecenter({
+  currentPosition,
+  serviceOrigin,
+}: {
+  currentPosition: L.LatLngExpression;
+  serviceOrigin: L.LatLngExpression | null;
+}) {
   const map = useMap();
   useEffect(() => {
-    // map.flyTo anima el movimiento a la nueva posición
-    map.flyTo(position, map.getZoom(), {
-      animate: true,
-      duration: 1.5, // Duración de la animación en segundos
-    });
-  }, [position, map]); // Se ejecuta cada vez que 'position' o 'map' cambian
+    if (serviceOrigin) {
+      // Si hay un origen de servicio, centrar el mapa entre la posición actual y el origen del servicio
+      const bounds = L.latLngBounds([currentPosition, serviceOrigin]);
+      map.flyToBounds(bounds, {
+        animate: true,
+        duration: 1.5,
+        padding: L.point(50, 50), // Añadir padding para que los marcadores no queden en los bordes
+      });
+    } else {
+      // Si no hay origen de servicio, centrar solo en la posición actual
+      map.flyTo(currentPosition, map.getZoom(), {
+        animate: true,
+        duration: 1.5,
+      });
+    }
+  }, [currentPosition, serviceOrigin, map]);
   return null;
 }
 
 export default function InteractiveMap() {
   // Mover la configuración de iconos de Leaflet a un useEffect para asegurar que se ejecute solo en el cliente
   useEffect(() => {
-    // Corrige los problemas de iconos predeterminados de Leaflet con Webpack/Next.js
     // @ts-ignore
     delete L.Icon.Default.prototype._getIconUrl;
 
@@ -47,8 +62,22 @@ export default function InteractiveMap() {
       iconRetinaUrl: '/leaflet/images/marker-icon-2x.png',
       iconUrl: '/leaflet/images/marker-icon.png',
       shadowUrl: '/leaflet/images/marker-shadow.png',
+      iconSize: [25, 41],   // Tamaño del icono
+      iconAnchor: [12, 41], // Punto del icono que corresponde a la ubicación del marcador
+      popupAnchor: [1, -34], // Punto desde el que se abrirán los popups
+      shadowSize: [41, 41]  // Tamaño de la sombra
     });
-  }, []); // El array vacío asegura que se ejecute solo una vez al montar
+  }, []); // Dependencias vacías para que se ejecute solo una vez al montar
+
+  const serviceMarkerIcon = useMemo(() => new L.Icon({
+    iconUrl: '/leaflet/images/marker-icon.png', // Un nuevo icono para los pedidos de servicio
+    iconRetinaUrl: '/leaflet/images/marker-icon-2x.png',
+    iconSize: [25, 41],   // Tamaño del icono
+    iconAnchor: [12, 41], // Punto del icono que corresponde a la ubicación del marcador
+    popupAnchor: [1, -34], // Punto desde el que se abrirán los popups
+    shadowSize: [41, 41]  // Tamaño de la sombra]
+  }), []);
+
 
   const { user, isLoaded } = useUser();
   const [isAvailable, setIsAvailable] = useState(false);
@@ -58,11 +87,21 @@ export default function InteractiveMap() {
   const [hasVehicle, setHasVehicle] = useState(false);
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
 
+  const [currentServiceRequest, setCurrentServiceRequest] = useState<ServiceRequest | null>(null); // Inicializar como null
+
+  const serviceOriginPosition = useMemo(() => {
+    if (currentServiceRequest) {
+      return [
+        currentServiceRequest.originCoordinates.lat,
+        currentServiceRequest.originCoordinates.lng,
+      ] as L.LatLngExpression;
+    }
+    return null;
+  }, [currentServiceRequest]);
+
   // Referencias para los IDs de los temporizadores
   const scheduleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const acceptTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [currentServiceRequest, setCurrentServiceRequest] = useState<ServiceRequest | null>(null); // Inicializar como null
 
   // Función para limpiar todos los temporizadores y la solicitud actual
   const clearAllTimers = useCallback(() => {
@@ -186,12 +225,19 @@ export default function InteractiveMap() {
         zoomControl={false} // Deshabilitar el control de zoom por defecto
         className="h-full w-full z-0"
       >
-        <MapRecenter position={currentPosition} /> {/* Componente para re-centrar el mapa dinámicamente */}
+        <MapRecenter
+          currentPosition={currentPosition}
+          serviceOrigin={serviceOriginPosition}
+        />{" "}
+        {/* Componente para re-centrar el mapa dinámicamente */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Marker position={currentPosition}></Marker>
+        {serviceOriginPosition && (
+          <Marker position={serviceOriginPosition} icon={serviceMarkerIcon}></Marker>
+        )}
         <ZoomControl position="bottomright" /> {/* Añadir control de zoom en la parte inferior derecha */}
       </MapContainer>
 
