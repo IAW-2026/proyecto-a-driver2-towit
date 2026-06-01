@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation"; // Importar usePathname
 import { useClerk, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ isSignedIn, onClose }: MobileMenuProps) {
   const router = useRouter();
+  const pathname = usePathname(); // Obtener la ruta actual
   const { signOut } = useClerk();
 
   const handleSignOut = async () => {
@@ -32,6 +33,12 @@ export default function MobileMenu({ isSignedIn, onClose }: MobileMenuProps) {
     router.push(path);
     onClose();
   };
+
+  const showDashboardButton = isSignedIn && pathname !== "/dashboard";
+  const showTripsLink = isSignedIn && pathname !== "/trips";
+  const showVehiclesLink = isSignedIn && pathname !== "/vehicles";
+  const showPaymentsLink = isSignedIn && pathname !== "/payments";
+  const showAccountDetailsLink = isSignedIn && pathname !== "/account-details";
 
   return (
     <DialogContent
@@ -52,26 +59,41 @@ export default function MobileMenu({ isSignedIn, onClose }: MobileMenuProps) {
       <nav className="flex flex-col gap-4 flex-1">
         {isSignedIn ? (
           <>
-            <DialogClose asChild>
-              <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/trips")}>
-                Mis Viajes
-              </Button>
-            </DialogClose>
-            <DialogClose asChild>
-              <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/vehicles")}>
-                Mis Vehículos
-              </Button>
-            </DialogClose>
-            <DialogClose asChild>
-              <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/payments")}>
-                Mis Liquidaciones
-              </Button>
-            </DialogClose>
-            <DialogClose asChild>
-              <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/account-details")}>
-                Mi Cuenta
-              </Button>
-            </DialogClose>
+            {showDashboardButton && (
+              <DialogClose asChild>
+                <Button variant="ghost" className="justify-start text-base text-yellow-500 hover:underline underline-offset-4" onClick={() => navigateAndClose("/dashboard")}>
+                  Dashboard
+                </Button>
+              </DialogClose>
+            )}
+            {showTripsLink && (
+              <DialogClose asChild>
+                <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/trips")}>
+                  Mis Viajes
+                </Button>
+              </DialogClose>
+            )}
+            {showVehiclesLink && (
+              <DialogClose asChild>
+                <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/vehicles")}>
+                  Mis Vehículos
+                </Button>
+              </DialogClose>
+            )}
+            {showPaymentsLink && (
+              <DialogClose asChild>
+                <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/payments")}>
+                  Mis Liquidaciones
+                </Button>
+              </DialogClose>
+            )}
+            {showAccountDetailsLink && (
+              <DialogClose asChild>
+                <Button variant="ghost" className="justify-start text-base text-slate-300 hover:text-white" onClick={() => navigateAndClose("/account-details")}>
+                  Mi Cuenta
+                </Button>
+              </DialogClose>
+            )}
             <DialogClose asChild>
               <Button variant="ghost" className="justify-start text-base text-red-400 hover:text-red-300 mt-auto" onClick={handleSignOut}>
                 Cerrar Sesión
