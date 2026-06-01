@@ -5,9 +5,9 @@
     "customerRating": 4.2,
     "vehicleModel": "Toyota Corolla",
     "vehiclePlate": "AB 123 CD",
-    "originAddress": "Calle Falsa 123, CABA",
+    "originAddress": "Alsina 50 (Plaza Rivadavia), Bahía Blanca",
     "serviceValue": 12000.00,
-    "originCoordinates": { "lat": -34.6037, "lng": -58.3816 }
+    "originCoordinates": { "lat": -38.7196, "lng": -62.2651 }
   },
   {
     "tripId": "mock_trip_002",
@@ -15,9 +15,9 @@
     "customerRating": 3.9,
     "vehicleModel": "Fiat Palio",
     "vehiclePlate": "EF 456 GH",
-    "originAddress": "Av. Santa Fe 2000, CABA",
+    "originAddress": "Av. Alem 1200, Bahía Blanca",
     "serviceValue": 10500.00,
-    "originCoordinates": { "lat": -34.5937, "lng": -58.4120 }
+    "originCoordinates": { "lat": -38.7075, "lng": -62.2665 }
   },
   {
     "tripId": "mock_trip_003",
@@ -25,9 +25,9 @@
     "customerRating": 4.8,
     "vehicleModel": "Volkswagen Gol",
     "vehiclePlate": "IJ 789 KL",
-    "originAddress": "Av. Cabildo 150, CABA",
+    "originAddress": "Av. Alem y Córdoba (Parque de Mayo), Bahía Blanca",
     "serviceValue": 13500.00,
-    "originCoordinates": { "lat": -34.5776, "lng": -58.4419 }
+    "originCoordinates": { "lat": -38.7022, "lng": -62.2741 }
   },
   {
     "tripId": "mock_trip_004",
@@ -35,9 +35,9 @@
     "customerRating": 4.1,
     "vehicleModel": "Renault Clio",
     "vehiclePlate": "MN 012 OP",
-    "originAddress": "Defensa 500, CABA",
+    "originAddress": "Alsina 425 (Teatro Municipal), Bahía Blanca",
     "serviceValue": 11000.00,
-    "originCoordinates": { "lat": -34.6111, "lng": -58.3725 }
+    "originCoordinates": { "lat": -38.7163, "lng": -62.2612 }
   },
   {
     "tripId": "mock_trip_005",
@@ -45,9 +45,9 @@
     "customerRating": 4.6,
     "vehicleModel": "Chevrolet Onix",
     "vehiclePlate": "QR 345 ST",
-    "originAddress": "Junín 1000, CABA",
+    "originAddress": "Mitre 300, Bahía Blanca",
     "serviceValue": 12800.00,
-    "originCoordinates": { "lat": -34.5947, "lng": -58.3917 }
+    "originCoordinates": { "lat": -38.7235, "lng": -62.2610 }
   },
   {
     "tripId": "mock_trip_006",
@@ -55,9 +55,9 @@
     "customerRating": 3.5,
     "vehicleModel": "Peugeot 208",
     "vehiclePlate": "UV 678 WX",
-    "originAddress": "Uriarte 2400, CABA",
+    "originAddress": "Av. Cabrera 4000 (BBPS), Bahía Blanca",
     "serviceValue": 14000.00,
-    "originCoordinates": { "lat": -34.5888, "lng": -58.4287 }
+    "originCoordinates": { "lat": -38.6855, "lng": -62.2425 }
   },
   {
     "tripId": "mock_trip_007",
@@ -65,9 +65,9 @@
     "customerRating": 4.9,
     "vehicleModel": "Honda Civic",
     "vehiclePlate": "YZ 901 AB",
-    "originAddress": "Av. del Libertador 4000, CABA",
+    "originAddress": "Av. Cerri 750 (Estación Sud), Bahía Blanca",
     "serviceValue": 16000.00,
-    "originCoordinates": { "lat": -34.5684, "lng": -58.4400 }
+    "originCoordinates": { "lat": -38.7285, "lng": -62.2690 }
   },
   {
     "tripId": "mock_trip_008",
@@ -75,9 +75,9 @@
     "customerRating": 4.0,
     "vehicleModel": "Toyota Hilux",
     "vehiclePlate": "CD 234 EF",
-    "originAddress": "Pedro Goyena 500, CABA",
+    "originAddress": "Perú 400 (Barrio Universitario), Bahía Blanca",
     "serviceValue": 18000.00,
-    "originCoordinates": { "lat": -34.6247, "lng": -58.4402 }
+    "originCoordinates": { "lat": -38.7095, "lng": -62.2615 }
   },
   {
     "tripId": "mock_trip_009",
@@ -85,9 +85,9 @@
     "customerRating": 4.7,
     "vehicleModel": "BMW Serie 3",
     "vehiclePlate": "GH 567 IJ",
-    "originAddress": "Olazábal 2800, CABA",
+    "originAddress": "Av. Lainez 2400 (Hospital Penna), Bahía Blanca",
     "serviceValue": 20000.00,
-    "originCoordinates": { "lat": -34.5627, "lng": -58.4815 }
+    "originCoordinates": { "lat": -38.7360, "lng": -62.2280 }
   },
   {
     "tripId": "mock_trip_010",
@@ -95,8 +95,8 @@
     "customerRating": 3.7,
     "vehicleModel": "Mercedes-Benz Clase C",
     "vehiclePlate": "KL 890 MN",
-    "originAddress": "Av. Juan B. Justo 900, CABA",
+    "originAddress": "Av. Colón 600, Bahía Blanca",
     "serviceValue": 17500.00,
-    "originCoordinates": { "lat": -34.5956, "lng": -58.4374 }
+    "originCoordinates": { "lat": -38.7240, "lng": -62.2730 }
   }
 ]
