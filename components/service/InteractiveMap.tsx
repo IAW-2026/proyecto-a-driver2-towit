@@ -332,7 +332,7 @@ export default function InteractiveMap({
     return () => {
       if (cleanupSim) cleanupSim();
     };
-  }, [acceptedTrip, drawRoute, simulateDriverMovement, isMapLoaded]); // 'driverLocation' ha sido removido
+  }, [drawRoute, simulateDriverMovement, acceptedTrip, isMapLoaded]); // Reordenar dependencias para consistencia
 
   // Asegurarse de que el marcador del conductor esté siempre en `driverLocation`
   useEffect(() => {
