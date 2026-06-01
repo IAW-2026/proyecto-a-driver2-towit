@@ -3,13 +3,22 @@
 import Link from "next/link";
 import React from "react";
 import { Button } from "@/components/ui/button";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import mockPaymentsData from '@/lib/mocks/payments.json'; // Importa el archivo JSON
+
+interface Payment {
+  id: string;
+  valor: number;
+  fecha: string;
+  estado: string;
+}
 
 export default function RecentPaymentsList() {
-  // Datos mockeados
-  const recentPayments = [
-    { id: "pay_001", date: "2026-05-29", amount: 150.00, status: "Completado" },
-    { id: "pay_002", date: "2026-05-28", amount: 120.50, status: "Completado" },
-  ];
+  // Obtener las últimas 2 liquidaciones del JSON
+  const recentPayments: Payment[] = mockPaymentsData
+    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()) // Ordenar por fecha descendente
+    .slice(0, 2) as Payment[]; // Tomar las dos más recientes
 
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full">
@@ -17,8 +26,8 @@ export default function RecentPaymentsList() {
       <ul className="space-y-3 flex-1">
         {recentPayments.map((payment) => (
           <li key={payment.id} className="border-b border-slate-800 pb-3 last:border-b-0 last:pb-0">
-            <p className="text-white text-base">-${payment.amount.toFixed(2)}</p>
-            <p className="text-slate-400 text-sm">{payment.date} - {payment.status}</p>
+            <p className="text-white text-base">-${payment.valor.toFixed(2)}</p>
+            <p className="text-slate-400 text-sm">{format(new Date(payment.fecha), 'dd/MM/yyyy', { locale: es })} - {payment.estado}</p>
           </li>
         ))}
       </ul>
