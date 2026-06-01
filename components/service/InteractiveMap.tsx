@@ -27,28 +27,32 @@ interface ServiceRequest {
 function MapRecenter({
   currentPosition,
   serviceOrigin,
+  simulationTarget, // Añadir simulationTarget aquí
 }: {
   currentPosition: L.LatLngExpression;
   serviceOrigin: L.LatLngExpression | null;
+  simulationTarget: L.LatLngExpression | null; // Nuevo prop para el destino de la simulación
 }) {
   const map = useMap();
   useEffect(() => {
-    if (serviceOrigin) {
-      // Si hay un origen de servicio, centrar el mapa entre la posición actual y el origen del servicio
-      const bounds = L.latLngBounds([currentPosition, serviceOrigin]);
+    const target = simulationTarget || serviceOrigin; // Usar el destino de simulación si existe, de lo contrario el origen del servicio
+
+    if (target) {
+      // Si hay un objetivo (origen de servicio o destino de simulación), centrar el mapa entre la posición actual y el objetivo
+      const bounds = L.latLngBounds([currentPosition, target]);
       map.flyToBounds(bounds, {
         animate: true,
         duration: 1.5,
         padding: L.point(50, 50), // Añadir padding para que los marcadores no queden en los bordes
       });
     } else {
-      // Si no hay origen de servicio, centrar solo en la posición actual
+      // Si no hay objetivo, centrar solo en la posición actual
       map.flyTo(currentPosition, map.getZoom(), {
         animate: true,
         duration: 1.5,
       });
     }
-  }, [currentPosition, serviceOrigin, map]);
+  }, [currentPosition, serviceOrigin, simulationTarget, map]);
   return null;
 }
 
@@ -89,6 +93,13 @@ export default function InteractiveMap() {
 
   const [currentServiceRequest, setCurrentServiceRequest] = useState<ServiceRequest | null>(null); // Inicializar como null
   const [routeCoordinates, setRouteCoordinates] = useState<L.LatLngExpression[]>([]); // Estado para las coordenadas de la ruta
+  const [isSimulatingMovement, setIsSimulatingMovement] = useState(false); // Nuevo estado para controlar la simulación de movimiento
+  const [destinationForSimulation, setDestinationForSimulation] = useState<L.LatLngExpression | null>(null); // Destino final de la simulación
+
+  // Referencia para el ID del temporizador de la simulación de movimiento
+  const simulationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Referencia para almacenar la posición de inicio de la simulación
+  const simulationStartPositionRef = useRef<L.LatLngExpression | null>(null);
 
   const serviceOriginPosition = useMemo(() => {
     if (currentServiceRequest) {
@@ -135,11 +146,12 @@ export default function InteractiveMap() {
   }, []);
 
   // Referencias para los IDs de los temporizadores
+  // Referencias para los IDs de los temporizadores de solicitudes
   const scheduleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const acceptTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Función para limpiar todos los temporizadores y la solicitud actual
-  const clearAllTimers = useCallback(() => {
+  // Función para limpiar solo los temporizadores y el estado de la solicitud
+  const clearServiceRequestState = useCallback(() => {
     if (scheduleTimerRef.current) {
       clearTimeout(scheduleTimerRef.current);
       scheduleTimerRef.current = null;
@@ -149,14 +161,28 @@ export default function InteractiveMap() {
       acceptTimerRef.current = null;
     }
     setCurrentServiceRequest(null);
-    setRouteCoordinates([]); // Limpiar la ruta también
-    console.log("Todos los temporizadores y la solicitud actual han sido limpiados.");
+    setRouteCoordinates([]); // Limpiar la ruta asociada a la solicitud
+    console.log("Temporizadores de solicitud y solicitud actual limpiados.");
   }, []);
+
+  // Función para limpiar todos los estados y detener cualquier proceso (reseteo completo)
+  const clearAllTimers = useCallback(() => {
+    clearServiceRequestState(); // Limpiar lo relacionado con la solicitud
+    if (simulationIntervalRef.current) {
+      clearInterval(simulationIntervalRef.current);
+      simulationIntervalRef.current = null;
+    }
+    setIsSimulatingMovement(false); // Asegurarse de detener la simulación
+    setDestinationForSimulation(null); // Limpiar el destino de la simulación
+    setIsAvailable(false); // Forzar a no disponible en un reseteo completo
+    simulationStartPositionRef.current = null; // Limpiar la referencia de posición inicial
+    console.log("Todos los temporizadores y estados (incluida simulación) han sido limpiados.");
+  }, [clearServiceRequestState, simulationStartPositionRef]); // Depende de clearServiceRequestState y simulationStartPositionRef
 
   // Función para programar una nueva solicitud
   const scheduleNewRequest = useCallback(() => {
     // Asegurarse de que no haya temporizadores pendientes antes de programar una nueva
-    clearAllTimers(); 
+    clearServiceRequestState(); // Usar la limpieza granular
 
     if (isAvailable && hasVehicle) {
       const delay = Math.floor(Math.random() * (15 - 5 + 1) + 5) * 1000; // Retraso aleatorio de 5 a 15 segundos
@@ -211,33 +237,114 @@ export default function InteractiveMap() {
     }
   }, []);
 
-  // Efecto de limpieza global para los temporizadores
+  // Efecto de limpieza global para los temporizadores (al desmontar el componente)
   useEffect(() => {
     return () => {
-      clearAllTimers();
+      clearAllTimers(); // Resetea todo al desmontar
     };
   }, [clearAllTimers]);
 
+
   // Efecto principal para gestionar el flujo de solicitudes de servicio
   useEffect(() => {
-    // Si el conductor está disponible, tiene vehículo, no hay solicitud activa Y no hay un temporizador de programación en curso
-    if (isAvailable && hasVehicle && !currentServiceRequest && !scheduleTimerRef.current && !acceptTimerRef.current) {
+    // Si el conductor está disponible, tiene vehículo, no hay solicitud activa Y no hay temporizadores de solicitud
+    // Y NO se está simulando movimiento.
+    if (isAvailable && hasVehicle && !currentServiceRequest && !scheduleTimerRef.current && !acceptTimerRef.current && !isSimulatingMovement) {
       scheduleNewRequest();
-    } else if (!isAvailable || !hasVehicle) {
-      // Si no está disponible o no tiene vehículo, se detiene el flujo de solicitudes
+    } 
+    // Si NO está disponible O NO tiene vehículo, Y NO se está simulando movimiento,
+    // entonces se detiene el flujo de solicitudes y la simulación.
+    // Esto previene que clearAllTimers() detenga una simulación en curso si isAvailable se vuelve false
+    // como parte del inicio de la simulación.
+    else if ((!isAvailable || !hasVehicle) && !isSimulatingMovement) {
       clearAllTimers();
     }
-    // No necesitamos una función de limpieza aquí, ya que el useEffect global de limpieza y clearAllTimers se encargan.
-  }, [isAvailable, hasVehicle, currentServiceRequest, scheduleNewRequest, clearAllTimers]);
+    // Si isSimulatingMovement es true, simplemente se deja que la simulación termine por su cuenta,
+    // este useEffect no interfiere con ella.
+  }, [isAvailable, hasVehicle, currentServiceRequest, scheduleNewRequest, clearAllTimers, isSimulatingMovement]);
 
-  // Efecto para dibujar la ruta cuando las posiciones cambian
+
+  // Efecto para dibujar la ruta cuando las posiciones cambian (tanto para solicitud activa como para simulación)
   useEffect(() => {
-    if (currentServiceRequest && serviceOriginPosition) {
+    if (isSimulatingMovement && destinationForSimulation) {
+      fetchRoute(currentPosition, destinationForSimulation);
+    } else if (currentServiceRequest && serviceOriginPosition) {
       fetchRoute(currentPosition, serviceOriginPosition);
     } else {
-      setRouteCoordinates([]); // Limpiar la ruta si no hay solicitud
+      setRouteCoordinates([]); // Limpiar la ruta si no hay solicitud y no hay simulación
     }
-  }, [currentPosition, serviceOriginPosition, currentServiceRequest, fetchRoute]);
+  }, [currentPosition, serviceOriginPosition, currentServiceRequest, destinationForSimulation, isSimulatingMovement, fetchRoute]); // Añadir dependencias de simulación
+
+  // Efecto para la simulación de movimiento del conductor
+  useEffect(() => {
+    if (isSimulatingMovement && destinationForSimulation) {
+      // Capturar la posición inicial para la simulación SOLO cuando comienza
+      if (!simulationStartPositionRef.current) {
+        simulationStartPositionRef.current = currentPosition;
+        console.log("SIMULACION: Posición inicial capturada:", currentPosition);
+      }
+
+      const startCoords = simulationStartPositionRef.current; // Usar la posición capturada
+      const endCoords = destinationForSimulation;
+
+      if (!Array.isArray(startCoords) || !Array.isArray(endCoords)) {
+        console.error("Coordenadas de inicio o fin no válidas para simulación de movimiento.");
+        setIsSimulatingMovement(false);
+        // Limpiar la referencia de posición inicial en caso de error
+        simulationStartPositionRef.current = null;
+        return;
+      }
+
+      const totalDuration = 10000; // 10 segundos
+      const updateInterval = 100; // Actualizar cada 100 ms
+      const totalSteps = totalDuration / updateInterval;
+      let currentStep = 0;
+
+      // Calcular las diferencias basadas en la posición inicial capturada
+      const latDiff = (endCoords[0] - startCoords[0]) / totalSteps;
+      const lngDiff = (endCoords[1] - startCoords[1]) / totalSteps;
+      console.log("SIMULACION: startCoords", startCoords, "endCoords", endCoords);
+      console.log("SIMULACION: latDiff", latDiff, "lngDiff", lngDiff);
+      console.log("SIMULACION: Estableciendo el intervalo de simulación."); // Log para el establecimiento del intervalo
+
+      simulationIntervalRef.current = setInterval(() => {
+        console.log(`SIMULACION: Intervalo de movimiento ejecutándose. Paso: ${currentStep}`); // Log dentro del callback del intervalo
+        if (currentStep < totalSteps) {
+          setCurrentPosition((prevPos) => {
+            const currentLat = (prevPos as number[])[0];
+            const currentLng = (prevPos as number[])[1];
+            
+            const newPos: L.LatLngExpression = [
+              currentLat + latDiff,
+              currentLng + lngDiff,
+            ];
+            // Log detallado de la actualización de posición
+            console.log(`SIMULACION: Paso ${currentStep} - Actualizando posición: De [${currentLat}, ${currentLng}] a [${newPos[0]}, ${newPos[1]}]`);
+            return newPos;
+          });
+          currentStep++;
+        } else {
+          // Simulación completa o muy cerca del destino
+          setCurrentPosition(endCoords); // Ajustar a la posición final
+          setIsSimulatingMovement(false); // Detener explícitamente la simulación
+          setDestinationForSimulation(null); // Limpiar el destino
+          setIsAvailable(true); // Una vez completado el viaje, el conductor vuelve a estar disponible
+          clearServiceRequestState(); // Asegurarse de que no haya residuos de solicitud
+          simulationStartPositionRef.current = null; // Limpiar la referencia al finalizar
+          console.log("Simulación de movimiento completada. Conductor ahora disponible.");
+        }
+      }, updateInterval);
+    }
+
+    return () => {
+      if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
+        simulationIntervalRef.current = null;
+      }
+      // También limpiar la referencia de posición inicial si el efecto se limpia por otras razones
+      simulationStartPositionRef.current = null;
+    };
+  }, [isSimulatingMovement, destinationForSimulation, clearServiceRequestState, setIsAvailable]); // currentPosition no es una dependencia para evitar re-crear el intervalo. clearAllTimers ya no se llama al final.
 
   const handleToggleAvailability = () => {
     if (!hasVehicle) {
@@ -254,9 +361,30 @@ export default function InteractiveMap() {
 
   const handleAcceptServiceRequest = (tripId: string) => {
     console.log(`Pedido ${tripId} aceptado!`);
-    clearAllTimers(); // Cierra la solicitud actual y limpia sus timers
+    
+    // 1. Capturar el destino de la solicitud ANTES de limpiar currentServiceRequest
+    let targetDestination: L.LatLngExpression | null = null;
+    if (currentServiceRequest) {
+      targetDestination = [
+        currentServiceRequest.originCoordinates.lat,
+        currentServiceRequest.originCoordinates.lng,
+      ];
+    } else {
+      console.error("No se encontró currentServiceRequest al aceptar. La simulación no puede iniciar.");
+      return; // No hay solicitud, no se puede aceptar
+    }
+
+    // 2. Limpiar solo el estado de la solicitud pendiente
+    clearServiceRequestState(); 
+    
+    // 3. Establecer el estado para iniciar la simulación
     setIsAvailable(false); // El conductor pasa a no disponible para nuevas solicitudes
-    // Aquí se podría integrar la lógica para iniciar el viaje real,
+    setDestinationForSimulation(targetDestination); // Establecer el destino de la simulación
+    setIsSimulatingMovement(true); // Iniciar la simulación de movimiento
+
+    console.log("Simulación de movimiento iniciada con destino:", targetDestination);
+
+    // Aquí se integraría la lógica para iniciar el viaje real,
     // enviar notificaciones, etc.
   };
 
@@ -272,6 +400,7 @@ export default function InteractiveMap() {
         <MapRecenter
           currentPosition={currentPosition}
           serviceOrigin={serviceOriginPosition}
+          simulationTarget={destinationForSimulation} // Pasar el destino de la simulación
         />{" "}
         {/* Componente para re-centrar el mapa dinámicamente */}
         <TileLayer
@@ -293,21 +422,25 @@ export default function InteractiveMap() {
         <Button
           onClick={handleToggleAvailability}
           className={`font-bold ${
-            currentServiceRequest // Si hay una solicitud activa, mostrar color de "Solicitud Activa"
-              ? "bg-yellow-600 text-slate-950 cursor-not-allowed"
-              : (isAvailable // Si está disponible, mostrar "Disponible", sino "No Disponible"
-                  ? "bg-green-600 hover:bg-green-500 text-white"
-                  : "bg-slate-400 hover:bg-slate-600 text-white"
-                )
+            isSimulatingMovement // Si se está simulando movimiento
+              ? "bg-indigo-600 text-white cursor-not-allowed"
+              : currentServiceRequest // Si hay una solicitud activa, mostrar color de "Solicitud Activa"
+                ? "bg-yellow-600 text-slate-950 cursor-not-allowed"
+                : (isAvailable // Si está disponible, mostrar "Disponible", sino "No Disponible"
+                    ? "bg-green-600 hover:bg-green-500 text-white"
+                    : "bg-slate-400 hover:bg-slate-600 text-white"
+                  )
           }`}
-          disabled={!hasVehicle || currentServiceRequest !== null} // Deshabilitar si no hay vehículo o hay una solicitud activa
+          disabled={!hasVehicle || currentServiceRequest !== null || isSimulatingMovement} // Deshabilitar si no hay vehículo, hay una solicitud activa o está simulando movimiento
         >
           {!hasVehicle // Si no tiene vehículo
             ? "Añadir Vehículo para Activar"
-            : (currentServiceRequest // Si hay una solicitud activa
-                ? "Solicitud Activa"
-                : (isAvailable ? "Esperando Solicitud" : "No Disponible") // Si está disponible o no
-              )
+            : isSimulatingMovement // Si se está simulando movimiento
+              ? "En Camino"
+              : (currentServiceRequest // Si hay una solicitud activa
+                  ? "Solicitud Activa"
+                  : (isAvailable ? "Esperando Solicitud" : "No Disponible") // Si está disponible o no
+                )
           }
         </Button>
       </div>
