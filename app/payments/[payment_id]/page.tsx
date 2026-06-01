@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import mockPaymentsData from '@/lib/mocks/payments.json';
@@ -22,63 +21,80 @@ export default async function PaymentDetailPage({ params }: { params: { payment_
 
   const payment = mockPaymentsData.find((p) => p.id === payment_id) as Payment | undefined;
 
-  if (!payment) {
-    // Si la liquidación no se encuentra, se redirige a una página 404
-    notFound();
-  }
-
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">
       <AppHeader />
       <main className="flex-1 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto bg-slate-900/70 p-8 rounded-lg shadow-lg border border-slate-800">
-          <h1 className="text-3xl font-bold text-white mb-8 border-b border-slate-800 pb-4">
-            Detalle de Liquidación <span className="text-yellow-500">#{payment.id}</span>
-          </h1>
+          {payment ? (
+            <>
+              <h1 className="text-3xl font-bold text-white mb-8 border-b border-slate-800 pb-4">
+                Detalle de Liquidación <span className="text-yellow-500">#{payment.id}</span>
+              </h1>
 
-          <div className="space-y-6">
-            <div>
-              <p className="text-slate-400 text-sm">Fecha:</p>
-              <p className="text-white text-lg font-semibold">
-                {format(new Date(payment.fecha), 'dd/MM/yyyy - HH:mm', { locale: es })}
-              </p>
-            </div>
+              <div className="space-y-6">
+                <div>
+                  <p className="text-slate-400 text-sm">Fecha:</p>
+                  <p className="text-white text-lg font-semibold">
+                    {format(new Date(payment.fecha), 'dd/MM/yyyy - HH:mm', { locale: es })}
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold text-white mb-8 border-b border-slate-800 pb-4">
+                Liquidación no encontrada
+              </h1>
+              <div className="text-center p-6 text-slate-400">
+                <p className="text-lg mb-4">Lo sentimos, la liquidación con ID <span className="font-bold text-yellow-500">{payment_id}</span> no fue encontrada.</p>
+                <p className="text-md">Por favor, verifica el ID e intenta de nuevo.</p>
+              </div>
+            </>
+          )}
 
-            <div>
-              <p className="text-slate-400 text-sm">Valor:</p>
-              <p className="text-white text-xl font-bold">
-                ${payment.valor.toFixed(2)}
-              </p>
-            </div>
+          {payment && ( // Solo muestra los detalles si el pago existe
+            <>
+              <div>
+                <p className="text-slate-400 text-sm">Valor:</p>
+                <p className="text-white text-xl font-bold">
+                  ${payment.valor.toFixed(2)}
+                </p>
+              </div>
+            </>
+          )}
 
-            <div>
-              <p className="text-slate-400 text-sm">Estado:</p>
-              <span className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                payment.estado === 'Completado' ? 'bg-green-600/20 text-green-400' : 'bg-yellow-600/20 text-yellow-400'
-              }`}>
-                {payment.estado}
-              </span>
-            </div>
+          {payment ? ( // Si el pago existe, muestra el resto de los detalles
+            <>
+              <div>
+                <p className="text-slate-400 text-sm">Estado:</p>
+                <span className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
+                  payment.estado === 'Completado' ? 'bg-green-600/20 text-green-400' : 'bg-yellow-600/20 text-yellow-400'
+                }`}>
+                  {payment.estado}
+                </span>
+              </div>
 
-            <div>
-              <p className="text-slate-400 text-sm">ID de Transacción Externa:</p>
-              <p className="text-white text-lg">{payment.external_id}</p>
-            </div>
+              <div>
+                <p className="text-slate-400 text-sm">ID de Transacción Externa:</p>
+                <p className="text-white text-lg">{payment.external_id}</p>
+              </div>
 
-            <div>
-              <p className="text-slate-400 text-sm">Estado de Transacción (interno):</p>
-              <p className="text-white text-lg">{payment.status}</p>
-            </div>
+              <div>
+                <p className="text-slate-400 text-sm">Estado de Transacción (interno):</p>
+                <p className="text-white text-lg">{payment.status}</p>
+              </div>
 
-            <div>
-              <p className="text-slate-400 text-sm">ID del Viaje Asociado:</p>
-              <Link href={`/trips/${payment.trip_id}`}>
-                <Button variant="link" className="p-0 h-auto text-lg text-yellow-500 hover:text-yellow-400">
-                  {payment.trip_id}
-                </Button>
-              </Link>
-            </div>
-          </div>
+              <div>
+                <p className="text-slate-400 text-sm">ID del Viaje Asociado:</p>
+                <Link href={`/trips/${payment.trip_id}`}>
+                  <Button variant="link" className="p-0 h-auto text-lg text-yellow-500 hover:text-yellow-400">
+                    {payment.trip_id}
+                  </Button>
+                </Link>
+              </div>
+            </>
+          ) : null /* Si no hay pago, no se muestran estos detalles */}
 
           <div className="mt-10 flex justify-end">
             <Link href="/payments">
@@ -93,3 +109,5 @@ export default async function PaymentDetailPage({ params }: { params: { payment_
     </div>
   );
 }
+
+            
