@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 interface UserProfileProps {
   imageUrl: string;
   fullName: string;
-  avgRating: number;
 }
 
 interface AdminDataProps {
@@ -187,9 +186,6 @@ export default function AdminDetailsForm({ initialUserProfile, initialAdminData,
           <h3 className="text-2xl font-bold text-white leading-tight">
             {userProfile.fullName}
           </h3>
-          <p className="text-base text-yellow-400 mt-0 mb-1">
-            Calificación: {userProfile.avgRating}
-          </p>
           <div className="flex flex-col gap-1 mt-2">
             <button
               type="button"

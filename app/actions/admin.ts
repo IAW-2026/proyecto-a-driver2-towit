@@ -89,7 +89,6 @@ export async function getAdminDetails(): Promise<
       userProfile: {
         imageUrl: string;
         fullName: string;
-        avgRating: number; // Mocked for consistency with TowerDetails
       };
       adminData: {
         admin_id: string; // ID de Prisma
@@ -128,7 +127,6 @@ export async function getAdminDetails(): Promise<
     const userProfile = {
       imageUrl: clerkUser.imageUrl,
       fullName: clerkUser.firstName && clerkUser.lastName ? `${clerkUser.firstName} ${clerkUser.lastName}` : clerkUser.emailAddresses[0]?.emailAddress || 'Admin',
-      avgRating: 5.0, // Calificación mockeada para admins
     };
 
     // Datos específicos del administrador de Prisma
