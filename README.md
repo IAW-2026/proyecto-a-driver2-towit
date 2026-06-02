@@ -10,7 +10,7 @@ Esta app corresponde al rol del conductor en el proyecto de tipo **A (Transporte
 Enunciado completo: <https://iaw-2026.github.io/proyecto/>
 
 ## Deploy
-* 
+* https://proyecto-a-driver2-towit.vercel.app/home
 
 ## Usuarios de prueba
 Vienen dos usuarios precargados de prueba:
