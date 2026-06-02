@@ -18,7 +18,7 @@ Vienen dos usuarios precargados de prueba:
 * admin+clerk_test@iaw.com
 Adicionalmente, vienen otros usuarios precargados, de los cuales se pueden destacar:
 * tower+clerktest@iaw.com
-* admin+clerk_test@iaw.com
+* admin+clerktest@iaw.com
 El primero de ellos contando con vehículos de prueba.
 Las contraseña de los usuarios es la misma y coincide con la especificada en los requerimientos.
 
