@@ -10,15 +10,15 @@ Esta app corresponde al rol del conductor en el proyecto de tipo **A (Transporte
 Enunciado completo: <https://iaw-2026.github.io/proyecto/>
 
 ## Deploy
-* https://proyecto-a-driver2-towit.vercel.app/home
+* https://proyecto-a-driver2-towit.vercel.app/
 
 ## Usuarios de prueba
 Vienen dos usuarios precargados de prueba:
 * tower+clerk_test@iaw.com
-* admin+clerk_test@iaw.com
+* admin+clerk_test@iaw.com<br>
 Adicionalmente, vienen otros usuarios precargados, de los cuales se pueden destacar:
 * tower+clerktest@iaw.com
-* admin+clerktest@iaw.com
+* admin+clerktest@iaw.com<br>
 En realidad se trata de los mismos usuarios que los dos anteriores, con la salvedad de que los últimos dos son el pseudónimo en la base de datos de Neon, por haber sido creado antes y después renombrados.
 Las contraseña de los usuarios es la misma y coincide con la especificada en los requerimientos.
 
