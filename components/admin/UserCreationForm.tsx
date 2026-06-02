@@ -2,7 +2,14 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Reutilizamos el componente Input
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // Importamos los componentes Select
 import { createUser } from "@/app/actions/admin";
 
 export default function UserCreationForm() {
@@ -133,18 +140,20 @@ export default function UserCreationForm() {
             />
           </div>
           <div className='md:col-span-3 lg:col-span-1'>
-            <select
-              id="role"
-              name="role"
+            <Select
               value={formData.role}
-              onChange={handleChange}
-              className="w-full p-3.5 bg-slate-800/70 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              required
+              onValueChange={(value: "tower" | "admin") => handleChange({ target: { name: "role", value } } as React.ChangeEvent<HTMLSelectElement>)}
               disabled={isLoading}
+              required
             >
-              <option value="tower">Tower</option>
-              <option value="admin">Admin</option>
-            </select>
+              <SelectTrigger className="w-full h-full bg-slate-800/70 border-slate-700 text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+                <SelectValue placeholder="Seleccionar Rol" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900/90 border-slate-700 text-white">
+                <SelectItem value="tower">Tower</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="flex justify-end mt-4">
