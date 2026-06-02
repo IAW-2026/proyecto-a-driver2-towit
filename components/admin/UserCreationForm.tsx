@@ -150,7 +150,7 @@ export default function UserCreationForm() {
         <div className="flex justify-end mt-4">
           <Button
             type="submit"
-            className="w-full md:w-auto bg-green-600/70 hover:bg-green-500 text-green-950 font-bold p-3.5 h-auto"
+            className="w-full md:w-auto bg-green-600/70 hover:bg-green-500 text-green-950 font-bold py-1 px-2.5 h-auto"
             disabled={isLoading}
           >
             {isLoading ? 'Creando...' : 'Crear'}
