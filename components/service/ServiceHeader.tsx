@@ -6,9 +6,10 @@ import React from "react";
 interface ServiceHeaderProps {
   isAvailable: boolean;
   setIsAvailable: React.Dispatch<React.SetStateAction<boolean>>;
+  isTripActive: boolean; // Nueva prop para indicar si un viaje está activo
 }
 
-export default function ServiceHeader({ isAvailable, setIsAvailable }: ServiceHeaderProps) {
+export default function ServiceHeader({ isAvailable, setIsAvailable, isTripActive }: ServiceHeaderProps) {
   const handleToggleAvailability = () => {
     setIsAvailable(prev => !prev);
   };
@@ -32,6 +33,7 @@ export default function ServiceHeader({ isAvailable, setIsAvailable }: ServiceHe
                 ? "bg-green-600 hover:bg-green-500 text-white"
                 : "bg-slate-700 hover:bg-slate-600 text-white"
             }`}
+            disabled={isTripActive} // Deshabilitar si hay un viaje activo
           >
             {isAvailable ? "Disponible" : "No Disponible"}
           </Button>

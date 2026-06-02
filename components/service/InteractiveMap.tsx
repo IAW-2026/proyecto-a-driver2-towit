@@ -37,6 +37,8 @@ interface InteractiveMapProps {
   acceptedTrip: ServiceRequest | null;
   setAcceptedTrip: React.Dispatch<React.SetStateAction<ServiceRequest | null>>;
   onTripEnd: () => void;
+  currentTripStage: 'idle' | 'to_origin' | 'to_destination'; // Estado elevado
+  setCurrentTripStage: React.Dispatch<React.SetStateAction<'idle' | 'to_origin' | 'to_destination'>>; // Setter elevado
 }
 
 export default function InteractiveMap({
@@ -47,24 +49,23 @@ export default function InteractiveMap({
   acceptedTrip,
   setAcceptedTrip,
   onTripEnd,
+  currentTripStage, // Recibido como prop
+  setCurrentTripStage, // Recibido como prop
 }: InteractiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const driverMarker = useRef<Marker | null>(null);
-  const destinationMarker = useRef<Marker | null>(null); // Nuevo: marcador para el destino del pedido
+  const destinationMarker = useRef<Marker | null>(null);
   const routeSourceId = "route";
   const routeLayerId = "route-line";
 
-  // Estado local para la posición actual del conductor
-  const [driverLocation, setDriverLocation] = useState<Coordinates>(BAHIA_BLANCA_CENTER); // Valor inicial, será actualizado por geolocalización
+  const [driverLocation, setDriverLocation] = useState<Coordinates>(BAHIA_BLANCA_CENTER);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [currentTripStage, setCurrentTripStage] = useState<'idle' | 'to_origin' | 'to_destination'>('idle');
   const currentTripStageRef = useRef(currentTripStage); // Ref para acceder al estado más reciente
   
-  // Sincronizar el ref con el estado
   useEffect(() => {
     currentTripStageRef.current = currentTripStage;
-  }, [currentTripStage]);
+  }, [currentTripStage]); // Sincronizar el ref con la prop
 
   // === Inicialización del mapa ===
   useEffect(() => {
@@ -308,8 +309,8 @@ export default function InteractiveMap({
       currentStep++;
     }, SIMULATION_UPDATE_INTERVAL);
 
-    return () => clearInterval(animation); // Función de limpieza
-  }, [clearRoute, onTripEnd, setCurrentTripStage, currentTripStageRef]); // currentTripStage removido, añadido setCurrentTripStage y currentTripStageRef
+    return () => clearInterval(animation);
+  }, [clearRoute, onTripEnd, setCurrentTripStage, currentTripStageRef]);
 
   // === Efecto para manejar solicitudes entrantes (dibujar ruta al origen de la solicitud) ===
   useEffect(() => {
@@ -353,7 +354,7 @@ export default function InteractiveMap({
     return () => {
       if (cleanupSim) cleanupSim();
     };
-  }, [acceptedTrip, isMapLoaded, currentTripStage, drawRoute, simulateDriverMovement, onTripEnd]); // 'driverLocation' removido de las dependencias
+  }, [acceptedTrip, isMapLoaded, currentTripStage, drawRoute, simulateDriverMovement, onTripEnd, driverLocation, setCurrentTripStage]); // Añadir driverLocation y setCurrentTripStage
 
   // === Efecto para manejar la segunda etapa del viaje (al destino final del servicio) ===
   useEffect(() => {
@@ -382,7 +383,7 @@ export default function InteractiveMap({
         if (cleanupSim) cleanupSim();
       };
     }
-  }, [currentTripStage, acceptedTrip, isMapLoaded, drawRoute, simulateDriverMovement, onTripEnd]);
+  }, [currentTripStage, acceptedTrip, isMapLoaded, drawRoute, simulateDriverMovement, onTripEnd, setCurrentTripStage]);
 
 
   // Asegurarse de que el marcador del conductor esté siempre en `driverLocation`
