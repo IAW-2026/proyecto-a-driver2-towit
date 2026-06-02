@@ -70,7 +70,6 @@ export default function UserProfileSummary() {
           // const sortedVehicles = [...fetchedVehicles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
           setSelectedVehicleId(fetchedVehicles[fetchedVehicles.length - 1].vehicle_id);
         } else {
-          console.error("Error al obtener vehículos del Tower:", result.error);
           setVehicles([]); // Asegurarse de que vehicles sea un array vacío en caso de error
           setSelectedVehicleId(null); // No hay vehículo seleccionado si no hay ninguno
         }
