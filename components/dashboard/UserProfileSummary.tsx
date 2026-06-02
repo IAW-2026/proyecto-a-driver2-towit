@@ -29,7 +29,7 @@ export default function UserProfileSummary() {
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
-  const [isAvailable, setIsAvailable] = useState(true); // El usuario entra disponible por defecto
+  const [isAvailable, setIsAvailable] = useState(false);
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
 
   // Usa una referencia para rastrear si ya se ha realizado la petición para el userId actual.           
