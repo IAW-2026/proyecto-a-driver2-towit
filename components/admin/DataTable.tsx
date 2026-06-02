@@ -7,8 +7,8 @@ interface DataTableProps<T extends Record<string, any>> {
   data: T[];
   emptyMessage?: string;
   idFieldName: string; // Nombre del campo que contiene el ID único de la fila
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (id: string) => void; // Hacemos opcional
+  onDelete?: (id: string) => void; // Hacemos opcional
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -19,6 +19,7 @@ export default function DataTable<T extends Record<string, any>>({
   onEdit,
   onDelete,
 }: DataTableProps<T>) {
+  const hasActions = onEdit || onDelete;
   if (!data || data.length === 0) {
     return (
       <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 h-full flex flex-col">
@@ -46,9 +47,11 @@ export default function DataTable<T extends Record<string, any>>({
                   {header.replace(/_/g, ' ')}
                 </th>
               ))}
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Acciones
-              </th>
+              {hasActions && ( // Condicionalmente mostrar la columna de acciones
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider">
+                  Acciones
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
@@ -83,24 +86,30 @@ export default function DataTable<T extends Record<string, any>>({
                     </TooltipProvider>
                   </td>
                 ))}
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex gap-2 justify-end">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => onEdit(row[idFieldName] as string)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => onDelete(row[idFieldName] as string)}
-                    >
-                      Eliminar
-                    </Button>
-                  </div>
-                </td>
+                {hasActions && ( // Condicionalmente mostrar la celda de acciones
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex gap-2 justify-end">
+                      {onEdit && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => onEdit(row[idFieldName] as string)}
+                        >
+                          Editar
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDelete(row[idFieldName] as string)}
+                        >
+                          Eliminar
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

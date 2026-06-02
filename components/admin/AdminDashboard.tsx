@@ -27,7 +27,7 @@ type DeletingEntity = { type: 'admin'; id: string; clerkId?: string; name: strin
 interface AdminDashboardData {
   towers: Tower[];
   vehicles: Vehicle[];
-  assignments: Assignment[]; // Replace 'any' with Assignment[] once model is defined
+  assignments: Assignment[];
   admins: Admin[];
 }
 
@@ -65,7 +65,7 @@ export default function AdminDashboard() {
       setData({
         towers: towersRes.data as Tower[],
         vehicles: vehiclesRes.data as Vehicle[],
-        assignments: assignmentsRes.data as any[],
+        assignments: assignmentsRes.data as Assignment[], // Casting a Assignment[]
         admins: adminsRes.data as Admin[],
       });
     } catch (err: any) {
@@ -220,10 +220,13 @@ export default function AdminDashboard() {
         onEdit={handleEditVehicle}
         onDelete={handleDeleteVehicle}
       />
-      {/* Añadir DataTable para Assignments cuando el modelo esté implementado */}
-      {data?.assignments.length === 0 && (
-        <p className="text-slate-400 text-center">Nota: El modelo de Assignments aún no está implementado en la base de datos.</p>
-      )}
+      <DataTable<Assignment> // DataTable para Assignments
+        title="Asignaciones"
+        data={data?.assignments || []}
+        emptyMessage="No hay asignaciones para mostrar."
+        idFieldName="assignment_id" // Usar assignment_id como clave única
+        // No se pasan onEdit ni onDelete para que no se muestre la columna de acciones
+      />
 
       {/* Modales de Edición */}
       <Dialog open={!!editingEntity} onOpenChange={closeEditModal}>
