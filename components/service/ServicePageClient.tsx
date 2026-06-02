@@ -76,13 +76,30 @@ export default function ServicePageClient() {
         setAcceptanceTimer(null);
       }
     };
-  }, [isAvailable, currentRequest, acceptedTrip, acceptanceTimer, currentTripStage]); // Añadir currentTripStage a las dependencias
+  }, [isAvailable, currentRequest, acceptedTrip, acceptanceTimer, currentTripStage]);
+
+  // Efecto para limpiar la solicitud y la ruta cuando el conductor se pone no disponible
+  useEffect(() => {
+    if (!isAvailable) { // Si el conductor se pone no disponible
+      if (currentRequest) { // Y hay una solicitud actual mostrándose
+        console.log("Conductor no disponible: Eliminando solicitud y ruta del mapa.");
+        setCurrentRequest(null); // Quitar la tarjeta de solicitud
+        if (acceptanceTimer) {
+          clearTimeout(acceptanceTimer); // Limpiar el temporizador de aceptación
+          setAcceptanceTimer(null);
+        }
+        // La limpieza de la ruta del mapa ocurrirá automáticamente en InteractiveMap
+        // debido a que currentRequest se establece en null, lo cual es una dependencia
+        // del useEffect que maneja el dibujo de la ruta de la solicitud.
+      }
+    }
+  }, [isAvailable, currentRequest, acceptanceTimer, setCurrentRequest, setAcceptanceTimer]);
 
   // Handler para aceptar una solicitud
   const handleAcceptRequest = useCallback((tripId: string) => {
     if (currentRequest && currentRequest.tripId === tripId) {
       console.log(`Solicitud ${tripId} aceptada.`);
-      setIsAvailable(false); // Cambiar a no disponible
+      setIsAvailable(false); // Cambiar a no disponible (el botón se deshabilitará por isTripActive)
       setAcceptedTrip(currentRequest); // Establecer el viaje aceptado
       
       // Limpiar el temporizador de aceptación actual
@@ -92,7 +109,7 @@ export default function ServicePageClient() {
       }
       setCurrentRequest(null); // Ocultar la tarjeta de solicitud
     }
-  }, [currentRequest, acceptanceTimer, setIsAvailable, setAcceptedTrip]); // Añadir dependencias necesarias
+  }, [currentRequest, acceptanceTimer, setIsAvailable, setAcceptedTrip]);
 
   // Handler para cuando el viaje termina
   const onTripEnd = useCallback(() => {
