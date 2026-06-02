@@ -1,0 +1,92 @@
+[
+  {
+    "id": "pay_001",
+    "valor": 150.00,
+    "fecha": "2026-05-29",
+    "estado": "Completado",
+    "external_id": "ext_abc123",
+    "status": "completed",
+    "trip_id": "trip_001"
+  },
+  {
+    "id": "pay_002",
+    "valor": 120.50,
+    "fecha": "2026-05-28",
+    "estado": "Completado",
+    "external_id": "ext_def456",
+    "status": "completed",
+    "trip_id": "trip_002"
+  },
+  {
+    "id": "pay_003",
+    "valor": 200.00,
+    "fecha": "2026-05-27",
+    "estado": "Completado",
+    "external_id": "ext_ghi789",
+    "status": "completed",
+    "trip_id": "trip_003"
+  },
+  {
+    "id": "pay_004",
+    "valor": 95.75,
+    "fecha": "2026-05-26",
+    "estado": "Completado",
+    "external_id": "ext_jkl012",
+    "status": "completed",
+    "trip_id": "trip_004"
+  },
+  {
+    "id": "pay_005",
+    "valor": 180.20,
+    "fecha": "2026-05-25",
+    "estado": "Completado",
+    "external_id": "ext_mno345",
+    "status": "completed",
+    "trip_id": "trip_005"
+  },
+  {
+    "id": "pay_006",
+    "valor": 75.00,
+    "fecha": "2026-05-24",
+    "estado": "Completado",
+    "external_id": "ext_pqr678",
+    "status": "completed",
+    "trip_id": "trip_006"
+  },
+  {
+    "id": "pay_007",
+    "valor": 300.00,
+    "fecha": "2026-05-23",
+    "estado": "Completado",
+    "external_id": "ext_stu901",
+    "status": "completed",
+    "trip_id": "trip_007"
+  },
+  {
+    "id": "pay_008",
+    "valor": 110.00,
+    "fecha": "2026-05-22",
+    "estado": "Completado",
+    "external_id": "ext_vwx234",
+    "status": "completed",
+    "trip_id": "trip_008"
+  },
+  {
+    "id": "pay_009",
+    "valor": 145.90,
+    "fecha": "2026-05-21",
+    "estado": "Completado",
+    "external_id": "ext_yza567",
+    "status": "completed",
+    "trip_id": "trip_009"
+  },
+  {
+    "id": "pay_010",
+    "valor": 220.30,
+    "fecha": "2026-05-20",
+    "estado": "Completado",
+    "external_id": "ext_bcd890",
+    "status": "completed",
+    "trip_id": "trip_010"
+  }
+]

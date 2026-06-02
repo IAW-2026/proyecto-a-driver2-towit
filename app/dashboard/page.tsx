@@ -1,0 +1,58 @@
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import AppHeader from "@/components/layout/AppHeader";
+import AppFooter from "@/components/layout/AppFooter";
+import UserProfileSummary from "@/components/dashboard/UserProfileSummary";
+import MonthlyTripsSummary from "@/components/dashboard/MonthlyTripsSummary";
+import RecentTripsList from "@/components/dashboard/RecentTripsList";
+import WeeklyEarningsChart from "@/components/dashboard/WeeklyEarningsChart";
+import RecentPaymentsList from "@/components/dashboard/RecentPaymentsList";
+
+export default async function DashboardPage() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    redirect("/home"); // Redirigir si el usuario no está autenticado
+  }
+
+  // No necesitamos obtener datos de Clerk o Prisma aquí directamente
+  // Los componentes del dashboard pueden manejar su propia carga de datos o usar useUser()
+
+  return (
+    <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">
+      <AppHeader />
+      <main className="flex-1 p-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold text-white mb-8">Dashboard</h1>
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 grid-flow-row-dense">
+            {/* Sección 1: Resumen de detalles de usuario (3 columnas de ancho, 1 fila de alto) */}
+            <div className="lg:col-span-3 lg:row-span-1 h-full">
+              <UserProfileSummary />
+            </div>
+
+            {/* Sección 2: Cantidad de viajes realizados en el mes (1 columna de ancho, 1 fila de alto) */}
+            <div className="lg:col-span-1 lg:row-span-1 h-full">
+              <MonthlyTripsSummary />
+            </div>
+
+            {/* Sección 3: Listado de viajes (2 columnas de ancho, 2 filas de alto) */}
+            <div className="lg:col-span-2 lg:row-span-2">
+              <RecentTripsList />
+            </div>
+
+            {/* Sección 4: Resumen de ganancias de la última semana (4 columnas de ancho, 2 filas de alto) */}
+            <div className="lg:col-span-4 lg:row-span-2 h-full">
+              <WeeklyEarningsChart />
+            </div>
+
+            {/* Sección 5: Listado de pagos desembolsados (2 columnas de ancho, 1 fila de alto) */}
+            <div className="lg:col-span-2 lg:row-span-1">
+              <RecentPaymentsList />
+            </div>
+          </div>
+        </div>
+      </main>
+      <AppFooter />
+    </div>
+  );
+}

@@ -1,0 +1,407 @@
+[
+  {
+    "id": "trip_001",
+    "tower_id": "tower_clerk_101",
+    "customer": {
+      "customer_id": "cust_001",
+      "full_name": "Juan Pérez"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_001",
+      "brand": "Ford",
+      "model": "Fiesta",
+      "year": 2015,
+      "weight": 1200
+    },
+    "origin": {
+      "lat": "-34.6037",
+      "long": "-58.3816"
+    },
+    "destination": {
+      "lat": "-34.5906",
+      "long": "-58.4194"
+    },
+    "date": "2026-05-29",
+    "time": "10:30",
+    "status": "Completado",
+    "amount": 150.00
+  },
+  {
+    "id": "trip_002",
+    "tower_id": "tower_clerk_102",
+    "customer": {
+      "customer_id": "cust_002",
+      "full_name": "María López"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_002",
+      "brand": "Chevrolet",
+      "model": "Cruze",
+      "year": 2017,
+      "weight": 1400
+    },
+    "origin": {
+      "lat": "-34.5888",
+      "long": "-58.4000"
+    },
+    "destination": {
+      "lat": "-34.6200",
+      "long": "-58.3900"
+    },
+    "date": "2026-05-28",
+    "time": "14:15",
+    "status": "Completado",
+    "amount": 120.50
+  },
+  {
+    "id": "trip_003",
+    "tower_id": "tower_clerk_101",
+    "customer": {
+      "customer_id": "cust_003",
+      "full_name": "Carlos García"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_003",
+      "brand": "Volkswagen",
+      "model": "Gol Trend",
+      "year": 2019,
+      "weight": 1100
+    },
+    "origin": {
+      "lat": "-34.6100",
+      "long": "-58.4500"
+    },
+    "destination": {
+      "lat": "-34.5700",
+      "long": "-58.4700"
+    },
+    "date": "2026-05-27",
+    "time": "09:00",
+    "status": "Pendiente",
+    "amount": 90.00
+  },
+  {
+    "id": "trip_004",
+    "tower_id": "tower_clerk_103",
+    "customer": {
+      "customer_id": "cust_004",
+      "full_name": "Ana Rodríguez"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_004",
+      "brand": "Renault",
+      "model": "Clio",
+      "year": 2016,
+      "weight": 1050
+    },
+    "origin": {
+      "lat": "-34.5600",
+      "long": "-58.4300"
+    },
+    "destination": {
+      "lat": "-34.6000",
+      "long": "-58.4100"
+    },
+    "date": "2026-05-26",
+    "time": "11:45",
+    "status": "Completado",
+    "amount": 110.25
+  },
+  {
+    "id": "trip_005",
+    "tower_id": "tower_clerk_102",
+    "customer": {
+      "customer_id": "cust_005",
+      "full_name": "Pedro Sánchez"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_005",
+      "brand": "Toyota",
+      "model": "Corolla",
+      "year": 2020,
+      "weight": 1300
+    },
+    "origin": {
+      "lat": "-34.6300",
+      "long": "-58.3700"
+    },
+    "destination": {
+      "lat": "-34.5950",
+      "long": "-58.3850"
+    },
+    "date": "2026-05-25",
+    "time": "16:00",
+    "status": "Cancelado",
+    "amount": 0.00
+  },
+  {
+    "id": "trip_006",
+    "tower_id": "tower_clerk_103",
+    "customer": {
+      "customer_id": "cust_006",
+      "full_name": "Laura Torres"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_006",
+      "brand": "Peugeot",
+      "model": "208",
+      "year": 2021,
+      "weight": 1150
+    },
+    "origin": {
+      "lat": "-34.6000",
+      "long": "-58.4000"
+    },
+    "destination": {
+      "lat": "-34.6300",
+      "long": "-58.4200"
+    },
+    "date": "2026-05-24",
+    "time": "08:00",
+    "status": "Completado",
+    "amount": 135.00
+  },
+  {
+    "id": "trip_007",
+    "tower_id": "tower_clerk_101",
+    "customer": {
+      "customer_id": "cust_007",
+      "full_name": "Diego Fernández"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_007",
+      "brand": "Fiat",
+      "model": "Cronos",
+      "year": 2022,
+      "weight": 1250
+    },
+    "origin": {
+      "lat": "-34.5750",
+      "long": "-58.4350"
+    },
+    "destination": {
+      "lat": "-34.6150",
+      "long": "-58.4550"
+    },
+    "date": "2026-05-23",
+    "time": "13:30",
+    "status": "Completado",
+    "amount": 160.75
+  },
+  {
+    "id": "trip_008",
+    "tower_id": "tower_clerk_102",
+    "customer": {
+      "customer_id": "cust_008",
+      "full_name": "Sofía Giménez"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_008",
+      "brand": "Honda",
+      "model": "HR-V",
+      "year": 2023,
+      "weight": 1600
+    },
+    "origin": {
+      "lat": "-34.6250",
+      "long": "-58.3650"
+    },
+    "destination": {
+      "lat": "-34.5850",
+      "long": "-58.3950"
+    },
+    "date": "2026-05-22",
+    "time": "17:00",
+    "status": "Pendiente",
+    "amount": 180.00
+  },
+  {
+    "id": "trip_009",
+    "tower_id": "tower_clerk_103",
+    "customer": {
+      "customer_id": "cust_009",
+      "full_name": "Martín Herrera"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_009",
+      "brand": "Hyundai",
+      "model": "Creta",
+      "year": 2024,
+      "weight": 1500
+    },
+    "origin": {
+      "lat": "-34.5900",
+      "long": "-58.4100"
+    },
+    "destination": {
+      "lat": "-34.6200",
+      "long": "-58.4300"
+    },
+    "date": "2026-05-21",
+    "time": "09:45",
+    "status": "Completado",
+    "amount": 100.00
+  },
+  {
+    "id": "trip_010",
+    "tower_id": "tower_clerk_101",
+    "customer": {
+      "customer_id": "cust_010",
+      "full_name": "Valentina Ibañez"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_010",
+      "brand": "Nissan",
+      "model": "Kicks",
+      "year": 2020,
+      "weight": 1350
+    },
+    "origin": {
+      "lat": "-34.6100",
+      "long": "-58.3900"
+    },
+    "destination": {
+      "lat": "-34.5700",
+      "long": "-58.3700"
+    },
+    "date": "2026-05-20",
+    "time": "12:00",
+    "status": "Completado",
+    "amount": 140.00
+  },
+  {
+    "id": "trip_011",
+    "tower_id": "tower_clerk_102",
+    "customer": {
+      "customer_id": "cust_011",
+      "full_name": "Francisco Juárez"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_011",
+      "brand": "Mercedes-Benz",
+      "model": "Clase A",
+      "year": 2018,
+      "weight": 1450
+    },
+    "origin": {
+      "lat": "-34.5800",
+      "long": "-58.4600"
+    },
+    "destination": {
+      "lat": "-34.6200",
+      "long": "-58.4800"
+    },
+    "date": "2026-05-19",
+    "time": "15:30",
+    "status": "Completado",
+    "amount": 200.00
+  },
+  {
+    "id": "trip_012",
+    "tower_id": "tower_clerk_103",
+    "customer": {
+      "customer_id": "cust_012",
+      "full_name": "Camila Kuntz"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_012",
+      "brand": "BMW",
+      "model": "Serie 1",
+      "year": 2019,
+      "weight": 1550
+    },
+    "origin": {
+      "lat": "-34.6050",
+      "long": "-58.3750"
+    },
+    "destination": {
+      "lat": "-34.5650",
+      "long": "-58.3550"
+    },
+    "date": "2026-05-18",
+    "time": "11:00",
+    "status": "Cancelado",
+    "amount": 0.00
+  },
+  {
+    "id": "trip_013",
+    "tower_id": "tower_clerk_101",
+    "customer": {
+      "customer_id": "cust_013",
+      "full_name": "Lucas Lagos"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_013",
+      "brand": "Audi",
+      "model": "A3",
+      "year": 2021,
+      "weight": 1400
+    },
+    "origin": {
+      "lat": "-34.6150",
+      "long": "-58.4250"
+    },
+    "destination": {
+      "lat": "-34.5750",
+      "long": "-58.4050"
+    },
+    "date": "2026-05-17",
+    "time": "14:00",
+    "status": "Completado",
+    "amount": 170.00
+  },
+  {
+    "id": "trip_014",
+    "tower_id": "tower_clerk_102",
+    "customer": {
+      "customer_id": "cust_014",
+      "full_name": "Agustina Molina"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_014",
+      "brand": "Jeep",
+      "model": "Renegade",
+      "year": 2022,
+      "weight": 1650
+    },
+    "origin": {
+      "lat": "-34.6350",
+      "long": "-58.3850"
+    },
+    "destination": {
+      "lat": "-34.5950",
+      "long": "-58.4150"
+    },
+    "date": "2026-05-16",
+    "time": "09:10",
+    "status": "Completado",
+    "amount": 190.50
+  },
+  {
+    "id": "trip_015",
+    "tower_id": "tower_clerk_103",
+    "customer": {
+      "customer_id": "cust_015",
+      "full_name": "Ezequiel Nuñez"
+    },
+    "vehicle": {
+      "vehicle_id": "veh_015",
+      "brand": "RAM",
+      "model": "1500",
+      "year": 2023,
+      "weight": 3000
+    },
+    "origin": {
+      "lat": "-34.5600",
+      "long": "-58.4000"
+    },
+    "destination": {
+      "lat": "-34.5900",
+      "long": "-58.4200"
+    },
+    "date": "2026-05-15",
+    "time": "13:00",
+    "status": "Completado",
+    "amount": 250.00
+  }
+]

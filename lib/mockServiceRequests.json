@@ -1,0 +1,122 @@
+[
+  {
+    "tripId": "mock_trip_001",
+    "customerName": "Ana García",
+    "customerRating": 4.2,
+    "vehicleModel": "Toyota Corolla",
+    "vehiclePlate": "AB 123 CD",
+    "originAddress": "Alsina 50 (Plaza Rivadavia), Bahía Blanca",
+    "serviceValue": 12000.00,
+    "originCoordinates": { "lat": -38.7196, "lng": -62.2651 },
+    "destinationAddress": "Parque de Mayo, Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7022, "lng": -62.2741 }
+  },
+  {
+    "tripId": "mock_trip_002",
+    "customerName": "Pedro López",
+    "customerRating": 3.9,
+    "vehicleModel": "Fiat Palio",
+    "vehiclePlate": "EF 456 GH",
+    "originAddress": "Av. Alem 1200, Bahía Blanca",
+    "serviceValue": 10500.00,
+    "originCoordinates": { "lat": -38.7075, "lng": -62.2665 },
+    "destinationAddress": "Av. Colón 80, Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7190, "lng": -62.2695 }
+  },
+  {
+    "tripId": "mock_trip_003",
+    "customerName": "Sofía Martínez",
+    "customerRating": 4.8,
+    "vehicleModel": "Volkswagen Gol",
+    "vehiclePlate": "IJ 789 KL",
+    "originAddress": "Av. Alem y Córdoba (Parque de Mayo), Bahía Blanca",
+    "serviceValue": 13500.00,
+    "originCoordinates": { "lat": -38.7022, "lng": -62.2741 },
+    "destinationAddress": "Chiclana 100, Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7180, "lng": -62.2640 }
+  },
+  {
+    "tripId": "mock_trip_004",
+    "customerName": "Carlos Rodríguez",
+    "customerRating": 4.1,
+    "vehicleModel": "Renault Clio",
+    "vehiclePlate": "MN 012 OP",
+    "originAddress": "Alsina 425 (Teatro Municipal), Bahía Blanca",
+    "serviceValue": 11000.00,
+    "originCoordinates": { "lat": -38.7163, "lng": -62.2612 },
+    "destinationAddress": "Sixto Laspiur 400 (Estación Sud), Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7290, "lng": -62.2680 }
+  },
+  {
+    "tripId": "mock_trip_005",
+    "customerName": "Laura Gómez",
+    "customerRating": 4.6,
+    "vehicleModel": "Chevrolet Onix",
+    "vehiclePlate": "QR 345 ST",
+    "originAddress": "Mitre 300, Bahía Blanca",
+    "serviceValue": 12800.00,
+    "originCoordinates": { "lat": -38.7235, "lng": -62.2610 },
+    "destinationAddress": "Estomba 1000 (Hospital Municipal), Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7100, "lng": -62.2690 }
+  },
+  {
+    "tripId": "mock_trip_006",
+    "customerName": "Diego Fernandez",
+    "customerRating": 3.5,
+    "vehicleModel": "Peugeot 208",
+    "vehiclePlate": "UV 678 WX",
+    "originAddress": "Av. Cabrera 4000 (BBPS), Bahía Blanca",
+    "serviceValue": 14000.00,
+    "originCoordinates": { "lat": -38.6855, "lng": -62.2425 },
+    "destinationAddress": "Don Bosco 1900, Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7030, "lng": -62.2480 }
+  },
+  {
+    "tripId": "mock_trip_007",
+    "customerName": "Valeria Castro",
+    "customerRating": 4.9,
+    "vehicleModel": "Honda Civic",
+    "vehiclePlate": "YZ 901 AB",
+    "originAddress": "Av. Cerri 750 (Estación Sud), Bahía Blanca",
+    "serviceValue": 16000.00,
+    "originCoordinates": { "lat": -38.7285, "lng": -62.2690 },
+    "destinationAddress": "Guillermo Torres 3900 (Puerto Ing. White), Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7750, "lng": -62.2600 }
+  },
+  {
+    "tripId": "mock_trip_008",
+    "customerName": "Ricardo Sosa",
+    "customerRating": 4.0,
+    "vehicleModel": "Toyota Hilux",
+    "vehiclePlate": "CD 234 EF",
+    "originAddress": "Perú 400 (Barrio Universitario), Bahía Blanca",
+    "serviceValue": 18000.00,
+    "originCoordinates": { "lat": -38.7095, "lng": -62.2615 },
+    "destinationAddress": "Florida 1400 (Shopping Bahía Blanca), Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7100, "lng": -62.2450 }
+  },
+  {
+    "tripId": "mock_trip_009",
+    "customerName": "Mariana Ríos",
+    "customerRating": 4.7,
+    "vehicleModel": "BMW Serie 3",
+    "vehiclePlate": "GH 567 IJ",
+    "originAddress": "Av. Lainez 2400 (Hospital Penna), Bahía Blanca",
+    "serviceValue": 20000.00,
+    "originCoordinates": { "lat": -38.7360, "lng": -62.2280 },
+    "destinationAddress": "Garibaldi 300 (Villa Mitre), Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7250, "lng": -62.2500 }
+  },
+  {
+    "tripId": "mock_trip_010",
+    "customerName": "Pablo Nuñez",
+    "customerRating": 3.7,
+    "vehicleModel": "Mercedes-Benz Clase C",
+    "vehiclePlate": "KL 890 MN",
+    "originAddress": "Av. Colón 600, Bahía Blanca",
+    "serviceValue": 17500.00,
+    "originCoordinates": { "lat": -38.7240, "lng": -62.2730 },
+    "destinationAddress": "Sarmiento 40 (Terminal de Ómnibus), Bahía Blanca",
+    "destinationCoordinates": { "lat": -38.7140, "lng": -62.2850 }
+  }
+]
