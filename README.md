@@ -19,7 +19,7 @@ Vienen dos usuarios precargados de prueba:
 Adicionalmente, vienen otros usuarios precargados, de los cuales se pueden destacar:
 * tower+clerktest@iaw.com
 * admin+clerktest@iaw.com
-El primero de ellos contando con vehículos de prueba.
+En realidad se trata de los mismos usuarios que los dos anteriores, con la salvedad de que los últimos dos son el pseudónimo en la base de datos de Neon, por haber sido creado antes y después renombrados.
 Las contraseña de los usuarios es la misma y coincide con la especificada en los requerimientos.
 
 ## Descripción del proyecto
