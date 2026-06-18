@@ -39,7 +39,7 @@ export default function HomePage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md">
-          <SignUpButton forceRedirectUrl="/dashboard" mode="modal">
+          <SignUpButton forceRedirectUrl="/dashboard" mode="modal" unsafeMetadata={{ role: "tower" }}>
             <button className="bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-lg font-bold px-8 py-4 rounded-xl transition-all shadow-xl shadow-yellow-500/20 w-full">
               Comenzar como Tower
             </button>
