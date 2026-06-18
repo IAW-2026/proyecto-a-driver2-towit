@@ -1,27 +1,15 @@
-"use client";
-
-import { SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
-export default function HomePage() {
-  const { isSignedIn, isLoaded } = useUser();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      router.push("/dashboard");
-    }
-  }, [isLoaded, isSignedIn, router]);
+export default async function HomePage() {
+  const { userId } = await auth();
 
-  if (isLoaded && isSignedIn) {
-    return (
-      <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col justify-center items-center">
-        <p className="text-slate-400">Redirigiendo al dashboard...</p>
-      </div>
-    );
+  if (userId) {
+    redirect("/dashboard");
   }
 
   return (
