@@ -59,52 +59,39 @@ export async function POST(req: Request) {
         return new Response('Error: Missing user ID or email addresses', { status: 400 });
     }
 
+    // Extraer el rol directamente de unsafe_metadata
+    const roleFromUnsafeMetadata = (unsafe_metadata as any)?.role;
+
+    // Si el rol en unsafe_metadata no es 'tower', ignorar el evento según la lógica solicitada.
+    if (roleFromUnsafeMetadata !== 'tower') {
+      console.log(`Ignoring user.created event for user ${id}: unsafe_metadata.role is not 'tower' or is missing.`);
+      return new NextResponse('Webhook processed (ignored - not a tower user from app signup)', { status: 200 });
+    }
+
     const primaryEmail = email_addresses.find(email => email.id === evt.data.primary_email_address_id)?.email_address || email_addresses[0].email_address;
     const fullName = `${first_name || ''} ${last_name || ''}`.trim();
 
     try {
       const client = await clerkClient();
 
-      let finalRole = (public_metadata as any)?.role; // Prefer public_metadata if already set
-
-      // If public_metadata does not have a role, check unsafe_metadata
-      if (!finalRole && (unsafe_metadata as any)?.role === 'tower') {
-        finalRole = 'tower';
-      }
-
-      // Update the user's publicMetadata in Clerk if a role was determined and it's different
-      if (finalRole && (public_metadata as any)?.role !== finalRole) {
-          await client.users.updateUser(id, {
-              publicMetadata: {
-                  ...(public_metadata as object), // Maintain other public metadata
-                  role: finalRole,
-              },
-          });
-          console.log(`User ${id} updated with publicMetadata: { role: '${finalRole}' }`);
-      }
-
-      // Save the user in the Neon database based on the final determined role
-      if (finalRole === 'admin') {
-        await prisma.admin.create({
-          data: {
-            clerk_id: id,
-            email: primaryEmail,
-            full_name: fullName,
+      // Asignar el rol 'tower' a publicMetadata del usuario en Clerk
+      await client.users.updateUser(id, {
+          publicMetadata: {
+              ...(public_metadata as object), // Mantener cualquier otra publicMetadata existente
+              role: 'tower',
           },
-        });
-        console.log(`Admin user ${id} saved to Neon database.`);
-      } else if (finalRole === 'tower') {
-        await prisma.tower.create({
-          data: {
-            clerk_id: id,
-            email: primaryEmail,
-            full_name: fullName,
-          },
-        });
-        console.log(`Tower user ${id} saved to Neon database.`);
-      } else {
-          console.warn(`User ${id} created with no recognized role in public/unsafe metadata for Prisma record. public_metadata: ${JSON.stringify(public_metadata)}, unsafe_metadata: ${JSON.stringify(unsafe_metadata)}`);
-      }
+      });
+      console.log(`User ${id} updated with publicMetadata: { role: 'tower' }`);
+
+      // Guardar el usuario 'tower' en la base de datos de Neon (Prisma)
+      await prisma.tower.create({
+        data: {
+          clerk_id: id,
+          email: primaryEmail,
+          full_name: fullName,
+        },
+      });
+      console.log(`Tower user ${id} saved to Neon database.`);
 
     } catch (error) {
       console.error(`Failed to process user.created event for user ${id}:`, error);
