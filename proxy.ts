@@ -22,14 +22,15 @@ export default clerkMiddleware(async (auth, req) => {
   //si el usuario no está logeado
   if (!userId) {
     //lo redirecciono a /home en caso de que la ruta sea /
-    if (pathname == "/")
-      NextResponse.redirect(new URL("/home", req.url));
+    if (pathname == "/" || !isPublicPath(req))
+      return NextResponse.redirect(new URL("/home", req.url));
+
 
   } else {
     //si está logeado, obtengo el rol
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
-    const userRole = user.publicMetadata.role as 'admin' | 'tower' | undefined;
+    const userRole = sessionClaims?.role as 'admin' | 'tower' | undefined;
     
     //y si está en una ruta pública, lo redirecciono a donde corresponde
     if (isPublicPath(req)) {
