@@ -1,15 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
 import AccountDetailsForm from "@/components/account-details/AccountDetailsForm";
+// Redirección manejada por el middleware (proxy.ts)
 
 export default async function AccountDetailsPage() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/home");
-  }
+  // Redirección manejada por el middleware (proxy.ts)
 
   // AccountDetailsForm ahora carga sus propios datos internamente,
   // por lo que no es necesario pasar userProfile ni towerData como props aquí.

@@ -1,15 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
 import TripDetail from "@/components/trips/TripDetail";
+// Redirección manejada por el middleware (proxy.ts)
 
 export default async function TripsDetailPage({ params }: { params: { id: string } }) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/home"); // Redirigir si el usuario no está autenticado
-  }
+  // Redirección manejada por el middleware (proxy.ts)
 
   const { id } = await params;
 

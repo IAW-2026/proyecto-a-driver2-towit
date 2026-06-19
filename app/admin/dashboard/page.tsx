@@ -1,20 +1,8 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import AdminDashboard from "@/components/admin/AdminDashboard";
+// Redirección manejada por el middleware (proxy.ts)
 
 export default async function AdminPage() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/home"); // Redirigir si el usuario no está autenticado
-  }
-
-  const client = await clerkClient()
-  const user = await client.users.getUser(userId);
-
-  if (user.publicMetadata?.role !== 'admin') {
-    redirect("/home"); // Redirigir si el usuario no es administrador
-  }
+  // Redirección manejada por el middleware (proxy.ts)
 
   return (
     <>

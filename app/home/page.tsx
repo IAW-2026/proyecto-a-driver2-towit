@@ -1,16 +1,11 @@
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+// Redirección manejada por el middleware (proxy.ts)
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
 
 
 export default async function HomePage() {
-  const { userId } = await auth();
-
-  if (userId) {
-    redirect("/dashboard");
-  }
+  // Redirección manejada por el middleware (proxy.ts)
 
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">

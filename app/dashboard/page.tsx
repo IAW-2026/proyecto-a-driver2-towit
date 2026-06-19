@@ -1,5 +1,3 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
 import UserProfileSummary from "@/components/dashboard/UserProfileSummary";
@@ -7,16 +5,10 @@ import MonthlyTripsSummary from "@/components/dashboard/MonthlyTripsSummary";
 import RecentTripsList from "@/components/dashboard/RecentTripsList";
 import WeeklyEarningsChart from "@/components/dashboard/WeeklyEarningsChart";
 import RecentPaymentsList from "@/components/dashboard/RecentPaymentsList";
+// Redirección manejada por el middleware (proxy.ts)
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/home"); // Redirigir si el usuario no está autenticado
-  }
-
-  // No necesitamos obtener datos de Clerk o Prisma aquí directamente
-  // Los componentes del dashboard pueden manejar su propia carga de datos o usar useUser()
+  // Redirección manejada por el middleware (proxy.ts)
 
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">

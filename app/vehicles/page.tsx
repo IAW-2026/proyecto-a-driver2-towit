@@ -1,15 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import AppHeader from "@/components/layout/AppHeader";
 import AppFooter from "@/components/layout/AppFooter";
 import VehicleList from "@/components/vehicles/VehicleList"; // Importar el componente de lista de vehículos
+// Redirección manejada por el middleware (proxy.ts)
 
 export default async function VehiclesPage() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/home"); // Redirigir si el usuario no está autenticado
-  }
+  // Redirección manejada por el middleware (proxy.ts)
 
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">

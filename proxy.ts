@@ -1,70 +1,93 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkClient, clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { RedirectToSignIn } from '@clerk/nextjs';
 
-const isPublicRoute = createRouteMatcher([
-  '/',
+// 1. Definir rutas que son consideradas "públicas" (accesibles sin autenticación)
+// Excluye la raíz '/' de aquí, ya que tiene un comportamiento especial de redireccionamiento cuando no está logeado.
+const publicRoutes = createRouteMatcher([
   '/home',
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/api/webhooks/clerk',
 ]);
 
-const isTowerRoute = createRouteMatcher([
-  '/dashboard',
-  '/service',
-  '/trips(.*)', // Incluye /trips y /trips/[id]
-  '/account-details',
-  '/vehicles(.*)', // Incluye /vehicles y sub-rutas de gestión de vehículos
+// Rutas que SIEMPRE deben redirigir a /home si no está autenticado, o a dashboard si está autenticado
+const alwaysRedirectRootIfUnauthenticated = createRouteMatcher(['/']);
+
+// 2. Definir rutas específicas para Towers
+const towerRoutes = createRouteMatcher([
+  '/dashboard(.*)',
+  '/service(.*)',
   '/payments(.*)',
+  '/trips(.*)',
+  '/vehicles(.*)',
 ]);
 
-const isAdminRoute = createRouteMatcher([
-  '/admin(.*)', // Cubre /admin, /admin/dashboard, etc.
+// 3. Definir rutas específicas para Admins
+const adminRoutes = createRouteMatcher([
+  '/admin(.*)', // Esto cubre /admin y /admin/dashboard
 ]);
 
-export default clerkMiddleware(async (auth, request) => {
-  const { userId, sessionClaims } = await auth();
-  const homeUrl = new URL('/home', request.url);
-  const dashboardUrl = new URL('/dashboard', request.url);
-  const adminDashboardUrl = new URL('/admin/dashboard', request.url); // Asumiendo que existe o existirá
+export default clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
+  const url = req.nextUrl;
+  const pathname = url.pathname;
 
-  // 1. Permitir acceso a rutas públicas
-  if (isPublicRoute(request)) {
-    return;
+  // 7. Al acceder a /admin se redirecciona a /admin/dashboard.
+  if (pathname === '/admin') {
+    return NextResponse.redirect(new URL('/admin/dashboard', url));
   }
 
-  // 2. Redirigir a /home si no es una ruta pública y el usuario no está autenticado
+  // Lógica si el usuario NO está autenticado (userId no existe)
+  // 5. Si se intenta acceder a alguna ruta privada (tower o admin) sin logearse, se redirecciona a /home.
+  // 6. Al acceder a '/', se redirecciona a: /home si no se logueó
   if (!userId) {
-    return NextResponse.redirect(homeUrl);
-  }
-
-  // 3. Usuario autenticado, verificar roles
-  const userRole = sessionClaims?.role as string | undefined;
-  
-
-  // Lógica para usuarios con rol 'admin'
-  if (userRole === 'admin') {
-    // Si un admin intenta acceder a una ruta de tower, redirigirlo al dashboard de admin
-    if (isTowerRoute(request)) {
-      return NextResponse.redirect(adminDashboardUrl);
+    // Si la ruta no es una ruta pública explícitamente definida, o es la raíz '/',
+    // y no es un archivo interno de Next.js, redirigir para iniciar sesión.
+    if (
+      alwaysRedirectRootIfUnauthenticated(req) ||
+      (!publicRoutes(req) && !pathname.startsWith('/_next'))
+    ) {
+      // Redirigir explícitamente a /home sin el parámetro redirect_url
+      return NextResponse.redirect(new URL('/home', url));
     }
-    // Si no es una ruta de tower, permitirle el acceso (asumiendo que es una ruta de admin o permitida para admins)
-    return;
+    // Si es una ruta pública definida (ej. /home, /sign-in, /sign-up) y no está logeado, permitir acceso.
+    return NextResponse.next();
   }
 
-  // Lógica para usuarios con rol 'tower'
-  if (userRole === 'tower') {
-    // Si un tower intenta acceder a una ruta de admin, o a cualquier ruta que no sea de tower (y no pública), redirigirlo a su dashboard
-    if (isAdminRoute(request) || !isTowerRoute(request)) {
-      return NextResponse.redirect(dashboardUrl);
+  // Lógica si el usuario SÍ está autenticado (userId existe)
+  const client = await clerkClient();
+  const user = await client.users.getUser(userId)
+  const userRole = user?.publicMetadata?.role;
+
+  // 4. Si el usuario está logeado y trata de acceder a alguna ruta pública (o la raíz '/'),
+  // se lo redirecciona a /dashboard (user role = tower) o a /admin/dashboard (user role = admin).
+  // 6. Al acceder a '/', se redirecciona a: /dashboard o /admin/dashboard si se logueó.
+  if (publicRoutes(req) || alwaysRedirectRootIfUnauthenticated(req)) {
+    if (userRole === 'admin') {
+      return NextResponse.redirect(new URL('/admin/dashboard', url));
+    } else if (userRole === 'tower') {
+      return NextResponse.redirect(new URL('/dashboard', url));
     }
-    // Si es una ruta de tower, permitir el acceso
-    return;
+    // Caso de usuario logeado sin rol definido, redirigir a un dashboard por defecto.
+    // Asumimos /dashboard es el dashboard predeterminado si no hay un rol claro.
+    return NextResponse.redirect(new URL('/dashboard', url));
   }
 
-  // 4. Fallback: Usuario autenticado pero con rol no reconocido (o sin rol)
-  // Si intenta acceder a cualquier ruta no pública, redirigir a /home
-  return NextResponse.redirect(homeUrl);
+  // Lógica de autorización para rutas protegidas por rol (Admin/Tower)
+  if (adminRoutes(req)) {
+    if (userRole !== 'admin') {
+      // Intenta acceder a una ruta de admin sin ser admin, redirigir a su dashboard de Tower
+      return NextResponse.redirect(new URL('/dashboard', url));
+    }
+  } else if (towerRoutes(req)) {
+    if (userRole !== 'tower') {
+      // Intenta acceder a una ruta de tower sin ser tower, redirigir a su dashboard de Admin
+      return NextResponse.redirect(new URL('/admin/dashboard', url));
+    }
+  }
+
+  // Si llegó hasta aquí, el usuario está logeado y tiene permiso para la ruta actual.
+  return NextResponse.next();
 });
 
 export const config = {
