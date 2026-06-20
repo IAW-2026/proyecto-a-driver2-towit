@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
-import { getTowerVehicles } from "@/app/actions/vehicle"; // Usar la nueva Server Action para vehículos
-import { useEffect, useState, useRef } from "react"; // Importa useRef
+import { getTowerVehicles } from "@/app/actions/vehicle";
+import { getTowerDetails } from "@/app/actions/tower"; // Importamos getTowerDetails
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useNoVehicleErrorModal } from "@/components/providers/NoVehicleErrorModalProvider";
+import PaymentAliasModal from "@/components/payments/PaymentAliasModal"; // Importamos el nuevo modal
 
 interface Vehicle {
   vehicle_id: string;
-  createdAt: Date; // Asumiendo que createdAt está disponible para ordenar
+  createdAt: Date;
   brand: string;
   model: string;
   year: number;
   max_load: number;
+}
+
+interface TowerData {
+  clerk_id: string;
+  email: string;
+  full_name: string;
+  payments_alias: string;
 }
 
 export default function UserProfileSummary() {
@@ -30,22 +39,24 @@ export default function UserProfileSummary() {
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState(false);
+  const [towerData, setTowerData] = useState<TowerData | null>(null); // Nuevo estado para towerData
+  const [isLoadingTowerData, setIsLoadingTowerData] = useState(true); // Nuevo estado para la carga de towerData
+  const [showPaymentAliasModal, setShowPaymentAliasModal] = useState(false); // Estado para controlar el modal de alias
+
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
 
-  // Usa una referencia para rastrear si ya se ha realizado la petición para el userId actual.           
+  // Referencia para evitar dobles llamadas a Server Actions en desarrollo
   const fetchExecutedRef = useRef<{ userId: string | null; executed: boolean }>({
     userId: null,
     executed: false,
   });
 
-  useEffect(() => {
-    // Si el usuario no está cargado o no hay un objeto de usuario, resetea el estado de la referencia.  
+  const fetchAllData = useCallback(async () => {
     if (!isLoaded || !user || !user.id) {
       fetchExecutedRef.current = { userId: null, executed: false };
       return;
     }
 
-    // Si el userId es el mismo que el que ya procesamos y ya ejecutamos la petición, no hacemos nada.   
     if (
       fetchExecutedRef.current.userId === user.id &&
       fetchExecutedRef.current.executed
@@ -53,36 +64,48 @@ export default function UserProfileSummary() {
       return;
     }
 
-    // Marca la petición como ejecutada para el userId actual.                                           
     fetchExecutedRef.current = { userId: user.id, executed: true };
 
-    // Define la función asíncrona para la carga de vehículos.
-    async function fetchVehicles() {
-      setIsLoadingVehicles(true);
-      try {
-        const result = await getTowerVehicles(); // Llamar a la nueva Server Action
-        if (result.success && result.data && (result.data as Vehicle[]).length > 0) {
-          const fetchedVehicles = result.data as Vehicle[];
-          setVehicles(fetchedVehicles);
-          // Seleccionar el vehículo más recientemente añadido (el último si está ordenado ascendentemente por createdAt)
-          // Asumiendo que result.data ya viene ordenado por createdAt en orden ascendente o el último es el más reciente.
-          // Si no, necesitaríamos ordenar aquí:
-          // const sortedVehicles = [...fetchedVehicles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-          setSelectedVehicleId(fetchedVehicles[fetchedVehicles.length - 1].vehicle_id);
-        } else {
-          setVehicles([]); // Asegurarse de que vehicles sea un array vacío en caso de error
-          setSelectedVehicleId(null); // No hay vehículo seleccionado si no hay ninguno
-        }
-      } catch (error) {
-        console.error("Excepción al obtener vehículos del Tower:", error);
+    setIsLoadingVehicles(true);
+    setIsLoadingTowerData(true);
+
+    try {
+      // Fetch vehicles
+      const vehiclesResult = await getTowerVehicles();
+      if (vehiclesResult.success && vehiclesResult.data && (vehiclesResult.data as Vehicle[]).length > 0) {
+        const fetchedVehicles = vehiclesResult.data as Vehicle[];
+        setVehicles(fetchedVehicles);
+        setSelectedVehicleId(fetchedVehicles[fetchedVehicles.length - 1].vehicle_id);
+      } else {
         setVehicles([]);
-      } finally {
-        setIsLoadingVehicles(false);
+        setSelectedVehicleId(null);
       }
+    } catch (error) {
+      console.error("Excepción al obtener vehículos del Tower:", error);
+      setVehicles([]);
+    } finally {
+      setIsLoadingVehicles(false);
     }
 
-    fetchVehicles();
-  }, [isLoaded, user]); // Las dependencias se mantienen para reaccionar a la carga del usuario.
+    try {
+      // Fetch tower details
+      const details = await getTowerDetails();
+      if (details) {
+        setTowerData(details.towerData);
+      } else {
+        setTowerData(null);
+      }
+    } catch (error) {
+      console.error("Excepción al obtener detalles del Tower:", error);
+      setTowerData(null);
+    } finally {
+      setIsLoadingTowerData(false);
+    }
+  }, [isLoaded, user]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const handleToggleAvailability = () => {
     if (!vehicles || vehicles.length === 0) {
@@ -93,11 +116,20 @@ export default function UserProfileSummary() {
     setIsAvailable(!isAvailable);
   };
 
-  if (!isLoaded || isLoadingVehicles) {
+  const handleOpenPaymentAliasModal = () => setShowPaymentAliasModal(true);
+  const handleClosePaymentAliasModal = () => setShowPaymentAliasModal(false);
+  const handlePaymentAliasUpdated = () => {
+    // Re-fetch tower details to get the updated alias
+    // Reset fetchExecutedRef to force re-fetch
+    fetchExecutedRef.current = { userId: null, executed: false };
+    fetchAllData();
+  };
+
+  if (!isLoaded || isLoadingVehicles || isLoadingTowerData) {
     return (
       <div className="flex justify-center items-center h-48 bg-slate-900/70 p-6 rounded-lg shadow-lg     
 border border-slate-800">
-        <p className="text-slate-400">Cargando perfil y vehículos...</p>
+        <p className="text-slate-400">Cargando perfil, vehículos y detalles...</p>
       </div>
     );
   }
@@ -105,6 +137,9 @@ border border-slate-800">
   if (!user) {
     return null;
   }
+
+  // Si no hay datos de Tower o el alias de pagos no está configurado, mostrar el botón.
+  const hasPaymentAlias = !!towerData?.payments_alias;
 
   const avgRating = 4.8;
   const currentVehicle = vehicles?.find(v => v.vehicle_id === selectedVehicleId) || null;
@@ -132,31 +167,42 @@ h-full">
               </p>
             </div>
           </div>
-          <div className="flex gap-4 w-full mt-auto">
-            <Button
-              onClick={handleToggleAvailability}
-              className={`flex-1 font-bold ${isAvailable
-                  ? "bg-green-600 hover:bg-green-500 text-white"
-                  : "bg-slate-700 hover:bg-slate-600 text-white"
-                }`}
-              disabled={!selectedVehicleId} // Deshabilitar si no hay vehículo seleccionado
-            >
-              {isAvailable ? "Disponible" : "No Disponible"}
-            </Button>
-            <Link
-              href="/service"
-              className={`flex-1 ${!isAvailable ? 'pointer-events-none opacity-50' : ''}`}
-              tabIndex={!isAvailable ? -1 : undefined}
-              aria-disabled={!isAvailable}
-            >
+          {hasPaymentAlias ? (
+            <div className="flex gap-4 w-full mt-auto">
               <Button
-                className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
-                disabled={!isAvailable} // El botón "Empezar" se deshabilita si no está disponible
+                onClick={handleToggleAvailability}
+                className={`flex-1 font-bold ${isAvailable
+                    ? "bg-green-600 hover:bg-green-500 text-white"
+                    : "bg-slate-700 hover:bg-slate-600 text-white"
+                  }`}
+                disabled={!selectedVehicleId} // Deshabilitar si no hay vehículo seleccionado
               >
-                Empezar
+                {isAvailable ? "Disponible" : "No Disponible"}
               </Button>
-            </Link>
-          </div>
+              <Link
+                href="/service"
+                className={`flex-1 ${!isAvailable ? 'pointer-events-none opacity-50' : ''}`}
+                tabIndex={!isAvailable ? -1 : undefined}
+                aria-disabled={!isAvailable}
+              >
+                <Button
+                  className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
+                  disabled={!isAvailable} // El botón "Empezar" se deshabilita si no está disponible
+                >
+                  Empezar
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex w-full mt-auto">
+              <Button
+                onClick={handleOpenPaymentAliasModal}
+                className="w-full font-bold bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                Establecer Alias de Pago
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex flex-col w-full h-full">
           <h3 className="text-md font-bold text-white mb-2">Vehículo Actual</h3>
@@ -196,6 +242,12 @@ justify-center items-center">
           )}
         </div>
       </div>
+      <PaymentAliasModal
+        isOpen={showPaymentAliasModal}
+        onClose={handleClosePaymentAliasModal}
+        currentAlias={towerData?.payments_alias || null}
+        onSuccess={handlePaymentAliasUpdated}
+      />
     </div>
   );
 }

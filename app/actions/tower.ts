@@ -113,6 +113,26 @@ export async function getTowerDetails(): Promise<TowerDetails | null> {
   return { userProfile, towerData };
 }
 
+export async function updatePaymentAlias(
+  clerkId: string,
+  paymentsAlias: string
+): Promise<UpdateTowerDetailsResult> {
+  try {
+    const updatedTower = await prisma.tower.update({
+      where: { clerk_id: clerkId },
+      data: {
+        payments_alias: paymentsAlias,
+      },
+    });
+
+    revalidatePath("/dashboard"); // Revalida la ruta para mostrar los datos actualizados
+    return { success: true, data: updatedTower };
+  } catch (error: any) {
+    console.error(`Error al actualizar el alias de pago para ${clerkId}:`, error);
+    return { success: false, error: error.message || "Failed to update payment alias" };
+  }
+}
+
 export async function deleteTowerAccount(clerkId: string): Promise<UpdateTowerDetailsResult> {
   try {
     // 1. Eliminar de la base de datos de Neon (vía Prisma)
