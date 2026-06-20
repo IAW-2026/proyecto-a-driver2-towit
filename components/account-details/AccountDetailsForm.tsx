@@ -18,7 +18,7 @@ interface TowerDataProps {
   clerk_id: string;
   email: string;
   full_name: string;
-  payments_alias: string;
+  payments_alias: string | null;
 }
 
 interface AccountDetailsFormProps {
