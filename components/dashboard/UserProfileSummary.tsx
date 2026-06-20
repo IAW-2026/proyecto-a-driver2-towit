@@ -162,9 +162,19 @@ h-full">
               <h2 className="text-xl font-bold text-white leading-tight">
                 {user.fullName}
               </h2>
-              <p className="text-sm text-yellow-400 mt-1">
-                Calificación: {avgRating}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-yellow-400 mt-1">
+                  Calificación: {avgRating}
+                </p>
+              </div>
+              {/* Botón para abrir el modal de alias de pago */}
+              <Button
+                onClick={handleOpenPaymentAliasModal}
+                variant="link" // Estilo de enlace
+                className="p-0 h-auto text-blue-300 hover:text-blue-400 hover:no-underline cursor-pointer text-xs mt-1"
+              >
+                Cambiar Alias de pago
+              </Button>
             </div>
           </div>
           {hasPaymentAlias ? (
@@ -172,7 +182,7 @@ h-full">
               <Button
                 onClick={handleToggleAvailability}
                 className={`flex-1 font-bold ${isAvailable
-                    ? "bg-green-600 hover:bg-green-500 text-white"
+                    ? "bg-green-600 hover:bg-green-500 text-white cursor-pointer"
                     : "bg-slate-700 hover:bg-slate-600 text-white"
                   }`}
                 disabled={!selectedVehicleId} // Deshabilitar si no hay vehículo seleccionado
@@ -181,7 +191,7 @@ h-full">
               </Button>
               <Link
                 href="/service"
-                className={`flex-1 ${!isAvailable ? 'pointer-events-none opacity-50' : ''}`}
+                className={`flex-1 ${!isAvailable ? 'pointer-events-none opacity-50 cursor-pointer' : ''}`}
                 tabIndex={!isAvailable ? -1 : undefined}
                 aria-disabled={!isAvailable}
               >
@@ -197,7 +207,7 @@ h-full">
             <div className="flex w-full mt-auto">
               <Button
                 onClick={handleOpenPaymentAliasModal}
-                className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
+                className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950 cursor-pointer"
               >
                 Establecer alias para comenzar
               </Button>
@@ -224,7 +234,7 @@ h-full">
                 </SelectContent>
               </Select>
               <Link href="/vehicles" className="mt-auto w-full">
-                <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold">
+                <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold cursor-pointer">
                   Añadir Vehículos
                 </Button>
               </Link>
@@ -234,7 +244,7 @@ h-full">
 justify-center items-center">
               <p className="text-slate-400 text-sm mb-3">No tienes vehículos registrados.</p>
               <Link href="/vehicles" className="w-full">
-                <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold">
+                <Button className="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold cursor-pointer">
                   Añadir Vehículo
                 </Button>
               </Link>
