@@ -2,33 +2,37 @@
 
 import prisma from "@/lib/prisma";
 import { auth, currentUser, clerkClient } from "@clerk/nextjs/server"; // Importamos auth, currentUser, clerkClient
-import { Vehicle } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-interface UpdateTowerDetailsResult {
+// Definición de la interfaz para los datos de la torre (extraído para reuso)
+export interface TowerData {
+  clerk_id: string;
+  email: string;
+  full_name: string;
+  payments_alias: string | null; // Permitir que sea null
+}
+
+// Hacer la interfaz de resultado de actualización genérica
+export interface UpdateTowerDetailsResult<T = any> {
   success: boolean;
-  data?: any;
+  data?: T;
   error?: string;
 }
 
+// Actualizar TowerDetails para usar la nueva TowerData
 interface TowerDetails {
   userProfile: {
     imageUrl: string;
     fullName: string;
     avgRating: number; // Mocked as per existing code
   };
-  towerData: {
-    clerk_id: string;
-    email: string;
-    full_name: string;
-    payments_alias: string;
-  };
+  towerData: TowerData; // Usar la interfaz TowerData definida
 }
 
 export async function updateTowerDetails(
   clerkId: string,
   data: { full_name?: string; email?: string; payments_alias?: string }
-): Promise<UpdateTowerDetailsResult> {
+): Promise<UpdateTowerDetailsResult<TowerData>> {
   try {
     // 1. Actualizar en la base de datos de Neon (vía Prisma)
     const updatedTower = await prisma.tower.update({
@@ -76,7 +80,7 @@ export async function updateTowerDetails(
   }
 }
 
-export async function getTowerDetails(): Promise<TowerDetails | null> {
+export async function getTowerDetails(): Promise<TowerDetails | null> { // Mantener tipo de retorno para compatibilidad con UserProfileSummary
   const { userId } = await auth();
 
   if (!userId) {
@@ -103,20 +107,49 @@ export async function getTowerDetails(): Promise<TowerDetails | null> {
     avgRating: 4.8, // Mockeado
   };
 
-  const towerData = {
+  const towerData: TowerData = { // Asegurar que sea de tipo TowerData
     clerk_id: tower.clerk_id,
     email: tower.email,
     full_name: tower.full_name,
-    payments_alias: tower.payments_alias || '',
+    payments_alias: tower.payments_alias, // Permitir que sea null
   };
 
   return { userProfile, towerData };
 }
 
+// Nueva función para obtener solo los datos de la torre
+export async function getTowerData(userId: string): Promise<UpdateTowerDetailsResult<TowerData>> {
+  if (!userId) {
+    return { success: false, error: "User ID is required." };
+  }
+
+  try {
+    const tower = await prisma.tower.findUnique({
+      where: { clerk_id: userId },
+      select: { // Seleccionar solo los campos necesarios para TowerData
+        clerk_id: true,
+        email: true,
+        full_name: true,
+        payments_alias: true,
+      }
+    });
+
+    if (!tower) {
+      return { success: false, error: "Tower data not found for this user." };
+    }
+
+    return { success: true, data: tower };
+  } catch (error: any) {
+    console.error("Error al obtener datos de Tower:", error);
+    return { success: false, error: error.message || "Failed to get Tower data" };
+  }
+}
+
+
 export async function updatePaymentAlias(
   clerkId: string,
   paymentsAlias: string
-): Promise<UpdateTowerDetailsResult> {
+): Promise<UpdateTowerDetailsResult<TowerData>> { // Ajustar tipo de retorno
   try {
     const updatedTower = await prisma.tower.update({
       where: { clerk_id: clerkId },
@@ -133,7 +166,7 @@ export async function updatePaymentAlias(
   }
 }
 
-export async function deleteTowerAccount(clerkId: string): Promise<UpdateTowerDetailsResult> {
+export async function deleteTowerAccount(clerkId: string): Promise<UpdateTowerDetailsResult<void>> { // Ajustar tipo de retorno
   try {
     // 1. Eliminar de la base de datos de Neon (vía Prisma)
     await prisma.tower.delete({

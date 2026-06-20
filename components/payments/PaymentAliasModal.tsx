@@ -12,12 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updatePaymentAlias } from "@/app/actions/tower"; // Importa la nueva acción
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation"; // Nuevo: Importar useRouter
 
 interface PaymentAliasModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentAlias: string | null;
   onSuccess: () => void; // Para recargar los datos en el componente padre
+  isClosable?: boolean; // Nueva prop, por defecto true
+  isServiceContext?: boolean; // Nuevo: Prop para el contexto de /service
 }
 
 export default function PaymentAliasModal({
@@ -25,8 +28,11 @@ export default function PaymentAliasModal({
   onClose,
   currentAlias,
   onSuccess,
+  isClosable = true, // Establece el valor por defecto a true
+  isServiceContext = false, // Nuevo: Establece el valor por defecto a false
 }: PaymentAliasModalProps) {
   const { user } = useUser();
+  const router = useRouter(); // Nuevo: Inicializar useRouter
   const [alias, setAlias] = useState(currentAlias || "");
   const [isPending, startTransition] = useTransition(); // Hook para transiciones
 
@@ -59,9 +65,19 @@ export default function PaymentAliasModal({
     });
   };
 
+  const handleBackToDashboard = () => {
+    router.push("/dashboard");
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-slate-950/90 border-slate-700 text-white backdrop-blur-sm">
+    <Dialog open={isOpen} onOpenChange={(open) => isClosable && onClose()}>
+      <DialogContent
+        className={`sm:max-w-[425px] bg-slate-950/90 border-slate-700 text-white backdrop-blur-sm ${!isClosable ? '[&>button]:hidden' : ''}`} // Nuevo: Ocultar el botón de cerrar si no es cerrable
+        // Evita que el modal se cierre al pulsar Escape si no es cerrable
+        onEscapeKeyDown={(e) => !isClosable && e.preventDefault()}
+        // Evita que el modal se cierre al hacer clic fuera si no es cerrable
+        onPointerDownOutside={(e) => !isClosable && e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-white">Establecer Alias de Pago</DialogTitle>
           <DialogDescription className="text-slate-400">
@@ -82,15 +98,29 @@ export default function PaymentAliasModal({
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isPending}
-              className="bg-slate-700 hover:bg-slate-600 border-slate-600 text-white"
-            >
-              Cancelar
-            </Button>
+            {isServiceContext && !isClosable ? ( // Nuevo: Botón "Volver a dashboard" para contexto de servicio no cerrable
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBackToDashboard}
+                disabled={isPending}
+                className="bg-slate-700 hover:bg-slate-600 border-slate-600 text-white"
+              >
+                Volver a dashboard
+              </Button>
+            ) : (
+              isClosable && ( // Botón "Cancelar" original, solo si es cerrable
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isPending}
+                  className="bg-slate-700 hover:bg-slate-600 border-slate-600 text-white"
+                >
+                  Cancelar
+                </Button>
+              )
+            )}
             <Button
               type="submit"
               disabled={isPending || !alias.trim()}

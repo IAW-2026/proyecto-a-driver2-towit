@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import { getTowerVehicles } from "@/app/actions/vehicle";
-import { getTowerDetails } from "@/app/actions/tower"; // Importamos getTowerDetails
+import { getTowerDetails, TowerData } from "@/app/actions/tower"; // Importamos getTowerDetails y la interfaz TowerData
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -24,13 +24,6 @@ interface Vehicle {
   model: string;
   year: number;
   max_load: number;
-}
-
-interface TowerData {
-  clerk_id: string;
-  email: string;
-  full_name: string;
-  payments_alias: string;
 }
 
 export default function UserProfileSummary() {
