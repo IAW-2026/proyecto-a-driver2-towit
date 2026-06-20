@@ -1,23 +1,21 @@
 'use client';
 
-import { UserAvatar } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs"; // Importa UserButton
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useAccountDetailsModal } from "@/components/providers/AccountDetailsModalProvider";
+// Se elimina la importación de useAccountDetailsModal ya que no se usará
 
 export default function AppHeaderClientTower() {
   const router = useRouter();
   const pathname = usePathname();
-  const { openModal: openAccountDetailsModal } = useAccountDetailsModal();
+  // Se elimina la desestructuración de openModal ya que no se usará
 
   const showDashboardButton = pathname !== "/dashboard";
   const showTripsLink = pathname !== "/trips";
   const showVehiclesLink = pathname !== "/vehicles";
   const showPaymentsLink = pathname !== "/payments";
-  // showAccountDetailsLink siempre será true si el usuario está logeado,
-  // pero se mantiene por consistencia con la lógica original si se quisiera cambiar.
-  const showAccountDetailsLink = pathname !== "/account-details"; 
+  // showAccountDetailsLink ya no es necesario, UserButton siempre se mostrará para un usuario logueado.
 
   return (
     <>
@@ -45,15 +43,8 @@ export default function AppHeaderClientTower() {
           Dashboard
         </Button>
       )}
-      {showAccountDetailsLink && (
-        <button
-          onClick={openAccountDetailsModal}
-          className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center justify-between space-x-2 cursor-pointer"
-        >
-          <span>Mi Cuenta</span>
-          <UserAvatar />
-        </button>
-      )}
+      {/* Reemplazamos el botón y el avatar con el UserButton de Clerk */}
+      <UserButton />
     </>
   );
 }
