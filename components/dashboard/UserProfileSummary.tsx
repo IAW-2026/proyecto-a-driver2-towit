@@ -162,19 +162,21 @@ h-full">
               <h2 className="text-xl font-bold text-white leading-tight">
                 {user.fullName}
               </h2>
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-yellow-400 mt-1">
+              <div className="flex items-center">
+                <p className="text-sm text-yellow-400">
                   Calificación: {avgRating}
                 </p>
               </div>
               {/* Botón para abrir el modal de alias de pago */}
-              <Button
-                onClick={handleOpenPaymentAliasModal}
-                variant="link" // Estilo de enlace
-                className="p-0 h-auto text-blue-300 hover:text-blue-400 hover:no-underline cursor-pointer text-xs mt-1"
-              >
-                Cambiar Alias de pago
-              </Button>
+              {hasPaymentAlias && (
+                <Button
+                  onClick={handleOpenPaymentAliasModal}
+                  variant="link" // Estilo de enlace
+                  className="p-0 h-auto text-blue-300 hover:text-blue-400 hover:no-underline cursor-pointer text-xs"
+                >
+                  Cambiar Alias de pago
+                </Button>
+              )}
             </div>
           </div>
           {hasPaymentAlias ? (
