@@ -143,7 +143,12 @@ h-full">
             >
               {isAvailable ? "Disponible" : "No Disponible"}
             </Button>
-            <Link href="/service" className="flex-1">
+            <Link
+              href="/service"
+              className={`flex-1 ${!isAvailable ? 'pointer-events-none opacity-50' : ''}`}
+              tabIndex={!isAvailable ? -1 : undefined}
+              aria-disabled={!isAvailable}
+            >
               <Button
                 className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
                 disabled={!isAvailable} // El botón "Empezar" se deshabilita si no está disponible
