@@ -9,6 +9,13 @@ import { getTowerData, TowerData } from "@/app/actions/tower"; // Importar la ac
 import { getTowerVehicles } from "@/app/actions/vehicle"; // NUEVO: Importar la acción para obtener vehículos
 import PaymentAliasModal from "@/components/payments/PaymentAliasModal"; // Importar el modal de alias
 import { useRouter } from "next/navigation"; // Nuevo: Importar useRouter
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
 
 // Importar InteractiveMap dinámicamente con SSR deshabilitado
 const DynamicInteractiveMap = dynamic(() => import("@/components/service/InteractiveMap"), {
@@ -74,7 +81,7 @@ export default function ServicePageClient() {
           setShowRedirectionPopup(true);
           setTimeout(() => {
             router.push("/dashboard");
-          }, 3000); // 3 segundos de delay
+          }, 5000); // 3 segundos de delay
         } else {
           setShowPaymentAliasModal(false); // Asegurarse de que el modal opcional esté cerrado si todo está bien
           setShowRedirectionPopup(false); // Asegurarse de que el popup de redirección no se muestre
@@ -102,15 +109,6 @@ export default function ServicePageClient() {
 
   const isTripActive = false; // Ya no hay viajes activos simulados
 
-  // NUEVO: Mostrar el popup de redirección si los prerrequisitos no están cumplidos
-  if (showRedirectionPopup) {
-    return (
-      <div className="flex flex-col h-screen w-screen items-center justify-center text-white bg-slate-900/50 text-center p-4">
-        <p className="text-xl font-semibold mb-4">{redirectReason}</p>
-        <p className="text-slate-400">Serás redirigido automáticamente en breve.</p>
-      </div>
-    );
-  }
 
   // Mostrar un estado de carga general
   if (!isLoaded || isLoading) {
@@ -132,6 +130,25 @@ export default function ServicePageClient() {
       <div className="flex-1 w-full h-full">
         <DynamicInteractiveMap />
       </div>
+
+      {/* NUEVO: Popup de redirección flotante sobre el mapa */}
+      <Dialog open={showRedirectionPopup}>
+        <DialogContent
+          className="sm:max-w-[425px] bg-slate-950/90 border-slate-700 text-white backdrop-blur-sm [&>button]:hidden"
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-white">Faltan requisitos para el servicio</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {redirectReason}
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-center text-slate-300 mt-4">
+            Serás redirigido automáticamente al dashboard en breve.
+          </p>
+        </DialogContent>
+      </Dialog>
 
       {/* Renderizar el PaymentAliasModal aquí, pero su visibilidad está controlada por la lógica anterior.
           Este bloque es para cuando el alias ya se configuró (ej. desde el dashboard), pero el usuario quiere cambiarlo. */}
