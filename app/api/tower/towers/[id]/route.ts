@@ -11,12 +11,12 @@ import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib
  */
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!await validateApiKey(req)) {
     return unauthorizedResponse();
   }
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const tower = await prisma.tower.findUnique({
       where: { tower_id: id },
@@ -39,12 +39,12 @@ export async function GET(
  */
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!await validateApiKey(req)) {
     return unauthorizedResponse();
   }
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const data = await req.json();
     const { full_name, email, payments_alias } = data;
@@ -102,12 +102,12 @@ export async function PUT(
  */
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!await validateApiKey(req)) {
     return unauthorizedResponse();
   }
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const towerToDelete = await prisma.tower.findUnique({
       where: { tower_id: id },

@@ -10,12 +10,12 @@ import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib
  */
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!await validateApiKey(req)) {
     return unauthorizedResponse();
   }
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const vehicle = await prisma.vehicle.findUnique({
       where: { vehicle_id: id },
@@ -38,12 +38,12 @@ export async function GET(
  */
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!await validateApiKey(req)) {
     return unauthorizedResponse();
   }
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const data = await req.json();
     const { brand, model, year, max_load, tower_id } = data;
@@ -84,12 +84,12 @@ export async function PUT(
  */
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!await validateApiKey(req)) {
     return unauthorizedResponse();
   }
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const vehicleToDelete = await prisma.vehicle.findUnique({
       where: { vehicle_id: id },
