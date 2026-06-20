@@ -1,41 +1,20 @@
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server"; // Mantener para la gestión de usuarios Clerk
 import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma'; // CORRECTED IMPORT
-
-interface AdminActionResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-}
-
-/**
- * Verifica si el usuario autenticado tiene el rol de administrador.
- * @returns true si es administrador, false en caso contrario.
- */
-async function isAdmin(): Promise<boolean> {
-  const { userId } = await auth();
-  if (!userId) {
-    return false;
-  }
-
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-
-  return (user.publicMetadata?.role === 'admin');
-}
+import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib/apiAuth';
 
 /**
  * GET /api/towers/[id]
  * Obtiene un registro de la tabla Tower por su ID.
- * Requiere rol de administrador.
+ * Requiere una clave API de administrador válida.
  */
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ): Promise<NextResponse<AdminActionResponse>> {
-  if (!await isAdmin()) {
-    return NextResponse.json({ success: false, error: "No autorizado. Solo administradores pueden ver esta información." }, { status: 403 });
+  if (!await validateApiKey(req)) {
+    return unauthorizedResponse();
   }
   const { id } = params;
   try {
@@ -62,8 +41,8 @@ export async function PUT(
   req: Request,
   { params }: { params: { id: string } }
 ): Promise<NextResponse<AdminActionResponse>> {
-  if (!await isAdmin()) {
-    return NextResponse.json({ success: false, error: "No autorizado. Solo administradores pueden actualizar Towers." }, { status: 403 });
+  if (!await validateApiKey(req)) {
+    return unauthorizedResponse();
   }
   const { id } = params;
   try {
@@ -125,8 +104,8 @@ export async function DELETE(
   req: Request,
   { params }: { params: { id: string } }
 ): Promise<NextResponse<AdminActionResponse>> {
-  if (!await isAdmin()) {
-    return NextResponse.json({ success: false, error: "No autorizado. Solo administradores pueden eliminar Towers." }, { status: 403 });
+  if (!await validateApiKey(req)) {
+    return unauthorizedResponse();
   }
   const { id } = params;
   try {

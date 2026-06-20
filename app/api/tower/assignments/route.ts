@@ -1,38 +1,16 @@
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma'; // CORRECTED IMPORT
-
-interface AdminActionResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-}
-
-/**
- * Verifica si el usuario autenticado tiene el rol de administrador.
- * @returns true si es administrador, false en caso contrario.
- */
-async function isAdmin(): Promise<boolean> {
-  const { userId } = await auth();
-  if (!userId) {
-    return false;
-  }
-
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-
-  return (user.publicMetadata?.role === 'admin');
-}
+import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib/apiAuth';
 
 /**
  * GET /api/assignments
  * Obtiene todos los registros de la tabla Assignment.
- * Requiere rol de administrador.
+ * Requiere una clave API de administrador válida.
  */
-export async function GET(): Promise<NextResponse<AdminActionResponse>> {
-  if (!await isAdmin()) {
-    return NextResponse.json({ success: false, error: "No autorizado. Solo administradores pueden ver esta información." }, { status: 403 });
+export async function GET(req: Request): Promise<NextResponse<AdminActionResponse>> {
+  if (!await validateApiKey(req)) {
+    return unauthorizedResponse();
   }
   try {
     const assignments = await prisma.assignment.findMany({
@@ -51,8 +29,8 @@ export async function GET(): Promise<NextResponse<AdminActionResponse>> {
  * Requiere rol de administrador.
  */
 export async function POST(req: Request): Promise<NextResponse<AdminActionResponse>> {
-  if (!await isAdmin()) {
-    return NextResponse.json({ success: false, error: "No autorizado. Solo administradores pueden crear asignaciones." }, { status: 403 });
+  if (!await validateApiKey(req)) {
+    return unauthorizedResponse();
   }
 
   try {
