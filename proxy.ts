@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 // Definir las rutas públicas, de administrador y de tower.
 // El matcher para /home también cubrirá las variantes con hash como /home#/sso-signin.
-const isPublicPath = createRouteMatcher(['/', '/home(.*)']);
+const isPublicPath = createRouteMatcher(['/', '/home(.*)', "/sign-in(.*)", "/sign-up(.*)"]);
 const isAdminPath = createRouteMatcher(['/admin/dashboard']);
 const isTowerPath = createRouteMatcher([
   '/dashboard',
@@ -24,12 +24,8 @@ export default clerkMiddleware(async (auth, req) => {
     //lo redirecciono a /home en caso de que la ruta sea /
     if (pathname == "/" || !isPublicPath(req))
       return NextResponse.redirect(new URL("/home", req.url));
-
-
   } else {
     //si está logeado, obtengo el rol
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
     const userRole = sessionClaims?.role as 'admin' | 'tower' | undefined;
     
     //y si está en una ruta pública, lo redirecciono a donde corresponde
@@ -40,6 +36,7 @@ export default clerkMiddleware(async (auth, req) => {
       if (userRole === 'admin') {
         return NextResponse.redirect(new URL('/admin/dashboard', req.url)); // Admin logeado -> /admin/dashboard
       }
+      
     //si no está en una ruta pública, lo redirecciono solamente si está en una parte de la app que no le corresponde
     } else if (!isTowerPath(req) && userRole === "tower") {
       return NextResponse.redirect(new URL("/dashboard", req.url))
