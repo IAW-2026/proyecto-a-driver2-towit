@@ -61,15 +61,15 @@ export default function PaymentAliasModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-slate-800 text-white border-slate-700">
+      <DialogContent className="sm:max-w-[425px] bg-slate-950/90 border-slate-700 text-white backdrop-blur-sm">
         <DialogHeader>
           <DialogTitle className="text-white">Establecer Alias de Pago</DialogTitle>
           <DialogDescription className="text-slate-400">
-            Ingresa un alias único para tus pagos. Este alias será visible para los clientes.
+            Ingresa el alias de la cuenta en la que se acreditarán los pagos una vez finalizados los viajes.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+        <form onSubmit={handleSubmit} className="grid gap-2">
+          <div className="flex items-center space-x-4 border-b border-slate-800 pb-4">
             <label htmlFor="alias" className="text-right text-slate-200">
               Alias
             </label>
@@ -77,11 +77,11 @@ export default function PaymentAliasModal({
               id="alias"
               value={alias}
               onChange={(e) => setAlias(e.target.value)}
-              className="col-span-3 bg-slate-700 border-slate-600 text-white"
+              className="col-span-3 border-slate-600 text-white"
               required
             />
           </div>
-          <div className="flex justify-end gap-2 mt-4">
+          <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"

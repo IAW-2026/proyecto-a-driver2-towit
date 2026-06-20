@@ -197,9 +197,9 @@ h-full">
             <div className="flex w-full mt-auto">
               <Button
                 onClick={handleOpenPaymentAliasModal}
-                className="w-full font-bold bg-blue-600 hover:bg-blue-500 text-white"
+                className="w-full font-bold bg-yellow-600 hover:bg-yellow-500 text-slate-950"
               >
-                Establecer Alias de Pago
+                Establecer alias para comenzar
               </Button>
             </div>
           )}
