@@ -31,7 +31,7 @@ interface TowerDetails {
 
 export async function updateTowerDetails(
   clerkId: string,
-  data: { full_name?: string; email?: string; payments_alias?: string }
+  data: { full_name?: string; email?: string; payments_alias?: string | null }
 ): Promise<UpdateTowerDetailsResult<TowerData>> {
   try {
     // 1. Actualizar en la base de datos de Neon (vía Prisma)
