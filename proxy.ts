@@ -49,10 +49,11 @@ export default clerkMiddleware(async (auth, req) => {
 export const config = {
   matcher: [
     // 1. Coincidir con todas las rutas de la aplicación (UI y otras APIs) que deben ser procesadas por Clerk,
-    //    excluyendo las rutas internas de Next.js, archivos estáticos, y específicamente las APIs bajo /api/tower/.
-    //    Esto asegura que el middleware de Clerk NO se ejecute para /api/tower/(.*)
-    //    pero SÍ lo haga para todas las rutas de la UI y cualquier otra API que no esté bajo /api/tower/.
-    '/((?!_next|api/tower/|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    //    excluyendo las rutas internas de Next.js, archivos estáticos, el webhook de Clerk,
+    //    y específicamente las APIs bajo /api/tower/.
+    //    Esto asegura que el middleware de Clerk NO se ejecute para /api/webhooks/clerk/(.*) ni /api/tower/(.*)
+    //    pero SÍ lo haga para todas las rutas de la UI y cualquier otra API que no esté bajo esas exclusiones.
+    '/((?!_next|api/tower/|api/webhooks/clerk|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     // 2. Coincidir con rutas /trpc si las hubiera y debieran ser protegidas por Clerk.
     '/trpc(.*)',
   ],

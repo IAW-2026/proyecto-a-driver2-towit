@@ -97,25 +97,62 @@ export async function POST(req: Request) {
       console.error(`Failed to process user.created event for user ${id}:`, error);
       return new Response('Error processing user.created webhook event', { status: 500 });
     }
+  } else if (eventType === 'user.updated') {
+    const { id, first_name, last_name, email_addresses, primary_email_address_id, public_metadata } = evt.data;
+
+    // Verificar si el usuario tiene el rol 'tower' en public_metadata
+    if ((public_metadata as any)?.role !== 'tower') {
+      console.log(`Ignoring user.updated event for user ${id}: public_metadata.role is not 'tower'.`);
+      return new NextResponse('Webhook processed (ignored - not a tower user)', { status: 200 });
+    }
+
+    if (!id || !email_addresses || email_addresses.length === 0) {
+      console.error('Error: Missing user ID or email addresses in user.updated webhook event', evt.data);
+      return new Response('Error: Missing user ID or email addresses', { status: 400 });
+    }
+
+    const primaryEmail = email_addresses.find(email => email.id === primary_email_address_id)?.email_address || email_addresses[0].email_address;
+    const fullName = `${first_name || ''} ${last_name || ''}`.trim();
+
+    try {
+      await prisma.tower.updateMany({
+        where: { clerk_id: id },
+        data: {
+          email: primaryEmail,
+          full_name: fullName,
+        },
+      });
+      console.log(`Tower user ${id} updated in Neon database.`);
+    } catch (error) {
+      console.error(`Failed to process user.updated event for user ${id}:`, error);
+      return new Response('Error processing user.updated webhook event', { status: 500 });
+    }
   } else if (eventType === 'user.deleted') {
-    const { id } = evt.data;
+    const { id } = evt.data; // public_metadata no está disponible en este evento
+
     if (!id) {
       console.error('Error: Missing user ID in user.deleted webhook event');
       return new Response('Error: Missing user ID for deletion', { status: 400 });
     }
 
     try {
-      // Intentar eliminar de la tabla Tower (no arrojará error si no se encuentra)
-      await prisma.tower.deleteMany({
+      // Intentar eliminar de la tabla Tower.
+      // Si `deleteMany` elimina registros, sabemos que era un usuario 'tower'.
+      const towerDeleteResult = await prisma.tower.deleteMany({
         where: { clerk_id: id },
       });
-      console.log(`Attempted to delete Tower user ${id} from Neon database.`);
 
-      // Intentar eliminar de la tabla Admin (no arrojará error si no se encuentra)
-      await prisma.admin.deleteMany({
-        where: { clerk_id: id },
-      });
-      console.log(`Attempted to delete Admin user ${id} from Neon database.`);
+      if (towerDeleteResult.count > 0) {
+        console.log(`Tower user ${id} deleted from Neon database.`);
+
+        // Si se eliminó de Tower, también intentar eliminar de Admin (si existe)
+        await prisma.admin.deleteMany({
+          where: { clerk_id: id },
+        });
+        console.log(`Attempted to delete Admin user ${id} from Neon database.`);
+      } else {
+        console.log(`User ${id} not found in Tower database, skipping deletion (not a Tower user).`);
+      }
 
     } catch (error) {
       console.error(`Failed to delete user ${id} from database:`, error);
