@@ -12,15 +12,15 @@ export interface AdminActionResponse {
  * @returns true si la clave API es válida, false en caso contrario.
  */
 export async function validateApiKey(req: Request): Promise<boolean> {
-  const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
+  const API_SECRET_KEY = process.env.API_SECRET_KEY;
 
-  if (!ADMIN_API_KEY) {
-    console.error('Missing ADMIN_API_KEY environment variable');
+  if (!API_SECRET_KEY) {
+    console.error('Missing API_SECRET_KEY environment variable');
     return false;
   }
 
   const apiKey = req.headers.get('x-api-key');
-  return apiKey === ADMIN_API_KEY;
+  return apiKey === API_SECRET_KEY;
 }
 
 /**
