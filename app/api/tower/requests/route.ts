@@ -57,7 +57,7 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
     const rawGeosearchResults = await redis.geosearch(
       'towers:locations:available',
       { type: 'FROMLONLAT', coordinate: { lon: originLng, lat: originLat } },
-      { type: "BYRADIUS", radius: 5, radiusType: "KM" },
+      { type: "BYRADIUS", radius: 8, radiusType: "KM" },
       "ASC"
     );
 
