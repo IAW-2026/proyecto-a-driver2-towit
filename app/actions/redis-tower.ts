@@ -110,6 +110,7 @@ export async function refreshTowerHeartbeatAndLocation(
     await redis.pipeline()
       .geoadd('towers:locations:available', { longitude: long, latitude: lat, member: userId })
       .set(`tower:heartbeat:${userId}`, '1', { ex: 30 }) // Renovar TTL a 30 segundos
+      .hset(`tower:profile:${userId}`, { status: 'available' }) // Asegurar el estado 'available'
       .exec();
     // console.log(`Tower ${userId} location and heartbeat refreshed.`); // Descomentar para depuración intensiva
   } catch (error) {

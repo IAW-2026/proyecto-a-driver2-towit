@@ -41,9 +41,9 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   const [recheckTrigger, setRecheckTrigger] = useState(false); // NUEVO: Estado para forzar re-evaluación
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null); // Estado para la ubicación actual
 
-  // Simulación de obtención de ubicación (hardcoded por ahora)
-  useEffect(() => {
-    setCurrentLocation({ lat: -38.7196, long: -62.2651 }); // Ejemplo: Bahía Blanca
+  // Callback para recibir actualizaciones de ubicación del InteractiveMap
+  const handleLocationChange = useCallback((coords: { lat: number; lng: number }) => {
+    setCurrentLocation({ lat: coords.lat, long: coords.lng });
   }, []);
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
@@ -187,9 +187,10 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         isTripActive={isTripActive} // Pasar la prop para deshabilitar el botón
       />
       <div className="flex-1 w-full h-full">
-        {currentLocation && (
+        {currentLocation && ( // Renderizar el mapa solo si tenemos una ubicación inicial
           <DynamicInteractiveMap
             initialCoordinates={{ lat: currentLocation.lat, lng: currentLocation.long }}
+            onLocationChange={handleLocationChange} // Pasa el callback para recibir actualizaciones de ubicación
           />
         )}
       </div>

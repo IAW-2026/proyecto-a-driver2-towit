@@ -16,11 +16,11 @@ interface Coordinates {
 }
 
 interface InteractiveMapProps {
-  // Agregamos initialCoordinates para permitir que el componente padre sugiera un centro inicial.
   initialCoordinates?: Coordinates;
+  onLocationChange?: (coords: Coordinates) => void; // NUEVO: Callback para emitir la ubicación
 }
 
-export default function InteractiveMap({ initialCoordinates }: InteractiveMapProps) {
+export default function InteractiveMap({ initialCoordinates, onLocationChange }: InteractiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const driverMarker = useRef<Marker | null>(null);
@@ -107,6 +107,7 @@ export default function InteractiveMap({ initialCoordinates }: InteractiveMapPro
             const userCoords = { lat: latitude, lng: longitude };
             setDriverLocation(userCoords); // Actualizar la posición del conductor
             map.current?.setCenter([longitude, latitude]);
+            onLocationChange?.(userCoords); // Llama al callback con la ubicación real
           },
           (error) => {
             console.error("Mapbox: Error watching user location:", error.message, `(Code: ${error.code})`);
@@ -135,7 +136,7 @@ export default function InteractiveMap({ initialCoordinates }: InteractiveMapPro
       map.current?.remove();
       map.current = null; // También limpia la referencia
     };
-  }, []);
+  }, [initialCoordinates, onLocationChange]); // Añadir onLocationChange como dependencia
 
   // === Función para dibujar la ruta ===
   // Se mantiene para futuras implementaciones de rutas reales, pero no se utiliza en esta versión.
