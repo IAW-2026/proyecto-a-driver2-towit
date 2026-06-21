@@ -85,7 +85,14 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 
 **Response:**  
 ```json
-{}
+{
+  "success": boolean,
+  "data": {
+    "trip_id": "string",
+    "status": "string"
+  },
+  "error": "string"
+}
 ```
 
 **Quién llama a quién:**  
@@ -109,8 +116,8 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 **Response:**  
 ```json
 {
-  "status": "string",
-  "location": {
+  "status": "string", // Valores posibles: "pending", "accepted", "cancelled", "completed"
+  "location": { // Solo presente si status es "accepted"
     "lat": "string",
     "long": "string"
   }
@@ -124,7 +131,7 @@ Documentar cada endpoint que una app expone para ser consumido por otra app del 
 
 ### *Cancelar pedido de tower:* 
 
-La intención del endpoint es poder recibir la cancelación de un pedido de viaje que todavía no encontró tower para ser asignado. Ante el timeout en la Customer App, esta debería llamar a este endpoint para avisar la cancelación del pedido. También funciona para el caso normal de cancelación.
+La intención del endpoint es poder recibir la cancelación de un pedido de viaje que todavía no encontró tower para ser asignado (`pending` en Redis). Ante el timeout en la Customer App, esta debería llamar a este endpoint para avisar la cancelación del pedido. También funciona para el caso normal de cancelación de un viaje ya asignado.
 
 **Endpoint:**  
 - PATCH /api/tower/requests/{trip_id}
@@ -139,7 +146,20 @@ La intención del endpoint es poder recibir la cancelación de un pedido de viaj
 
 **Response:**  
 ```json
-{}
+{
+  "success": boolean,
+  "data": {
+    "assignment_id": "string",
+    "trip_id": "string",
+    "tower_id": "string",
+    "status": "string", // "cancelled"
+    "location": { "lat": "string", "long": "string" },
+    "createdAt": "string",
+    "updatedAt": "string"
+  },
+  "error": "string"
+}
+```
 ```
 
 **Quién llama a quién:**  
@@ -410,6 +430,46 @@ La intención del endpoint es poder recibir la cancelación de un pedido de viaj
 - Tower App, Customer App → Feedback App
 
 <br>
+
+---
+
+## 4. Solicitudes de Viaje Pendientes (Hash con TTL)
+Almacena los detalles de una solicitud de viaje hecha por un cliente, mientras se busca o asigna una torre. Se utiliza para el seguimiento del estado por parte de la Customer App.
+
+*   **Tipo de dato:** `HASH`
+*   **Patrón de Clave:** `trip:request:{trip_id}`
+*   **Campos (Fields):**
+    *   `customer_id` (String): ID único del cliente que realizó la solicitud.
+    *   `trip_id` (String): ID único del viaje.
+    *   `trip_origin_lat` (String): Latitud del origen del viaje.
+    *   `trip_origin_long` (String): Longitud del origen del viaje.
+    *   `trip_destination_lat` (String): Latitud del destino del viaje.
+    *   `trip_destination_long` (String): Longitud del destino del viaje.
+    *   `vehicle_brand` (String): Marca del vehículo solicitado.
+    *   `vehicle_model` (String): Modelo del vehículo solicitado.
+    *   `vehicle_year` (Number): Año del vehículo solicitado.
+    *   `preferred_tow_type` (String): Tipo de remolque preferido.
+*   `status` (String): Estado actual de la solicitud. Valores posibles: `"pending"`, `"accepted"`, `"cancelled"`, `"completed"`.
+    *   `tower_clerk_id` (String, opcional): ID de Clerk de la torre asignada (se añade si la solicitud es `accepted`).
+    *   `tower_location_lat` (String, opcional): Latitud de la torre asignada (se añade si la solicitud es `accepted`).
+    *   `tower_location_long` (String, opcional): Longitud de la torre asignada (se añade si la solicitud es `accepted`).
+*   **Tiempo de Vida (TTL):** 300 segundos (5 minutos). La solicitud expira si no es procesada o cancelada.
+
+### Comandos de Referencia:
+```bash
+# Crear o actualizar una solicitud de viaje
+HSET trip:request:trip_ABCDEF customer_id "cust_123" trip_id "trip_ABCDEF" status "pending" ...
+EXPIRE trip:request:trip_ABCDEF 300
+
+# Obtener el estado de una solicitud
+HGETALL trip:request:trip_ABCDEF
+
+# Actualizar el estado de una solicitud (ej. a "accepted" por una torre)
+HSET trip:request:trip_ABCDEF status "accepted" tower_clerk_id "tower_123" tower_location_lat "-38.7100" tower_location_long "-62.2600"
+
+# Eliminar una solicitud (ej. si se cancela o completa)
+DEL trip:request:trip_ABCDEF
+```
 
 ### *Obtener calificación promedio:* 
 
