@@ -126,7 +126,13 @@ export default function UserProfileSummary() {
     const newAvailabilityState = !isAvailable;
     const success = await toggleTowerAvailability(
       newAvailabilityState,
-      newAvailabilityState ? DASHBOARD_MOCK_LOCATION : null
+      newAvailabilityState ? DASHBOARD_MOCK_LOCATION : null,
+      newAvailabilityState && currentVehicle ? { // Solo pasar los detalles del vehículo si se está volviendo disponible y hay un vehículo actual
+        brand: currentVehicle.brand,
+        model: currentVehicle.model,
+        year: currentVehicle.year,
+        max_load: currentVehicle.max_load,
+      } : null
     );
 
     if (success) {
