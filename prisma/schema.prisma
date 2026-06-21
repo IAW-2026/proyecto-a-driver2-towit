@@ -49,7 +49,7 @@ model Vehicle {
 
 model Assignment {
   assignment_id String   @id @default(uuid())
-  trip_id       String
+  trip_id       String   @unique // trip_id ahora es único
   tower_id      String
   tower         Tower    @relation(fields: [tower_id], references: [tower_id], onDelete: Cascade)
   status        String   // pending, accepted, completed, cancelled
