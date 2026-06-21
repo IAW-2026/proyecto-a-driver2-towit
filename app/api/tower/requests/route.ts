@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { z } from 'zod'; // Para validación de esquema
 import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib/apiAuth';
 import { redis } from '@/lib/redis-client'; // Importamos el cliente Redis
@@ -113,14 +113,11 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
       );
     }
 
-    // CONTINUAR CON LA LÓGICA DE ASIGNACIÓN A UN TOWER DISPONIBLE.
-    // NOTA: Actualmente solo verifica si existe *al menos uno*.
-    // La lógica de asignación real (ej. al Tower más cercano) no está implementada aquí
-    // pero el filtrado de towers inactivos ya se ha realizado.
-
     // 2. Subir la solicitud a Redis en formato HASH
     // Se asigna un TTL para que las solicitudes no procesadas expiren.
     const requestKey = `trip:request:${trip.id}`;
+    const candidatesKey = `trip:request:${trip.id}:candidates`; //nueva key para la lista de candidatos
+
     const requestData = {
       customer_id: customer_id,
       trip_id: trip.id,
@@ -133,6 +130,7 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
       vehicle_year: vehicle_data.year,
       preferred_tow_type: preferred_tow_type,
       status: 'pending', // Estado inicial
+      current_tower_index: '0', //puntero inicial: empezamos ofreciendo al índice 0 (tower más cercano)
       // Los campos tower_clerk_id, tower_location_lat/long se añadirán cuando la solicitud sea aceptada por otra lógica
     };
 
@@ -140,9 +138,35 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
     await redis.pipeline()
       .hset(requestKey, requestData)
       .expire(requestKey, 300) // Expira en 5 minutos (300 segundos)
+      .rpush(candidatesKey, ...availableTowerClerkIds)
+      .expire(candidatesKey, 300) // mismo TTL para no dejar basura
       .exec();
 
     console.log(`Solicitud de viaje ${trip.id} creada en Redis con estado 'pending'.`);
+
+    // Disparar el flujo de oferta en segundo plano (asíncrono)
+    // 1. Parseamos la URL de la request
+    const requestUrl = new URL(req.url);
+
+    // 2. Si el hostname es localhost, forzamos HTTP plano para evitar el baneo de SSL local
+    const baseUrl = requestUrl.hostname === 'localhost'
+      ? process.env.NEXT_PUBLIC_TUNNEL_URL
+      : requestUrl.origin;
+
+    // fetch sin await para no bloquear la respuesta http del cliente
+    // este endpoint se encargará de mandar el ping en tiempo real al primer tower
+    after(() =>
+      fetch(`${baseUrl}/api/tower/offers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': `${process.env.API_SECRET_KEY}`
+        },
+        body: JSON.stringify({ trip_id: trip.id })
+      }).catch(error => {
+        console.error(`[Error Background Trigger] No se pudo iniciar la oferta para el viaje ${trip.id}: `, error)
+      })
+    )
 
     return NextResponse.json({ success: true, data: { trip_id: trip.id, status: 'pending' } }, { status: 200 });
   } catch (error: any) {
