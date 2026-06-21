@@ -92,9 +92,12 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
       if (heartbeatChecks[index]) {
         availableTowerClerkIds.push(towerId);
       } else {
-        // Si el heartbeat no existe, limpiar del GeoSet
+        // Si el heartbeat no existe:
+        // 1. Limpiar del GeoSet
         cleanupPipeline.zrem('towers:locations:available', towerId);
-        console.log(`[Lazy Cleanup] Tower ${towerId} sin heartbeat, removiendo de GeoSet.`);
+        // 2. Marcar el perfil del tower como "unavailable"
+        cleanupPipeline.hset(`tower:profile:${towerId}`, { status: 'unavailable' });
+        console.log(`[Lazy Cleanup] Tower ${towerId} sin heartbeat, removiendo de GeoSet y marcando como UNAVAILABLE en el perfil.`);
       }
     });
 
