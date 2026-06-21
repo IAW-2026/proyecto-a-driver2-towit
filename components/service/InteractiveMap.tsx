@@ -16,11 +16,11 @@ interface Coordinates {
 }
 
 interface InteractiveMapProps {
-  // Sin props relacionadas con solicitudes o viajes simulados.
-  // El mapa se centrará y mostrará la ubicación del usuario en tiempo real.
+  // Agregamos initialCoordinates para permitir que el componente padre sugiera un centro inicial.
+  initialCoordinates?: Coordinates;
 }
 
-export default function InteractiveMap({}: InteractiveMapProps) {
+export default function InteractiveMap({ initialCoordinates }: InteractiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const driverMarker = useRef<Marker | null>(null);
@@ -28,7 +28,8 @@ export default function InteractiveMap({}: InteractiveMapProps) {
   const routeSourceId = "route";
   const routeLayerId = "route-line";
 
-  const [driverLocation, setDriverLocation] = useState<Coordinates>(BAHIA_BLANCA_CENTER);
+  // Usar initialCoordinates si se proporciona, de lo contrario, usar BAHIA_BLANCA_CENTER.
+  const [driverLocation, setDriverLocation] = useState<Coordinates>(initialCoordinates || BAHIA_BLANCA_CENTER);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
 
   // === Inicialización del mapa ===
@@ -38,10 +39,13 @@ export default function InteractiveMap({}: InteractiveMapProps) {
       return;
     }
 
+    // Determinar el centro inicial del mapa
+    const initialCenter = initialCoordinates || BAHIA_BLANCA_CENTER;
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/navigation-day-v1",
-      center: [BAHIA_BLANCA_CENTER.lng, BAHIA_BLANCA_CENTER.lat],
+      center: [initialCenter.lng, initialCenter.lat], // Usar las coordenadas iniciales o el centro de Bahía Blanca
       zoom: 12,
       pitch: 45,
     });
@@ -102,8 +106,7 @@ export default function InteractiveMap({}: InteractiveMapProps) {
             const { latitude, longitude } = position.coords;
             const userCoords = { lat: latitude, lng: longitude };
             setDriverLocation(userCoords); // Actualizar la posición del conductor
-            // Opcional: Centrar el mapa en el conductor cuando se mueve
-            // map.current?.setCenter([longitude, latitude]);
+            map.current?.setCenter([longitude, latitude]);
           },
           (error) => {
             console.error("Mapbox: Error watching user location:", error.message, `(Code: ${error.code})`);

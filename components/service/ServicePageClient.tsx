@@ -16,17 +16,22 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
+import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation } from "@/app/actions/redis-tower"; // Importar las nuevas acciones
 
 // Importar InteractiveMap dinámicamente con SSR deshabilitado
 const DynamicInteractiveMap = dynamic(() => import("@/components/service/InteractiveMap"), {
   ssr: false,
 });
 
-export default function ServicePageClient() {
+interface ServicePageClientProps {
+  initialIsAvailable: boolean; // Nueva prop para el estado inicial de disponibilidad
+}
+
+export default function ServicePageClient({ initialIsAvailable }: ServicePageClientProps) {
   const { user, isLoaded } = useUser(); // Obtener el usuario de Clerk
   const router = useRouter(); // Nuevo: Inicializar useRouter
-  // 1. al ingresar a la página, el usuario esté en estado no disponible por defecto
-  const [isAvailable, setIsAvailable] = useState(false); // El usuario inicia como no disponible
+  // Inicializar el estado de disponibilidad con la prop recibida de Redis
+  const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
   const [towerData, setTowerData] = useState<TowerData | null>(null); // Estado para los datos de la torre
   const [vehicles, setVehicles] = useState<any[] | null>(null); // NUEVO: Estado para los vehículos del usuario
   const [isLoading, setIsLoading] = useState(true); // Estado unificado para la carga inicial
@@ -34,11 +39,17 @@ export default function ServicePageClient() {
   const [showRedirectionPopup, setShowRedirectionPopup] = useState(false); // NUEVO: Estado para el popup de redirección
   const [redirectReason, setRedirectReason] = useState(""); // NUEVO: Estado para el mensaje de redirección
   const [recheckTrigger, setRecheckTrigger] = useState(false); // NUEVO: Estado para forzar re-evaluación
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null); // Estado para la ubicación actual
+
+  // Simulación de obtención de ubicación (hardcoded por ahora)
+  useEffect(() => {
+    setCurrentLocation({ lat: -38.7196, long: -62.2651 }); // Ejemplo: Bahía Blanca
+  }, []);
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
   useEffect(() => {
     async function loadServicePrerequisites() {
-      if (!isLoaded || !user?.id) {
+      if (!isLoaded || !user?.id || !currentLocation) { // Esperar también por la ubicación
         setIsLoading(true); // Mantener cargando hasta que user?.id esté disponible
         return;
       }
@@ -100,21 +111,69 @@ export default function ServicePageClient() {
     }
 
     loadServicePrerequisites();
-  }, [isLoaded, user?.id, router, recheckTrigger]); // Añadir recheckTrigger a las dependencias
+  }, [isLoaded, user?.id, router, recheckTrigger, currentLocation]); // Añadir currentLocation a las dependencias
+
+  // Efecto para gestionar el heartbeat cuando el tower está disponible
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isAvailable && user?.id && currentLocation) {
+      // Función para refrescar el heartbeat y la ubicación
+      const updateHeartbeat = async () => {
+        if (currentLocation) {
+          await refreshTowerHeartbeatAndLocation(currentLocation);
+        }
+      };
+
+      // Iniciar el intervalo para actualizar cada ~20 segundos (menos que el TTL de 30s)
+      intervalId = setInterval(updateHeartbeat, 20 * 1000); // 20 segundos
+
+      // Realizar una actualización inmediata al activarse la disponibilidad por primera vez
+      updateHeartbeat();
+
+    } else if (intervalId) {
+      clearInterval(intervalId); // Limpiar el intervalo si ya no está disponible
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId); // Limpiar el intervalo al desmontar o cambiar la dependencia
+      }
+    };
+  }, [isAvailable, user?.id, currentLocation]); // Depende de isAvailable, user.id y currentLocation
 
   const handleAliasUpdateSuccess = useCallback(() => {
     setShowPaymentAliasModal(false); // Cerrar el modal opcional de alias
     setRecheckTrigger(prev => !prev); // Forzar la re-evaluación de los prerrequisitos del servicio
   }, []);
 
-  const isTripActive = false; // Ya no hay viajes activos simulados
+  // Función para manejar el cambio de disponibilidad
+  const handleToggleAvailability = async () => {
+    if (!user?.id || !currentLocation) {
+      // Considerar un log interno o manejo de errores sin toast si es crítico para el usuario
+      console.error("No se pudo obtener la información de usuario o la ubicación para cambiar la disponibilidad.");
+      return;
+    }
 
+    const newAvailabilityState = !isAvailable;
+    const success = await toggleTowerAvailability(newAvailabilityState, newAvailabilityState ? currentLocation : null);
+
+    if (success) {
+      setIsAvailable(newAvailabilityState);
+      // No se notifica al usuario, ya lo ve reflejado en el botón.
+    } else {
+      // Considerar un log interno o manejo de errores sin toast
+      console.error("Hubo un error al actualizar tu estado de disponibilidad en el servidor.");
+    }
+  };
+
+  const isTripActive = false; // Hardcoded a false como se indicó.
 
   // Mostrar un estado de carga general
-  if (!isLoaded || isLoading) {
+  if (!isLoaded || isLoading || !currentLocation) { // Esperar también a que currentLocation esté disponible
     return (
       <div className="flex flex-col h-screen w-screen items-center justify-center text-white">
-        Cargando servicio...
+        Cargando servicio y ubicación...
       </div>
     );
   }
@@ -123,12 +182,16 @@ export default function ServicePageClient() {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       <ServiceHeader
-        isAvailable={isAvailable} // Controlado por el estado local, asumiendo prerrequisitos cumplidos
-        setIsAvailable={setIsAvailable}
+        isAvailable={isAvailable}
+        setIsAvailable={handleToggleAvailability} // Pasar la función de manejo del toggle
         isTripActive={isTripActive} // Pasar la prop para deshabilitar el botón
       />
       <div className="flex-1 w-full h-full">
-        <DynamicInteractiveMap />
+        {currentLocation && (
+          <DynamicInteractiveMap
+            initialCoordinates={{ lat: currentLocation.lat, lng: currentLocation.long }}
+          />
+        )}
       </div>
 
       {/* NUEVO: Popup de redirección flotante sobre el mapa */}
