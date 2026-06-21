@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useUser } from "@clerk/nextjs";
 import { getTowerVehicles } from "@/app/actions/vehicle";
 import { getTowerDetails, TowerData } from "@/app/actions/tower"; // Importamos getTowerDetails y la interfaz TowerData
+import { getTowerAvailabilityStatus, toggleTowerAvailability } from "@/app/actions/redis-tower"; // Importar la acción de Redis para disponibilidad y la acción de toggle
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,10 @@ interface Vehicle {
   max_load: number;
 }
 
+// Ubicación mockeada para el contexto del dashboard, ya que no se rastrea la ubicación en tiempo real aquí.
+// Esta es una solución temporal.
+const DASHBOARD_MOCK_LOCATION = { lat: -38.7196, long: -62.2651 }; // Ejemplo: Bahía Blanca
+
 export default function UserProfileSummary() {
   const { user, isLoaded } = useUser();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
@@ -34,6 +39,7 @@ export default function UserProfileSummary() {
   const [isAvailable, setIsAvailable] = useState(false);
   const [towerData, setTowerData] = useState<TowerData | null>(null); // Nuevo estado para towerData
   const [isLoadingTowerData, setIsLoadingTowerData] = useState(true); // Nuevo estado para la carga de towerData
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(true); // Estado para la carga de disponibilidad
   const [showPaymentAliasModal, setShowPaymentAliasModal] = useState(false); // Estado para controlar el modal de alias
 
   const { openNoVehicleErrorModal } = useNoVehicleErrorModal();
@@ -61,6 +67,7 @@ export default function UserProfileSummary() {
 
     setIsLoadingVehicles(true);
     setIsLoadingTowerData(true);
+    setIsLoadingAvailability(true); // Iniciar carga de disponibilidad
 
     try {
       // Fetch vehicles
@@ -78,6 +85,16 @@ export default function UserProfileSummary() {
       setVehicles([]);
     } finally {
       setIsLoadingVehicles(false);
+    }
+
+    try { // Bloque para obtener el estado de disponibilidad
+      const availability = await getTowerAvailabilityStatus();
+      setIsAvailable(availability);
+    } catch (error) {
+      console.error("Excepción al obtener el estado de disponibilidad del Tower desde Redis:", error);
+      setIsAvailable(false); // Por defecto a no disponible en caso de error
+    } finally {
+      setIsLoadingAvailability(false); // Finalizar carga de disponibilidad
     }
 
     try {
@@ -100,14 +117,27 @@ export default function UserProfileSummary() {
     fetchAllData();
   }, [fetchAllData]);
 
-  const handleToggleAvailability = () => {
+  const handleToggleAvailability = useCallback(async () => { // Hacemos la función asíncrona
     if (!vehicles || vehicles.length === 0) {
       openNoVehicleErrorModal();
       return;
     }
-    console.log(`Mock: Updating availability in Redis for user ${user?.id} to ${!isAvailable}`);
-    setIsAvailable(!isAvailable);
-  };
+
+    const newAvailabilityState = !isAvailable;
+    const success = await toggleTowerAvailability(
+      newAvailabilityState,
+      newAvailabilityState ? DASHBOARD_MOCK_LOCATION : null
+    );
+
+    if (success) {
+      setIsAvailable(newAvailabilityState); // Actualizar el estado local solo si la actualización de Redis fue exitosa
+      console.log(`Disponibilidad de Tower actualizada en Redis para el usuario ${user?.id} a ${newAvailabilityState}`);
+    } else {
+      console.error("Hubo un error al actualizar la disponibilidad en Redis.");
+      // Aquí podrías añadir una notificación al usuario si se considera necesario,
+      // pero por ahora solo se registrará el error.
+    }
+  }, [isAvailable, vehicles, user?.id, openNoVehicleErrorModal]); // Añadir dependencias
 
   const handleOpenPaymentAliasModal = () => setShowPaymentAliasModal(true);
   const handleClosePaymentAliasModal = () => setShowPaymentAliasModal(false);
@@ -118,11 +148,11 @@ export default function UserProfileSummary() {
     fetchAllData();
   };
 
-  if (!isLoaded || isLoadingVehicles || isLoadingTowerData) {
+  if (!isLoaded || isLoadingVehicles || isLoadingTowerData || isLoadingAvailability) { // Incluir isLoadingAvailability
     return (
       <div className="flex justify-center items-center h-48 bg-slate-900/70 p-6 rounded-lg shadow-lg     
 border border-slate-800">
-        <p className="text-slate-400">Cargando perfil, vehículos y detalles...</p>
+        <p className="text-slate-400">Cargando perfil, vehículos, detalles y disponibilidad...</p>
       </div>
     );
   }
