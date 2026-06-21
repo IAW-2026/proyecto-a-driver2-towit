@@ -7,7 +7,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs"; // Importar useUser
 import { getTowerData, TowerData } from "@/app/actions/tower"; // Importar la acción para obtener datos de la torre y la interfaz TowerData
 import { getTowerVehicles } from "@/app/actions/vehicle"; // NUEVO: Importar la acción para obtener vehículos
-import PaymentAliasModal from "@/components/payments/PaymentAliasModal"; // Importar el modal de alias
 import { useRouter } from "next/navigation"; // Nuevo: Importar useRouter
 import {
   Dialog,
@@ -35,21 +34,16 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   const [towerData, setTowerData] = useState<TowerData | null>(null); // Estado para los datos de la torre
   const [vehicles, setVehicles] = useState<any[] | null>(null); // NUEVO: Estado para los vehículos del usuario
   const [isLoading, setIsLoading] = useState(true); // Estado unificado para la carga inicial
-  const [showPaymentAliasModal, setShowPaymentAliasModal] = useState(false); // Estado para el modal opcional de alias
   const [showRedirectionPopup, setShowRedirectionPopup] = useState(false); // NUEVO: Estado para el popup de redirección
   const [redirectReason, setRedirectReason] = useState(""); // NUEVO: Estado para el mensaje de redirección
   const [recheckTrigger, setRecheckTrigger] = useState(false); // NUEVO: Estado para forzar re-evaluación
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null); // Estado para la ubicación actual
-
-  // Callback para recibir actualizaciones de ubicación del InteractiveMap
-  const handleLocationChange = useCallback((coords: { lat: number; lng: number }) => {
-    setCurrentLocation({ lat: coords.lat, long: coords.lng });
-  }, []);
+  const [watchId, setWatchId] = useState<number | null>(null); // NEW: Para el ID de watchPosition
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
   useEffect(() => {
     async function loadServicePrerequisites() {
-      if (!isLoaded || !user?.id || !currentLocation) { // Esperar también por la ubicación
+      if (!isLoaded || !user?.id) { // No esperar por currentLocation para los prerrequisitos
         setIsLoading(true); // Mantener cargando hasta que user?.id esté disponible
         return;
       }
@@ -94,7 +88,6 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
             router.push("/dashboard");
           }, 5000); // 3 segundos de delay
         } else {
-          setShowPaymentAliasModal(false); // Asegurarse de que el modal opcional esté cerrado si todo está bien
           setShowRedirectionPopup(false); // Asegurarse de que el popup de redirección no se muestre
         }
 
@@ -111,7 +104,32 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     }
 
     loadServicePrerequisites();
-  }, [isLoaded, user?.id, router, recheckTrigger, currentLocation]); // Añadir currentLocation a las dependencias
+  }, [isLoaded, user?.id, router, recheckTrigger]); // Quitar currentLocation de las dependencias
+
+  // NUEVO: Efecto para obtener y actualizar la ubicación del usuario
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      const id = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation({ lat: latitude, long: longitude });
+        },
+        (error) => {
+          console.error("ServicePageClient: Error obteniendo ubicación:", error.message, `(Code: ${error.code})`);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+      setWatchId(id);
+
+      return () => {
+        if (id !== null) {
+          navigator.geolocation.clearWatch(id);
+        }
+      };
+    } else {
+      console.warn("ServicePageClient: Geolocation no soportado o no disponible.");
+    }
+  }, []); // Se ejecuta una vez al montar el componente
 
   // Efecto para gestionar el heartbeat cuando el tower está disponible
   useEffect(() => {
@@ -143,7 +161,6 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   }, [isAvailable, user?.id, currentLocation]); // Depende de isAvailable, user.id y currentLocation
 
   const handleAliasUpdateSuccess = useCallback(() => {
-    setShowPaymentAliasModal(false); // Cerrar el modal opcional de alias
     setRecheckTrigger(prev => !prev); // Forzar la re-evaluación de los prerrequisitos del servicio
   }, []);
 
@@ -169,11 +186,11 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
 
   const isTripActive = false; // Hardcoded a false como se indicó.
 
-  // Mostrar un estado de carga general
-  if (!isLoaded || isLoading || !currentLocation) { // Esperar también a que currentLocation esté disponible
+  // Mostrar un estado de carga general. No se espera por currentLocation para permitir que el mapa se inicie.
+  if (!isLoaded || isLoading) {
     return (
       <div className="flex flex-col h-screen w-screen items-center justify-center text-white">
-        Cargando servicio y ubicación...
+        Cargando servicio...
       </div>
     );
   }
@@ -188,10 +205,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       />
       <div className="flex-1 w-full h-full">
         {currentLocation && ( // Renderizar el mapa solo si tenemos una ubicación inicial
-          <DynamicInteractiveMap
-            initialCoordinates={{ lat: currentLocation.lat, lng: currentLocation.long }}
-            onLocationChange={handleLocationChange} // Pasa el callback para recibir actualizaciones de ubicación
-          />
+          <DynamicInteractiveMap />
         )}
       </div>
 
@@ -213,19 +227,6 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           </p>
         </DialogContent>
       </Dialog>
-
-      {/* Renderizar el PaymentAliasModal aquí, pero su visibilidad está controlada por la lógica anterior.
-          Este bloque es para cuando el alias ya se configuró (ej. desde el dashboard), pero el usuario quiere cambiarlo. */}
-      {showPaymentAliasModal && towerData?.payments_alias && (
-        <PaymentAliasModal
-          isOpen={showPaymentAliasModal}
-          onClose={() => setShowPaymentAliasModal(false)}
-          currentAlias={towerData.payments_alias || null}
-          onSuccess={handleAliasUpdateSuccess}
-          isClosable={true} // Permitir cerrar si ya está configurado (ej. si vino de dashboard)
-          isServiceContext={false} // No es el contexto de servicio bloqueante aquí
-        />
-      )}
     </div>
   );
 }
