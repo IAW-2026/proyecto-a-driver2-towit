@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod'; // Para validación de esquema
 import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib/apiAuth';
-import { redis } from '@/app/actions/redis-tower'; // Importamos el cliente Redis
+import { redis } from '@/lib/redis-client'; // Importamos el cliente Redis
 
 // Esquema de validación para el cuerpo de la solicitud POST
 const requestBodySchema = z.object({

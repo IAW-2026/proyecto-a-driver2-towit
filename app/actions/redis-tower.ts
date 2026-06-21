@@ -117,5 +117,4 @@ export async function refreshTowerHeartbeatAndLocation(
     console.error(`Error refreshing tower location and heartbeat for ${userId} in Redis:`, error);
   }
 }
-export { redis };
 

@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma'; // Se mantiene para el PATCH, pero no usado en GET
 import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib/apiAuth';
-import { redis } from '@/app/actions/redis-tower'; // Importamos el cliente Redis
+import { redis } from '@/lib/redis-client'; // Importamos el cliente Redis
 
 /**
  * GET /api/tower/requests/[trip_id]
@@ -10,13 +10,13 @@ import { redis } from '@/app/actions/redis-tower'; // Importamos el cliente Redi
  * La Customer App llama a este endpoint.
  */
 export async function GET(
-  req: Request,
-  context: { params: { trip_id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ trip_id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!(await validateApiKey(req))) {
     return unauthorizedResponse();
   }
-  const { trip_id } = context.params;
+  const { trip_id } = await context.params;
 
   try {
     // 1. Obtener la solicitud de Redis (exclusivamente)
@@ -65,13 +65,13 @@ export async function GET(
  * Esto podría generar inconsistencias si GET solo consulta Redis.
  */
 export async function PATCH(
-  req: Request,
-  context: { params: { trip_id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ trip_id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
   if (!(await validateApiKey(req))) {
     return unauthorizedResponse();
   }
-  const { trip_id } = context.params;
+  const { trip_id } = await context.params;
 
   try {
     // 1. Encontrar la asignación del viaje en Neon
