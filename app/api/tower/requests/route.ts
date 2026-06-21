@@ -54,19 +54,66 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
       );
     }
 
-    const availableTowerClerkIds = await redis.geosearch(
+    const rawGeosearchResults = await redis.geosearch(
       'towers:locations:available',
       { type: 'FROMLONLAT', coordinate: { lon: originLng, lat: originLat } },
       { type: "BYRADIUS", radius: 5, radiusType: "KM" },
       "ASC"
     );
 
-    if (!availableTowerClerkIds || availableTowerClerkIds.length === 0) {
+    // Mapear los resultados para extraer solo el 'member' (clerk_id)
+    const rawTowerClerkIds: string[] = rawGeosearchResults.map(item => {
+      // El tipo 'unknown' en 'member' nos obliga a una aserción de tipo o una verificación más robusta
+      // Asumimos que 'item' es un objeto con una propiedad 'member' de tipo string, basado en el error reportado.
+      if (typeof item === 'string') { // Si geosearch devuelve un array de strings (sin WITHDIST/WITHCOORD)
+        return item;
+      }
+      // Si geosearch devuelve un array de objetos (ej. con WITHDIST/WITHCOORD implícito/explícito)
+      return (item as { member: string }).member;
+    });
+
+    if (!rawTowerClerkIds || rawTowerClerkIds.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No se pudieron encontrar towers disponibles en este momento.' },
         { status: 404 }
       );
     }
+
+    // Implementar Estrategia de Limpieza Pasiva:
+    // 1. Filtrar towers que no tienen un heartbeat activo
+    const heartbeatChecks = await Promise.all(
+      rawTowerClerkIds.map(towerId => redis.exists(`tower:heartbeat:${towerId}`))
+    );
+
+    const availableTowerClerkIds: string[] = [];
+    const cleanupPipeline = redis.pipeline();
+
+    rawTowerClerkIds.forEach((towerId, index) => {
+      if (heartbeatChecks[index]) {
+        availableTowerClerkIds.push(towerId);
+      } else {
+        // Si el heartbeat no existe, limpiar del GeoSet
+        cleanupPipeline.zrem('towers:locations:available', towerId);
+        console.log(`[Lazy Cleanup] Tower ${towerId} sin heartbeat, removiendo de GeoSet.`);
+      }
+    });
+
+    // Ejecutar las operaciones de limpieza en segundo plano
+    await cleanupPipeline.exec().catch(error => {
+      console.error("Error durante la ejecución del pipeline de limpieza de GeoSet:", error);
+    });
+
+    if (availableTowerClerkIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No se pudieron encontrar towers activos disponibles en este momento.' },
+        { status: 404 }
+      );
+    }
+
+    // CONTINUAR CON LA LÓGICA DE ASIGNACIÓN A UN TOWER DISPONIBLE.
+    // NOTA: Actualmente solo verifica si existe *al menos uno*.
+    // La lógica de asignación real (ej. al Tower más cercano) no está implementada aquí
+    // pero el filtrado de towers inactivos ya se ha realizado.
 
     // 2. Subir la solicitud a Redis en formato HASH
     // Se asigna un TTL para que las solicitudes no procesadas expiren.

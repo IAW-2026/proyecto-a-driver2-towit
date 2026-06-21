@@ -3,6 +3,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { redis } from "@/lib/redis-client"; // Importa la instancia de Redis desde el nuevo archivo
 
+interface VehicleProfileData {
+  brand: string;
+  model: string;
+  year: number;
+  max_load: number;
+}
+
 export async function getTowerAvailabilityStatus(): Promise<boolean> {
   const { userId } = await auth();
 
@@ -29,7 +36,8 @@ export async function getTowerAvailabilityStatus(): Promise<boolean> {
  */
 export async function toggleTowerAvailability(
   isAvailable: boolean,
-  location: { lat: number, long: number } | null
+  location: { lat: number, long: number } | null,
+  vehicleDetails?: VehicleProfileData | null // Añadir detalles del vehículo
 ): Promise<boolean> {
   const { userId } = await auth();
 
@@ -39,10 +47,14 @@ export async function toggleTowerAvailability(
   }
 
   const pipeline = redis.pipeline();
+  const towerProfileData: { status: string; vehicle?: string } = { status: isAvailable ? 'available' : 'unavailable' };
 
   if (isAvailable) {
     // Si se pone disponible:
-    pipeline.hset(`tower:profile:${userId}`, { status: 'available' });
+    if (vehicleDetails) {
+      towerProfileData.vehicle = JSON.stringify(vehicleDetails);
+    }
+    pipeline.hset(`tower:profile:${userId}`, towerProfileData);
 
     // Si hay ubicación, se añade al GeoSet y se establece el heartbeat.
     // Esto coincide con la "Pipeline de Actualización Rutinaria" inicial de docs/redis-data-architecture.md
@@ -62,7 +74,7 @@ export async function toggleTowerAvailability(
     console.log(`Tower ${userId} puesto como AVAILABLE en Redis.`);
   } else {
     // Si se pone no disponible:
-    pipeline.hset(`tower:profile:${userId}`, { status: 'unavailable' });
+    pipeline.hset(`tower:profile:${userId}`, towerProfileData); // Actualizar solo el estado
     pipeline.zrem('towers:locations:available', userId); // Remover del GeoSet
     pipeline.del(`tower:heartbeat:${userId}`); // Eliminar heartbeat
 

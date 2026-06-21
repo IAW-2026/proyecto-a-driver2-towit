@@ -17,6 +17,14 @@ import {
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
 import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation } from "@/app/actions/redis-tower"; // Importar las nuevas acciones
 
+interface Vehicle { // Definir la interfaz Vehicle para mayor claridad
+  vehicle_id: string;
+  brand: string;
+  model: string;
+  year: number;
+  max_load: number;
+}
+
 // Importar InteractiveMap dinámicamente con SSR deshabilitado
 const DynamicInteractiveMap = dynamic(() => import("@/components/service/InteractiveMap"), {
   ssr: false,
@@ -32,7 +40,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   // Inicializar el estado de disponibilidad con la prop recibida de Redis
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
   const [towerData, setTowerData] = useState<TowerData | null>(null); // Estado para los datos de la torre
-  const [vehicles, setVehicles] = useState<any[] | null>(null); // NUEVO: Estado para los vehículos del usuario
+  const [vehicles, setVehicles] = useState<Vehicle[] | null>(null); // NUEVO: Estado para los vehículos del usuario
   const [isLoading, setIsLoading] = useState(true); // Estado unificado para la carga inicial
   const [showRedirectionPopup, setShowRedirectionPopup] = useState(false); // NUEVO: Estado para el popup de redirección
   const [redirectReason, setRedirectReason] = useState(""); // NUEVO: Estado para el mensaje de redirección
@@ -143,8 +151,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         }
       };
 
-      // Iniciar el intervalo para actualizar cada ~20 segundos (menos que el TTL de 30s)
-      intervalId = setInterval(updateHeartbeat, 20 * 1000); // 20 segundos
+      // Iniciar el intervalo para actualizar cada 20 segundos
+      intervalId = setInterval(updateHeartbeat, 20000); // 20 segundos
 
       // Realizar una actualización inmediata al activarse la disponibilidad por primera vez
       updateHeartbeat();
@@ -173,7 +181,24 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     }
 
     const newAvailabilityState = !isAvailable;
-    const success = await toggleTowerAvailability(newAvailabilityState, newAvailabilityState ? currentLocation : null);
+
+    if (!vehicles || vehicles.length === 0) {
+      console.error("No hay vehículos registrados para cambiar la disponibilidad.");
+      return;
+    }
+
+    const activeVehicle = vehicles[0]; // Seleccionar el primer vehículo como el activo
+
+    const success = await toggleTowerAvailability(
+      newAvailabilityState,
+      newAvailabilityState ? currentLocation : null,
+      newAvailabilityState ? {
+        brand: activeVehicle.brand,
+        model: activeVehicle.model,
+        year: activeVehicle.year,
+        max_load: activeVehicle.max_load,
+      } : null // Pasar detalles del vehículo solo si se está activando la disponibilidad
+    );
 
     if (success) {
       setIsAvailable(newAvailabilityState);
