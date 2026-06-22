@@ -16,11 +16,10 @@ interface Coordinates {
 }
 
 interface InteractiveMapProps {
-  // Sin props relacionadas con solicitudes o viajes simulados.
-  // El mapa se centrará y mostrará la ubicación del usuario en tiempo real.
+  initialCenter: Coordinates; // NUEVO: La ubicación inicial para centrar el mapa
 }
 
-export default function InteractiveMap({}: InteractiveMapProps) {
+export default function InteractiveMap({ initialCenter }: InteractiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const driverMarker = useRef<Marker | null>(null);
@@ -28,7 +27,7 @@ export default function InteractiveMap({}: InteractiveMapProps) {
   const routeSourceId = "route";
   const routeLayerId = "route-line";
 
-  const [driverLocation, setDriverLocation] = useState<Coordinates>(BAHIA_BLANCA_CENTER);
+  const [driverLocation, setDriverLocation] = useState<Coordinates>(initialCenter); // Inicializa con la ubicación actual del usuario
   const [isMapLoaded, setIsMapLoaded] = useState(false);
 
   // === Inicialización del mapa ===
@@ -41,8 +40,8 @@ export default function InteractiveMap({}: InteractiveMapProps) {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/navigation-day-v1",
-      center: [BAHIA_BLANCA_CENTER.lng, BAHIA_BLANCA_CENTER.lat],
-      zoom: 12,
+      center: [initialCenter.lng, initialCenter.lat], // Usa la ubicación inicial para centrar el mapa
+      zoom: 16,
       pitch: 45,
     });
 
@@ -202,7 +201,7 @@ export default function InteractiveMap({}: InteractiveMapProps) {
     if (driverMarker.current) {
       driverMarker.current.setLngLat([driverLocation.lng, driverLocation.lat]);
       // Opcional: Centrar el mapa en la ubicación del conductor al inicio o al cambiar drásticamente
-      // map.current?.flyTo({ center: [driverLocation.lng, driverLocation.lat], zoom: map.current.getZoom() });
+      map.current?.flyTo({ center: [driverLocation.lng, driverLocation.lat], zoom: map.current.getZoom() });
     }
   }, [driverLocation]);
 

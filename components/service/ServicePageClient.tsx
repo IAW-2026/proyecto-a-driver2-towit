@@ -376,7 +376,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       />
       <div className="flex-1 w-full h-full">
         {currentLocation && (
-          <DynamicInteractiveMap />
+          <DynamicInteractiveMap initialCenter={{ lat: currentLocation.lat, lng: currentLocation.long }} /> // Pasa la ubicación actual al mapa
         )}
       </div>
 
