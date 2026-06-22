@@ -386,13 +386,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   };
 
   // Mostrar un estado de carga general.
-  if (!isLoaded || isLoading) {
-    return (
-      <div className="flex flex-col h-screen w-screen items-center justify-center text-white">
-        Cargando servicio...
-      </div>
-    );
-  }
+  // if (!isLoaded || isLoading) {
+  //   return (
+  //     <div className="flex flex-col h-screen w-screen items-center justify-center text-white">
+  //       Cargando servicio...
+  //     </div>
+  //   );
+  // }
 
 
   return (
