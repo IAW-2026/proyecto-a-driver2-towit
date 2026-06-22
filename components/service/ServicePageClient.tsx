@@ -400,15 +400,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         isTripActive={isTripActive} // Pasar el estado isTripActive al header
       />
       <div className="flex-1 w-full h-full">
-        {currentLocation && (
-          <DynamicInteractiveMap
-            initialCenter={{ lat: currentLocation.lat, lng: currentLocation.long }}
-            routeStart={mapRouteStart} // Pasa la ubicación de inicio de la ruta (tower)
-            routeEnd={mapRouteEnd}     // Pasa la ubicación del origen del viaje
-            tripDestination={mapRouteOriginToDestinationEnd} // Pasa la ubicación del destino final del viaje
-            isTripActive={isTripActive} // Pasa si hay un viaje activo
-          />
-        )}
+        <DynamicInteractiveMap
+          userLocation={currentLocation ? { lat: currentLocation.lat, lng: currentLocation.long } : null} // Pasa la ubicación del usuario como userLocation, mapeando 'long' a 'lng'
+          routeStart={mapRouteStart}
+          routeEnd={mapRouteEnd}
+          tripDestination={mapRouteOriginToDestinationEnd}
+          isTripActive={isTripActive}
+        />
       </div>
 
       {/* RENDERIZADO CONDICIONAL DE LA TARJETA DE OFERTA */}
