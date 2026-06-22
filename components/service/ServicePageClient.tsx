@@ -48,6 +48,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null); // Estado para la ubicación actual
   const [watchId, setWatchId] = useState<number | null>(null); // NEW: Para el ID de watchPosition
 
+  // NUEVOS ESTADOS para gestionar la oferta
+  const [currentOffer, setCurrentOffer] = useState<any | null>(null);
+  const [offerTimeRemaining, setOfferTimeRemaining] = useState<number>(0);
+
+  // Variable para simular si hay un viaje activo (necesitaría más lógica real)
+  const [isTripActive, setIsTripActive] = useState(false); // Cambiado a estado para futura gestión
+
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
   useEffect(() => {
     async function loadServicePrerequisites() {
@@ -139,6 +146,74 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     }
   }, []); // Se ejecuta una vez al montar el componente
 
+  // NUEVO EFECTO: Polling para ofertas de viaje
+  useEffect(() => {
+    let pollingInterval: NodeJS.Timeout | null = null;
+
+    const checkOffers = async () => {
+      if (!user?.id || !isAvailable) {
+        // Si el tower no está logueado o no está disponible, no hay ofertas.
+        setCurrentOffer(null);
+        setOfferTimeRemaining(0);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/tower/check-offer?tower_id=${user.id}`);
+        const data = await response.json();
+
+        if (data.has_offer) {
+          setCurrentOffer(data.trip);
+          setOfferTimeRemaining(data.time_remaining);
+          // Opcional: Si el `check-offer` indica un viaje activo, actualizar `isTripActive`
+          // Para esta implementación, asumimos que `isTripActive` se gestionará tras aceptar.
+        } else {
+          setCurrentOffer(null);
+          setOfferTimeRemaining(0);
+        }
+      } catch (error) {
+        console.error("Error checking for offers:", error);
+        setCurrentOffer(null);
+        setOfferTimeRemaining(0);
+      }
+    };
+
+    if (isAvailable && user?.id) {
+      checkOffers(); // Una verificación inicial inmediata
+      pollingInterval = setInterval(checkOffers, 3000); // Poll cada 3 segundos
+    } else {
+      setCurrentOffer(null);
+      setOfferTimeRemaining(0);
+    }
+
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
+  }, [isAvailable, user?.id]);
+
+  // NUEVO EFECTO: Contador regresivo local para la oferta
+  useEffect(() => {
+    let countdownTimer: NodeJS.Timeout | null = null;
+    if (currentOffer && offerTimeRemaining > 0) {
+      countdownTimer = setInterval(() => {
+        setOfferTimeRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownTimer!);
+            setCurrentOffer(null); // La oferta expira
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (!currentOffer && countdownTimer) {
+      clearInterval(countdownTimer);
+    }
+    return () => {
+      if (countdownTimer) clearInterval(countdownTimer);
+    };
+  }, [currentOffer, offerTimeRemaining]);
+
+
   // Efecto para gestionar el heartbeat cuando el tower está disponible
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
@@ -209,9 +284,44 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     }
   };
 
-  const isTripActive = false; // Hardcoded a false como se indicó.
+  // NUEVA FUNCIÓN: Para aceptar una oferta de viaje
+  const handleAcceptOffer = async (tripId: string) => {
+    if (!user?.id) {
+      console.error("User ID not available to accept offer.");
+      return;
+    }
 
-  // Mostrar un estado de carga general. No se espera por currentLocation para permitir que el mapa se inicie.
+    try {
+      const response = await fetch('/api/tower/respond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trip_id: tripId,
+          tower_id: user.id,
+          action: 'accept',
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("Oferta aceptada:", data);
+        setCurrentOffer(null); // Limpiar la oferta actual de la UI
+        setOfferTimeRemaining(0);
+        setIsTripActive(true); // Marcar que hay un viaje activo
+        // Futuro: Redirigir o cambiar la UI para mostrar los detalles del viaje en curso
+      } else {
+        console.error("Error al aceptar la oferta:", data.error);
+        // Opcional: Mostrar un mensaje de error al usuario
+      }
+    } catch (error) {
+      console.error("Error en la solicitud para aceptar oferta:", error);
+      // Opcional: Mostrar un mensaje de error de red
+    }
+  };
+
+  // Mostrar un estado de carga general.
   if (!isLoaded || isLoading) {
     return (
       <div className="flex flex-col h-screen w-screen items-center justify-center text-white">
@@ -225,16 +335,30 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       <ServiceHeader
         isAvailable={isAvailable}
-        setIsAvailable={handleToggleAvailability} // Pasar la función de manejo del toggle
-        isTripActive={isTripActive} // Pasar la prop para deshabilitar el botón
+        setIsAvailable={handleToggleAvailability}
+        isTripActive={isTripActive} // Pasar el estado isTripActive al header
       />
       <div className="flex-1 w-full h-full">
-        {currentLocation && ( // Renderizar el mapa solo si tenemos una ubicación inicial
+        {currentLocation && (
           <DynamicInteractiveMap />
         )}
       </div>
 
-      {/* NUEVO: Popup de redirección flotante sobre el mapa */}
+      {/* RENDERIZADO CONDICIONAL DE LA TARJETA DE OFERTA */}
+      {currentOffer && offerTimeRemaining > 0 && (
+        <ServiceRequestCard
+          // Estos datos provienen del `check-offer` o son placeholders
+          customerName={`Cliente Nuevo (Quedan ${offerTimeRemaining}s)`} // Placeholder y contador
+          vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
+          vehiclePlate="Pendiente" // No proporcionado por check-offer
+          originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`} // Geocodificar para mostrar dirección real
+          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`} // Geocodificar para mostrar dirección real
+          serviceValue={150.00} // Valor ficticio, no proporcionado por check-offer
+          onAccept={handleAcceptOffer}
+          tripId={currentOffer.id}
+        />
+      )}
+
       <Dialog open={showRedirectionPopup}>
         <DialogContent
           className="sm:max-w-[425px] bg-slate-950/90 border-slate-700 text-white backdrop-blur-sm [&>button]:hidden"
