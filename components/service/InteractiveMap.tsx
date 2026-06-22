@@ -101,14 +101,7 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
         },
       });
 
-      // No agregar el marcador del conductor aquí. Se hará en el useEffect de userLocation.
-
       setIsMapLoaded(true); // El mapa y sus fuentes/capas están listos
-
-      // Configurar watchPosition para obtener actualizaciones continuas de la ubicación
-      // Esta lógica de watchPosition se mueve a ServicePageClient.tsx.
-      // Aquí solo se inicializa el mapa.
-
     });
 
     // Limpiar el mapa al desmontar
@@ -135,28 +128,24 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
     return el;
   }, []);
 
-  // NUEVO EFECTO: Para manejar la ubicación del usuario (prop userLocation)
+  // Efecto para manejar la ubicación del usuario (prop userLocation)
   // Añadir/mover el marcador del conductor y centrar el mapa cuando la ubicación esté disponible.
   useEffect(() => {
-    if (!map.current || !isMapLoaded || !userLocation) return;
+    if (!map.current || !isMapLoaded || !userLocation) {
+      // Si no hay userLocation, asegúrate de que el marcador no se muestre
+      if (driverMarker.current) {
+        driverMarker.current.remove();
+        driverMarker.current = null;
+      }
+      return;
+    }
 
     // Actualizar el estado interno de driverLocation
     setDriverLocation(userLocation);
 
     // Si el marcador del conductor aún no existe, crearlo
     if (!driverMarker.current) {
-      const el = document.createElement('div');
-      el.style.backgroundColor = '#007bff'; // Círculo azul para el conductor
-      el.style.width = '24px';
-      el.style.height = '24px';
-      el.style.borderRadius = '50%';
-      el.style.border = '2px solid #fff';
-      el.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.5)';
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.justifyContent = 'center';
-      el.style.color = '#fff';
-      el.style.fontWeight = 'bold';
+      const el = createCustomMarkerElement('#007bff'); // Usar la función auxiliar para el marcador del conductor
 
       driverMarker.current = new mapboxgl.Marker({
         element: el,
@@ -170,16 +159,28 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
       // Centrar el mapa en la ubicación del usuario con zoom 16 la primera vez
       map.current?.flyTo({
         center: [userLocation.lng, userLocation.lat],
-        zoom: 16, // Zoom para la ubicación real
-        essential: true, // Asegura que se complete la animación
+        zoom: 16,
+        essential: true,
       });
 
     } else {
       // Si ya existe, simplemente moverlo
       driverMarker.current.setLngLat([userLocation.lng, userLocation.lat]);
+
+      // Vuelve a centrar el mapa en el conductor si no hay rutas activas ni viaje en curso.
+      // Esto maneja el caso de que la ubicación del conductor se actualice y no haya una ruta que ya lo esté haciendo
+      const hasAnyRouteData = routeStart && routeEnd && tripDestination;
+      if (!isTripActive && !hasAnyRouteData) {
+        map.current?.flyTo({
+          center: [userLocation.lng, userLocation.lat],
+          zoom: map.current.getZoom() < 16 ? 16 : map.current.getZoom(),
+          duration: 1000,
+          essential: true,
+        });
+      }
     }
 
-  }, [userLocation, isMapLoaded, createCustomMarkerElement]); // Depende de la prop userLocation y si el mapa está cargado
+  }, [userLocation, isMapLoaded, createCustomMarkerElement, isTripActive, routeStart, routeEnd, tripDestination]); // Añadidas dependencias relevantes
 
   // === Función para borrar todas las rutas y marcadores de viaje ===
   const clearRoutesAndMarkers = useCallback(() => {

@@ -43,10 +43,11 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null); // NUEVO: Estado para los vehículos del usuario
   const [isLoading, setIsLoading] = useState(true); // Estado unificado para la carga inicial
   const [showRedirectionPopup, setShowRedirectionPopup] = useState(false); // NUEVO: Estado para el popup de redirección
-  const [redirectReason, setRedirectReason] = useState(""); // NUEVO: Estado para el mensaje de redirección
-  const [recheckTrigger, setRecheckTrigger] = useState(false); // NUEVO: Estado para forzar re-evaluación
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null); // Estado para la ubicación actual
+  const [redirectReason, setRedirectReason] = useState("");
+  const [recheckTrigger, setRecheckTrigger] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
+  const [arePrerequisitesLoaded, setArePrerequisitesLoaded] = useState(false); // NUEVO: Estado para saber si los datos esenciales están cargados
 
   // NUEVOS ESTADOS para gestionar la oferta
   const [currentOffer, setCurrentOffer] = useState<any | null>(null);
@@ -56,8 +57,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   const [mapRouteEnd, setMapRouteEnd] = useState<{ lat: number; lng: number } | null>(null);     // Origen del Viaje
   const [mapRouteOriginToDestinationEnd, setMapRouteOriginToDestinationEnd] = useState<{ lat: number; lng: number } | null>(null); // Destino final del Viaje
 
-  // Variable para simular si hay un viaje activo (necesitaría más lógica real)
-  const [isTripActive, setIsTripActive] = useState(false); // Cambiado a estado para futura gestión
+  // Variable para simular si hay un viaje activo
+  const [isTripActive, setIsTripActive] = useState(false);
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
   useEffect(() => {
@@ -72,8 +73,12 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       let reason = "";
 
       try {
-        // Cargar datos de la torre
-        const towerResult = await getTowerData(user.id);
+        // Ejecutar llamadas a la base de datos en paralelo
+        const [towerResult, vehiclesResult] = await Promise.all([
+          getTowerData(user.id),
+          getTowerVehicles()
+        ]);
+
         if (towerResult.success && towerResult.data) {
           setTowerData(towerResult.data);
           if (!towerResult.data.payments_alias) {
@@ -86,16 +91,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           reason = "Error al cargar los datos de la torre";
         }
 
-        // Cargar vehículos
-        const vehiclesResult = await getTowerVehicles();
         if (vehiclesResult.success && vehiclesResult.data && (vehiclesResult.data as any[]).length > 0) {
           setVehicles(vehiclesResult.data as any[]);
         } else {
-          // Si no hay vehículos, añadir la razón a la redirección
-          if (!needsRedirect) { // Si aún no se requiere redirección por alias
+          if (!needsRedirect) {
             needsRedirect = true;
             reason = "No se definió un vehículo a usar";
-          } else { // Si ya se requiere redirección por alias, combinamos las razones
+          } else {
             reason += " ni vehículo a usar";
           }
         }
@@ -105,9 +107,9 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           setShowRedirectionPopup(true);
           setTimeout(() => {
             router.push("/dashboard");
-          }, 5000); // 3 segundos de delay
+          }, 5000);
         } else {
-          setShowRedirectionPopup(false); // Asegurarse de que el popup de redirección no se muestre
+          setShowRedirectionPopup(false);
         }
 
       } catch (error) {
@@ -118,7 +120,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
             router.push("/dashboard");
         }, 3000);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Finaliza la carga de los prerrequisitos
+        setArePrerequisitesLoaded(true); // NUEVO: Marca que los prerrequisitos han sido cargados
       }
     }
 
@@ -397,11 +400,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       <ServiceHeader
         isAvailable={isAvailable}
         setIsAvailable={handleToggleAvailability}
-        isTripActive={isTripActive} // Pasar el estado isTripActive al header
+        isTripActive={isTripActive}
+        isButtonEnabled={arePrerequisitesLoaded} // NUEVO: Habilitar el botón solo si los prerrequisitos están cargados
       />
       <div className="flex-1 w-full h-full">
+        {/* Renderiza el mapa incondicionalmente */}
         <DynamicInteractiveMap
-          userLocation={currentLocation ? { lat: currentLocation.lat, lng: currentLocation.long } : null} // Pasa la ubicación del usuario como userLocation, mapeando 'long' a 'lng'
+          userLocation={currentLocation ? { lat: currentLocation.lat, lng: currentLocation.long } : null}
           routeStart={mapRouteStart}
           routeEnd={mapRouteEnd}
           tripDestination={mapRouteOriginToDestinationEnd}
