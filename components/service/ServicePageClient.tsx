@@ -117,7 +117,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         setRedirectReason("Error inesperado al cargar los datos, redirigiendo a dashboard...");
         setShowRedirectionPopup(true);
         setTimeout(() => {
-            router.push("/dashboard");
+          router.push("/dashboard");
         }, 3000);
       } finally {
         setIsLoading(false); // Finaliza la carga de los prerrequisitos
@@ -352,6 +352,14 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       return;
     }
 
+
+    setCurrentOffer(null); // Limpiar la oferta actual de la UI
+    setOfferTimeRemaining(0);
+    // Al rechazar, limpiar las rutas y permitir que el mapa se centre en el tower (punto 3)
+    setMapRouteStart(null);
+    setMapRouteEnd(null);
+    setMapRouteOriginToDestinationEnd(null);
+
     try {
       const response = await fetch('/api/tower/respond', {
         method: 'POST',
@@ -368,12 +376,6 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
 
       if (data.success) {
         console.log("Oferta rechazada:", data);
-        setCurrentOffer(null); // Limpiar la oferta actual de la UI
-        setOfferTimeRemaining(0);
-        // Al rechazar, limpiar las rutas y permitir que el mapa se centre en el tower (punto 3)
-        setMapRouteStart(null);
-        setMapRouteEnd(null);
-        setMapRouteOriginToDestinationEnd(null);
         // El estado isTripActive no cambia porque no se aceptó el viaje
       } else {
         console.error("Error al rechazar la oferta:", data.error);
