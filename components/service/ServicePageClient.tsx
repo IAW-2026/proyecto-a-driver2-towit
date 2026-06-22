@@ -321,6 +321,42 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     }
   };
 
+  // NUEVA FUNCIÓN: Para rechazar una oferta de viaje
+  const handleRejectOffer = async (tripId: string) => {
+    if (!user?.id) {
+      console.error("User ID not available to reject offer.");
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/tower/respond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trip_id: tripId,
+          tower_id: user.id,
+          action: 'reject',
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("Oferta rechazada:", data);
+        setCurrentOffer(null); // Limpiar la oferta actual de la UI
+        setOfferTimeRemaining(0);
+        // El estado isTripActive no cambia porque no se aceptó el viaje
+      } else {
+        console.error("Error al rechazar la oferta:", data.error);
+        // Opcional: Mostrar un mensaje de error al usuario
+      }
+    } catch (error) {
+      console.error("Error en la solicitud para rechazar oferta:", error);
+      // Opcional: Mostrar un mensaje de error de red
+    }
+  };
+
   // Mostrar un estado de carga general.
   if (!isLoaded || isLoading) {
     return (
@@ -355,6 +391,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`} // Geocodificar para mostrar dirección real
           serviceValue={150.00} // Valor ficticio, no proporcionado por check-offer
           onAccept={handleAcceptOffer}
+          onReject={handleRejectOffer} // NUEVO: Pasar la función handleRejectOffer
           tripId={currentOffer.id}
         />
       )}

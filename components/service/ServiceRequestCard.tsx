@@ -12,6 +12,7 @@ interface ServiceRequestCardProps {
   destinationAddress: string; // Nuevo: dirección de destino
   serviceValue: number;
   onAccept: (tripId: string) => void; // Función para manejar la aceptación del pedido
+  onReject: (tripId: string) => void; // NUEVO: Función para manejar el rechazo del pedido
   tripId: string; // ID del viaje asociado al pedido
 }
 
@@ -21,13 +22,19 @@ export default function ServiceRequestCard({
   vehicleModel,
   vehiclePlate,
   originAddress,
-  destinationAddress, // Nuevo: desestructurar la dirección de destino
+  destinationAddress,
   serviceValue,
   onAccept,
+  onReject, // NUEVO: Desestructurar la función onReject
   tripId,
 }: ServiceRequestCardProps) {
   const handleAcceptClick = () => {
     onAccept(tripId);
+  };
+
+  // NUEVO: Función para manejar el clic en el botón de rechazar
+  const handleRejectClick = () => {
+    onReject(tripId);
   };
 
   return (
@@ -55,12 +62,21 @@ export default function ServiceRequestCard({
         </p>
       </div>
 
-      <Button
-        onClick={handleAcceptClick}
-        className="w-full bg-green-600/70 hover:bg-green-500/90 text-white font-bold py-3 text-lg"
-      >
-        Aceptar
-      </Button>
+      <div className="flex gap-3"> {/* Contenedor flex para los botones */}
+        <Button
+          onClick={handleRejectClick}
+          variant="outline"
+          className="flex-1 bg-transparent border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-bold py-3 text-lg"
+        >
+          Rechazar
+        </Button>
+        <Button
+          onClick={handleAcceptClick}
+          className="flex-1 bg-green-600/70 hover:bg-green-500/90 text-white font-bold py-3 text-lg"
+        >
+          Aceptar
+        </Button>
+      </div>
     </div>
   );
 }
