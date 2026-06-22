@@ -46,7 +46,7 @@ export default function DataTable<T extends Record<string, any>>({
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider"
                 >
-                  {header === 'deactivated' ? 'Deactivado' : header.replace(/_/g, ' ')} {/* Cambiado 'deleted' a 'deactivated' */}
+                  {header.replace(/_/g, ' ')}
                 </th>
               ))}
               {hasActions && ( // Condicionalmente mostrar la columna de acciones
