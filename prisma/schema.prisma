@@ -22,7 +22,7 @@ model Tower {
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  deleted        Boolean      @default(false)
+  deactivated    Boolean      @default(false)
 }
 
 model Admin {
@@ -33,7 +33,7 @@ model Admin {
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  deleted    Boolean  @default(false)
+  deactivated    Boolean  @default(false)
 }
 
 model Vehicle {
@@ -47,7 +47,7 @@ model Vehicle {
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  deleted    Boolean  @default(false)
+  deactivated    Boolean  @default(false)
 }
 
 model Assignment {
@@ -60,5 +60,5 @@ model Assignment {
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  deleted       Boolean  @default(false)
+  deactivated    Boolean  @default(false)
 }
