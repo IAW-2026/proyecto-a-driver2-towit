@@ -1,13 +1,13 @@
 'use client';
 
-import { UserAvatar, useUser } from "@clerk/nextjs";
+import { UserAvatar, useUser, UserButton } from "@clerk/nextjs"; // Añadir UserButton
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useAccountDetailsModal } from "@/components/providers/AccountDetailsModalProvider";
+// Eliminar: import { useAccountDetailsModal } from "@/components/providers/AccountDetailsModalProvider"; // Ya no es necesario
 
 export default function AdminHeader() {
   const { user, isLoaded } = useUser();
-  const { openModal: openAccountDetailsModal } = useAccountDetailsModal();
+  // Eliminar: const { openModal: openAccountDetailsModal } = useAccountDetailsModal(); // Ya no es necesario
 
   if (!isLoaded || !user) {
     return (
@@ -35,13 +35,7 @@ export default function AdminHeader() {
         </div>
 
         <nav className="flex items-center gap-4">
-          <button
-            onClick={openAccountDetailsModal}
-            className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center justify-between space-x-2 cursor-pointer"
-          >
-            <span>Mi Cuenta</span>
-            <UserAvatar />
-          </button>
+          <UserButton/>
         </nav>
       </div>
     </header>
