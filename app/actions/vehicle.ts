@@ -185,3 +185,45 @@ export async function deleteVehicle(vehicleId: string): Promise<VehicleActionRes
     return { success: false, error: error.message || "Error al eliminar el vehículo." };
   }
 }
+
+/**
+ * Activa o desactiva un vehículo existente.
+ * @param vehicleId El ID del vehículo a activar/desactivar.
+ * @param deactivated El estado de desactivación (true para desactivar, false para activar).
+ * @returns Una promesa que resuelve con un objeto de respuesta que contiene el vehículo actualizado o un error.
+ */
+export async function toggleVehicleDeactivated(
+  vehicleId: string,
+  deactivated: boolean
+): Promise<VehicleActionResponse> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "No autorizado. Inicie sesión para actualizar un vehículo." };
+  }
+
+  try {
+    const tower = await prisma.tower.findUnique({
+      where: { clerk_id: userId },
+      select: { tower_id: true },
+    });
+
+    if (!tower) {
+      return { success: false, error: "No se encontró el perfil de Tower." };
+    }
+
+    const updatedVehicle = await prisma.vehicle.update({
+      where: {
+        vehicle_id: vehicleId,
+        tower_id: tower.tower_id, // Asegurarse de que el vehículo pertenece al Tower actual
+      },
+      data: { deactivated: deactivated },
+    });
+    revalidatePath("/vehicles");
+    revalidatePath("/admin"); // Revalidar la vista de admin
+    return { success: true, data: updatedVehicle };
+  } catch (error: any) {
+    console.error(`Error al ${deactivated ? 'desactivar' : 'activar'} el vehículo ${vehicleId}:`, error);
+    return { success: false, error: error.message || `Error al ${deactivated ? 'desactivar' : 'activar'} el vehículo.` };
+  }
+}

@@ -227,6 +227,53 @@ export async function updateAdmin(
  * Requiere rol de administrador.
  * @param adminId El ID de Prisma del administrador a eliminar.
  */
+export async function toggleAdminDeactivated(
+  adminId: string,
+  deactivated: boolean
+): Promise<AdminActionResponse> {
+  if (!await isAdmin()) {
+    return { success: false, error: "No autorizado. Solo administradores pueden desactivar/activar administradores." };
+  }
+  try {
+    const existingAdmin = await prisma.admin.findUnique({
+      where: { admin_id: adminId },
+      select: { clerk_id: true, full_name: true, email: true },
+    });
+
+    if (!existingAdmin) {
+      return { success: false, error: "Administrador no encontrado en la base de datos." };
+    }
+
+    const updatedAdmin = await prisma.admin.update({
+      where: { admin_id: adminId },
+      data: { deactivated: deactivated },
+    });
+
+    // Actualizar también el rol en Clerk publicMetadata
+    // Si se desactiva, cambiar el rol a 'deactivated_admin'
+    // Si se activa, cambiar el rol de nuevo a 'admin'
+    const client = await clerkClient();
+    await client.users.updateUserMetadata(existingAdmin.clerk_id, {
+      publicMetadata: {
+        role: deactivated ? 'deactivated_admin' : 'admin',
+      },
+    });
+    console.log(`Clerk user ${existingAdmin.clerk_id} role updated to '${deactivated ? 'deactivated_admin' : 'admin'}'.`);
+
+
+    revalidatePath("/admin");
+    return { success: true, data: updatedAdmin };
+  } catch (error: any) {
+    console.error(`Error al ${deactivated ? 'desactivar' : 'activar'} Admin ${adminId}:`, error);
+    return { success: false, error: error.message || `Error al ${deactivated ? 'desactivar' : 'activar'} el administrador.` };
+  }
+}
+
+/**
+ * Elimina un registro de la tabla Admin.
+ * Requiere rol de administrador.
+ * @param adminId El ID de Prisma del administrador a eliminar.
+ */
 export async function deleteAdmin(adminId: string): Promise<AdminActionResponse> {
   if (!await isAdmin()) {
     return { success: false, error: "No autorizado. Solo administradores pueden eliminar administradores." };

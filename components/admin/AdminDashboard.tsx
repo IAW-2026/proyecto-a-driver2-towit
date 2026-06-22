@@ -8,9 +8,10 @@ import {
   getAllAdmins,
   updateAdmin, // Importar la nueva acción de actualización de Admin
   deleteAdmin, // Importar la nueva acción de eliminación de Admin
+  toggleAdminDeactivated, // Importar la nueva acción de activar/desactivar Admin
 } from '@/app/actions/admin';
-import { updateTowerDetails, deleteTowerAccount } from '@/app/actions/tower'; // Importar acciones de Tower
-import { updateVehicle, deleteVehicle } from '@/app/actions/vehicle'; // Importar acciones de Vehicle
+import { updateTowerDetails, deleteTowerAccount, toggleTowerDeactivated } from '@/app/actions/tower'; // Importar acciones de Tower
+import { updateVehicle, deleteVehicle, toggleVehicleDeactivated } from '@/app/actions/vehicle'; // Importar acciones de Vehicle
 import UserCreationForm from './UserCreationForm';
 import DataTable from './DataTable';
 import AdminEditForm from './AdminEditForm'; // Nuevo componente
@@ -20,9 +21,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Tower, Vehicle, Admin, Assignment } from '@prisma/client';
 
-// Tipos para el estado de edición y eliminación
+// Tipos para el estado de edición, eliminación y activación/desactivación
 type EditingEntity = { type: 'admin'; data: Admin } | { type: 'tower'; data: Tower } | { type: 'vehicle'; data: Vehicle } | null;
 type DeletingEntity = { type: 'admin'; id: string; clerkId?: string; name: string } | { type: 'tower'; id: string; clerkId: string; name: string } | { type: 'vehicle'; id: string; name: string } | null;
+type ToggleDeactivatedEntity = { type: 'admin'; id: string; clerkId?: string; name: string; currentStatus: boolean } | { type: 'tower'; id: string; clerkId: string; name: string; currentStatus: boolean } | { type: 'vehicle'; id: string; name: string; currentStatus: boolean } | null;
 
 interface AdminDashboardData {
   towers: Tower[];
@@ -37,6 +39,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [editingEntity, setEditingEntity] = useState<EditingEntity>(null);
   const [deletingEntity, setDeletingEntity] = useState<DeletingEntity>(null);
+  const [togglingDeactivatedEntity, setTogglingDeactivatedEntity] = useState<ToggleDeactivatedEntity>(null); // Nuevo estado para activar/desactivar
   const [actionError, setActionError] = useState<string | null>(null); // Para errores de acciones CRUD
 
   const fetchData = async () => {
@@ -95,6 +98,13 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleDeactivatedAdmin = (id: string, currentStatus: boolean) => {
+    const adminToToggle = data?.admins.find((a) => a.admin_id === id);
+    if (adminToToggle) {
+      setTogglingDeactivatedEntity({ type: 'admin', id: adminToToggle.admin_id, clerkId: adminToToggle.clerk_id, name: adminToToggle.full_name, currentStatus });
+    }
+  };
+
   const handleEditTower = (id: string) => {
     const towerToEdit = data?.towers.find((t) => t.tower_id === id);
     if (towerToEdit) {
@@ -106,6 +116,13 @@ export default function AdminDashboard() {
     const towerToDelete = data?.towers.find((t) => t.tower_id === id);
     if (towerToDelete) {
       setDeletingEntity({ type: 'tower', id: towerToDelete.tower_id, clerkId: towerToDelete.clerk_id, name: towerToDelete.full_name });
+    }
+  };
+
+  const handleToggleDeactivatedTower = (id: string, currentStatus: boolean) => {
+    const towerToToggle = data?.towers.find((t) => t.tower_id === id);
+    if (towerToToggle) {
+      setTogglingDeactivatedEntity({ type: 'tower', id: towerToToggle.tower_id, clerkId: towerToToggle.clerk_id, name: towerToToggle.full_name, currentStatus });
     }
   };
 
@@ -123,6 +140,13 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleDeactivatedVehicle = (id: string, currentStatus: boolean) => {
+    const vehicleToToggle = data?.vehicles.find((v) => v.vehicle_id === id);
+    if (vehicleToToggle) {
+      setTogglingDeactivatedEntity({ type: 'vehicle', id: vehicleToToggle.vehicle_id, name: `${vehicleToToggle.brand} ${vehicleToToggle.model}`, currentStatus });
+    }
+  };
+
   const closeEditModal = () => {
     setEditingEntity(null);
     setActionError(null);
@@ -133,9 +157,15 @@ export default function AdminDashboard() {
     setActionError(null);
   };
 
+  const closeToggleDeactivatedConfirmationModal = () => {
+    setTogglingDeactivatedEntity(null);
+    setActionError(null);
+  };
+
   const handleActionSuccess = () => {
     closeEditModal();
     closeDeleteConfirmationModal();
+    closeToggleDeactivatedConfirmationModal(); // Cerrar modal de toggle
     fetchData(); // Recargar datos después de una operación exitosa
   };
 
@@ -162,6 +192,33 @@ export default function AdminDashboard() {
     } else {
       setActionError(result.error || `Error al eliminar ${deletingEntity.name}.`);
       setIsLoading(false); // Ocultar loading si hay un error
+    }
+  };
+
+  const handleConfirmToggleDeactivated = async () => {
+    if (!togglingDeactivatedEntity) return;
+
+    setActionError(null);
+    setIsLoading(true);
+
+    let result;
+    const newStatus = !togglingDeactivatedEntity.currentStatus; // Invertir el estado actual
+
+    if (togglingDeactivatedEntity.type === 'admin') {
+      result = await toggleAdminDeactivated(togglingDeactivatedEntity.id, newStatus);
+    } else if (togglingDeactivatedEntity.type === 'tower') {
+      result = await toggleTowerDeactivated(togglingDeactivatedEntity.clerkId as string, newStatus);
+    } else if (togglingDeactivatedEntity.type === 'vehicle') {
+      result = await toggleVehicleDeactivated(togglingDeactivatedEntity.id, newStatus);
+    } else {
+      result = { success: false, error: "Tipo de entidad a activar/desactivar desconocido." };
+    }
+
+    if (result.success) {
+      handleActionSuccess();
+    } else {
+      setActionError(result.error || `Error al ${newStatus ? 'desactivar' : 'activar'} ${togglingDeactivatedEntity.name}.`);
+      setIsLoading(false);
     }
   };
 
@@ -203,6 +260,7 @@ export default function AdminDashboard() {
         idFieldName="admin_id"
         onEdit={handleEditAdmin}
         onDelete={handleDeleteAdmin}
+        onToggleDeactivated={handleToggleDeactivatedAdmin} // Pasar el nuevo handler
       />
       <DataTable
         title="Towers"
@@ -211,6 +269,7 @@ export default function AdminDashboard() {
         idFieldName="tower_id"
         onEdit={handleEditTower}
         onDelete={handleDeleteTower}
+        onToggleDeactivated={handleToggleDeactivatedTower} // Pasar el nuevo handler
       />
       <DataTable
         title="Vehículos"
@@ -219,13 +278,15 @@ export default function AdminDashboard() {
         idFieldName="vehicle_id"
         onEdit={handleEditVehicle}
         onDelete={handleDeleteVehicle}
+        onToggleDeactivated={handleToggleDeactivatedVehicle} // Pasar el nuevo handler
       />
-      <DataTable<Assignment> // DataTable para Assignments
+      <DataTable<Assignment & { deactivated?: boolean }> // DataTable para Assignments
         title="Asignaciones"
         data={data?.assignments || []}
         emptyMessage="No hay asignaciones para mostrar."
         idFieldName="assignment_id" // Usar assignment_id como clave única
         // No se pasan onEdit ni onDelete para que no se muestre la columna de acciones
+        // ni onToggleDeactivated para Assignments
       />
 
       {/* Modales de Edición */}
@@ -278,6 +339,54 @@ export default function AdminDashboard() {
               disabled={isLoading}
             >
               {isLoading ? "Eliminando..." : "Confirmar Eliminación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmación de Activación/Desactivación */}
+      <Dialog open={!!togglingDeactivatedEntity} onOpenChange={closeToggleDeactivatedConfirmationModal}>
+        <DialogContent className="max-w-md bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">
+              {togglingDeactivatedEntity?.currentStatus ? "Confirmar Activación" : "Confirmar Desactivación"}
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Estás a punto de {togglingDeactivatedEntity?.currentStatus ? "activar" : "desactivar"} a "{togglingDeactivatedEntity?.name}".
+              {togglingDeactivatedEntity?.type === 'tower' && (
+                <span className="block mt-2 font-semibold text-red-400">
+                  Esto también cambiará el rol del usuario en Clerk.
+                </span>
+              )}
+              {togglingDeactivatedEntity?.type === 'admin' && (
+                <span className="block mt-2 font-semibold text-red-400">
+                  Esto también cambiará el rol del administrador en Clerk.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {actionError && (
+            <div className="p-3 rounded-lg text-center bg-red-600/20 text-red-400 mt-4">
+              {actionError}
+            </div>
+          )}
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2 bg-transparent">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={closeToggleDeactivatedConfirmationModal}
+              disabled={isLoading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant={togglingDeactivatedEntity?.currentStatus ? "default" : "destructive"}
+              onClick={handleConfirmToggleDeactivated}
+              disabled={isLoading}
+              className={togglingDeactivatedEntity?.currentStatus ? "bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold" : ""}
+            >
+              {isLoading ? "Procesando..." : (togglingDeactivatedEntity?.currentStatus ? "Confirmar Activación" : "Confirmar Desactivación")}
             </Button>
           </DialogFooter>
         </DialogContent>

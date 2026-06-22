@@ -187,5 +187,35 @@ export async function deleteTowerAccount(clerkId: string): Promise<UpdateTowerDe
   }
 }
 
+export async function toggleTowerDeactivated(
+  clerkId: string,
+  deactivated: boolean
+): Promise<UpdateTowerDetailsResult<TowerData>> {
+  try {
+    const updatedTower = await prisma.tower.update({
+      where: { clerk_id: clerkId },
+      data: { deactivated: deactivated },
+    });
+
+    // Actualizar también el rol en Clerk publicMetadata
+    // Si se desactiva, cambiar el rol a 'deactivated_tower'
+    // Si se activa, cambiar el rol de nuevo a 'tower'
+    const client = await clerkClient();
+    await client.users.updateUserMetadata(clerkId, {
+      publicMetadata: {
+        role: deactivated ? 'deactivated_tower' : 'tower',
+      },
+    });
+    console.log(`Clerk user ${clerkId} role updated to '${deactivated ? 'deactivated_tower' : 'tower'}'.`);
+
+    revalidatePath("/account-details");
+    revalidatePath("/admin"); // Revalidar la vista de admin
+    return { success: true, data: updatedTower };
+  } catch (error: any) {
+    console.error(`Error al ${deactivated ? 'desactivar' : 'activar'} Tower ${clerkId}:`, error);
+    return { success: false, error: error.message || `Error al ${deactivated ? 'desactivar' : 'activar'} el Tower.` };
+  }
+}
+
 // Se ha movido getTowerVehicles a app/actions/vehicle.ts para centralizar la lógica de vehículos.
 // Este archivo ya no necesita esa función.

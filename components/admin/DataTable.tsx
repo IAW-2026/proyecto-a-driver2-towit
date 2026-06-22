@@ -9,6 +9,7 @@ interface DataTableProps<T extends Record<string, any>> {
   idFieldName: string; // Nombre del campo que contiene el ID único de la fila
   onEdit?: (id: string) => void; // Hacemos opcional
   onDelete?: (id: string) => void; // Hacemos opcional
+  onToggleDeactivated?: (id: string, currentStatus: boolean) => void; // Nuevo: para activar/desactivar
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -18,8 +19,9 @@ export default function DataTable<T extends Record<string, any>>({
   idFieldName,
   onEdit,
   onDelete,
+  onToggleDeactivated, // Desestructuramos la nueva prop
 }: DataTableProps<T>) {
-  const hasActions = onEdit || onDelete;
+  const hasActions = onEdit || onDelete || onToggleDeactivated; // Las acciones incluyen también toggle
   if (!data || data.length === 0) {
     return (
       <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 h-full flex flex-col">
@@ -44,7 +46,7 @@ export default function DataTable<T extends Record<string, any>>({
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider"
                 >
-                  {header.replace(/_/g, ' ')}
+                  {header === 'deactivated' ? 'Deactivado' : header.replace(/_/g, ' ')} {/* Cambiado 'deleted' a 'deactivated' */}
                 </th>
               ))}
               {hasActions && ( // Condicionalmente mostrar la columna de acciones
@@ -66,20 +68,28 @@ export default function DataTable<T extends Record<string, any>>({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="truncate block"> {/* Usar un span para el contenido dentro del td */}
-                            {(header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
-                              ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                              : typeof row[header] === 'object' && row[header] !== null
-                                ? JSON.stringify(row[header])
-                                : String(row[header])}
+                            {header === 'createdAt' || header === 'updatedAt'
+                              ? row[header] instanceof Date
+                                ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                : String(row[header])
+                              : header === 'deactivated' // Manejar el campo 'deactivated'
+                                ? row[header] ? 'Sí' : 'No'
+                                : typeof row[header] === 'object' && row[header] !== null
+                                  ? JSON.stringify(row[header])
+                                  : String(row[header])}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            {(header === 'createdAt' || header === 'updatedAt') && row[header] instanceof Date
-                              ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                              : typeof row[header] === 'object' && row[header] !== null
-                                ? JSON.stringify(row[header])
-                                : String(row[header])}
+                            {header === 'createdAt' || header === 'updatedAt'
+                              ? row[header] instanceof Date
+                                ? row[header].toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                : String(row[header])
+                              : header === 'deactivated'
+                                ? row[header] ? 'Sí' : 'No'
+                                : typeof row[header] === 'object' && row[header] !== null
+                                  ? JSON.stringify(row[header])
+                                  : String(row[header])}
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -89,6 +99,16 @@ export default function DataTable<T extends Record<string, any>>({
                 {hasActions && ( // Condicionalmente mostrar la celda de acciones
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex gap-2 justify-end">
+                      {onToggleDeactivated && 'deactivated' in row && typeof row.deactivated === 'boolean' && (
+                        <Button
+                          variant={row.deactivated ? "default" : "secondary"} // Amarillo para activar, secundario para desactivar
+                          size="sm"
+                          onClick={() => onToggleDeactivated(row[idFieldName] as string, row.deactivated as boolean)}
+                          className={row.deactivated ? "bg-yellow-600 hover:bg-yellow-500 text-slate-950 font-bold" : ""}
+                        >
+                          {row.deactivated ? "Activar" : "Desactivar"}
+                        </Button>
+                      )}
                       {onEdit && (
                         <Button
                           variant="secondary"
