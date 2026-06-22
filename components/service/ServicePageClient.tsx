@@ -151,8 +151,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     let pollingInterval: NodeJS.Timeout | null = null;
 
     const checkOffers = async () => {
-      if (!user?.id || !isAvailable) {
-        // Si el tower no está logueado o no está disponible, no hay ofertas.
+      if (!user?.id || !isAvailable || isTripActive) { // Añadido: `isTripActive`
+        // Si el tower no está logueado, no está disponible o está en un viaje, no hay ofertas.
         setCurrentOffer(null);
         setOfferTimeRemaining(0);
         return;
@@ -189,7 +189,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     return () => {
       if (pollingInterval) clearInterval(pollingInterval);
     };
-  }, [isAvailable, user?.id]);
+  }, [isAvailable, user?.id, isTripActive]); // Añadido: `isTripActive` a las dependencias
 
   // NUEVO EFECTO: Contador regresivo local para la oferta
   useEffect(() => {
