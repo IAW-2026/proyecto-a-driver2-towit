@@ -46,11 +46,15 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   const [redirectReason, setRedirectReason] = useState(""); // NUEVO: Estado para el mensaje de redirección
   const [recheckTrigger, setRecheckTrigger] = useState(false); // NUEVO: Estado para forzar re-evaluación
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null); // Estado para la ubicación actual
-  const [watchId, setWatchId] = useState<number | null>(null); // NEW: Para el ID de watchPosition
+  const [watchId, setWatchId] = useState<number | null>(null);
 
   // NUEVOS ESTADOS para gestionar la oferta
   const [currentOffer, setCurrentOffer] = useState<any | null>(null);
   const [offerTimeRemaining, setOfferTimeRemaining] = useState<number>(0);
+  // NUEVOS ESTADOS para las coordenadas de la ruta en el mapa
+  const [mapRouteStart, setMapRouteStart] = useState<{ lat: number; lng: number } | null>(null); // Ubicación del Tower
+  const [mapRouteEnd, setMapRouteEnd] = useState<{ lat: number; lng: number } | null>(null);     // Origen del Viaje
+  const [mapRouteOriginToDestinationEnd, setMapRouteOriginToDestinationEnd] = useState<{ lat: number; lng: number } | null>(null); // Destino final del Viaje
 
   // Variable para simular si hay un viaje activo (necesitaría más lógica real)
   const [isTripActive, setIsTripActive] = useState(false); // Cambiado a estado para futura gestión
@@ -163,13 +167,30 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         const data = await response.json();
 
         if (data.has_offer) {
-          setCurrentOffer(data.trip);
-          setOfferTimeRemaining(data.time_remaining);
-          // Opcional: Si el `check-offer` indica un viaje activo, actualizar `isTripActive`
-          // Para esta implementación, asumimos que `isTripActive` se gestionará tras aceptar.
+          // Solo actualizar si la oferta del viaje ha cambiado para evitar re-renderizados innecesarios
+          if (currentOffer?.id !== data.trip.id) {
+            setCurrentOffer(data.trip);
+            setOfferTimeRemaining(data.time_remaining);
+            // Establecer las coordenadas para la ruta si hay una ubicación actual del conductor
+            if (currentLocation) {
+              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // Tower a Origen
+              setMapRouteEnd({ lat: parseFloat(data.trip.origin.lat), lng: parseFloat(data.trip.origin.long) }); // Origen del Viaje
+              setMapRouteOriginToDestinationEnd({ lat: parseFloat(data.trip.destination.lat), lng: parseFloat(data.trip.destination.long) }); // Destino Final
+            }
+          } else {
+            // Si la oferta es la misma, solo actualizar el tiempo restante
+            setOfferTimeRemaining(data.time_remaining);
+          }
         } else {
-          setCurrentOffer(null);
-          setOfferTimeRemaining(0);
+          // Solo limpiar si realmente había una oferta activa para evitar re-renderizados innecesarios
+          if (currentOffer !== null) {
+            setCurrentOffer(null);
+            setOfferTimeRemaining(0);
+            // Limpiar todas las coordenadas de la ruta si no hay oferta
+            setMapRouteStart(null);
+            setMapRouteEnd(null);
+            setMapRouteOriginToDestinationEnd(null);
+          }
         }
       } catch (error) {
         console.error("Error checking for offers:", error);
@@ -309,8 +330,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         console.log("Oferta aceptada:", data);
         setCurrentOffer(null); // Limpiar la oferta actual de la UI
         setOfferTimeRemaining(0);
-        setIsTripActive(true); // Marcar que hay un viaje activo
-        // Futuro: Redirigir o cambiar la UI para mostrar los detalles del viaje en curso
+        setIsTripActive(true); // Marcar que hay un viaje activo. Las rutas se mantendrán dibujadas.
+        // NO se limpian las rutas aquí. El mapa se centrará en el tower porque isTripActive es true.
       } else {
         console.error("Error al aceptar la oferta:", data.error);
         // Opcional: Mostrar un mensaje de error al usuario
@@ -346,6 +367,10 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         console.log("Oferta rechazada:", data);
         setCurrentOffer(null); // Limpiar la oferta actual de la UI
         setOfferTimeRemaining(0);
+        // Al rechazar, limpiar las rutas y permitir que el mapa se centre en el tower (punto 3)
+        setMapRouteStart(null);
+        setMapRouteEnd(null);
+        setMapRouteOriginToDestinationEnd(null);
         // El estado isTripActive no cambia porque no se aceptó el viaje
       } else {
         console.error("Error al rechazar la oferta:", data.error);
@@ -376,7 +401,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       />
       <div className="flex-1 w-full h-full">
         {currentLocation && (
-          <DynamicInteractiveMap initialCenter={{ lat: currentLocation.lat, lng: currentLocation.long }} /> // Pasa la ubicación actual al mapa
+          <DynamicInteractiveMap
+            initialCenter={{ lat: currentLocation.lat, lng: currentLocation.long }}
+            routeStart={mapRouteStart} // Pasa la ubicación de inicio de la ruta (tower)
+            routeEnd={mapRouteEnd}     // Pasa la ubicación del origen del viaje
+            tripDestination={mapRouteOriginToDestinationEnd} // Pasa la ubicación del destino final del viaje
+            isTripActive={isTripActive} // Pasa si hay un viaje activo
+          />
         )}
       </div>
 
