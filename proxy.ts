@@ -26,8 +26,30 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(new URL("/home", req.url));
   } else {
     //si está logeado, obtengo el rol
-    const userRole = sessionClaims?.role as 'admin' | 'tower' | undefined;
-    
+    const userRole = sessionClaims?.role as 'admin' | 'tower' | 'deactivated_admin' | 'deactivated_tower' | undefined;
+    const currentPath = req.nextUrl.pathname;
+
+    // --- LÓGICA PARA USUARIOS DESACTIVADOS (PRIORIDAD ALTA) ---
+    if (userRole === 'deactivated_admin' || userRole === 'deactivated_tower') {
+      // Si el usuario está desactivado y no está en la página de aviso
+      if (currentPath !== '/deactivated_user') {
+        return NextResponse.redirect(new URL('/deactivated_user', req.url));
+      }
+      // Si el usuario está desactivado y YA está en la página de aviso, permitir el acceso.
+      return NextResponse.next();
+    }
+
+    // --- LÓGICA PARA EVITAR QUE USUARIOS ACTIVOS ACCEDAN A /deactivated_user ---
+    if (currentPath === '/deactivated_user') {
+      // Redirigir a usuarios activos que intentan acceder a la página de desactivados
+      if (userRole === 'admin') {
+        return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+      } else { // Incluye 'tower' o cualquier otro rol no admin
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
+    }
+
+    // --- LÓGICA ORIGINAL PARA REDIRECCIONES DE ROLES ACTIVOS ---
     //y si está en una ruta pública, lo redirecciono a donde corresponde
     if (isPublicPath(req)) {
       if (userRole === 'tower') {
