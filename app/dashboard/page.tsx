@@ -3,9 +3,6 @@ import AppFooter from "@/components/layout/AppFooter";
 import UserProfileSummary from "@/components/dashboard/UserProfileSummary";
 import MonthlyTripsSummary from "@/components/dashboard/MonthlyTripsSummary";
 import RecentTripsList from "@/components/dashboard/RecentTripsList";
-import WeeklyEarningsChart from "@/components/dashboard/WeeklyEarningsChart";
-import RecentPaymentsList from "@/components/dashboard/RecentPaymentsList";
-// Redirección manejada por el middleware (proxy.ts)
 
 export default async function DashboardPage() {
   // Redirección manejada por el middleware (proxy.ts)

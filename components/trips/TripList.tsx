@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react'; // Ya no se necesita useState ni useEffect
 import Link from "next/link";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
-import mockTripsData from '@/lib/mocks/trips.json'; // Importa el archivo JSON
+// import mockTripsData from '@/lib/mocks/trips.json'; // REMOVIDO: ya no se importa el mock
 
 interface Customer {
   customer_id: string;
@@ -29,33 +29,25 @@ interface Trip {
   id: string; // trip_id del JSON
   tower_id: string;
   customer: Customer;
-  vehicle: Vehicle;
+  vehicle?: Vehicle; // CAMBIO: Hecho opcional
   origin: Coordinates;
   destination: Coordinates;
   date: string;
-  time: string;
+  time?: string; // CAMBIO: Hecho opcional
   status: string;
-  amount: number; // Agregado para mantener la consistencia con el display existente
+  amount?: number; // CAMBIO: Hecho opcional
 }
 
-export default function TripList() {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// CAMBIO: Se define la interfaz de las props para TripList
+interface TripListProps {
+  trips: Trip[];
+  isLoading: boolean;
+  error: string | null;
+}
 
-  useEffect(() => {
-    // Como es un mock local, la carga es instantánea
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Usar los datos importados directamente
-      setTrips(mockTripsData as Trip[]); // Castear para asegurar el tipo
-      setIsLoading(false);
-    } catch (err: any) {
-      setError("Error al cargar los viajes: " + err.message);
-      setIsLoading(false);
-    }
-  }, []);
+// CAMBIO: TripList ahora acepta props
+export default function TripList({ trips, isLoading, error }: TripListProps) {
+  // REMOVIDO: Eliminado useState y useEffect para la carga de datos
 
   if (isLoading) {
     return (
@@ -89,7 +81,8 @@ export default function TripList() {
             <div className="flex-1 min-w-0">
               <p className="text-white text-lg font-semibold truncate">{trip.customer.full_name}</p>
               <p className="text-slate-400 text-sm">
-                {format(new Date(`${trip.date}T${trip.time}`), 'dd/MM/yyyy - HH:mm', { locale: es })} - Destino: Lat {trip.destination.lat}, Long {trip.destination.long}
+                {/* CAMBIO: Se usa solo la fecha ya que la hora no viene de la API */}
+                {format(new Date(trip.date), 'dd/MM/yyyy', { locale: es })} - Destino: Lat {trip.destination.lat}, Long {trip.destination.long}
               </p>
               <p className="text-slate-500 text-xs mt-1">Status: {trip.status}</p>
             </div>

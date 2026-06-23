@@ -1,35 +1,86 @@
 "use client";
 
 import Link from "next/link";
-import React from "react";
+import React, { useState, useEffect } from "react"; // CAMBIO: Añadir useState y useEffect
 import { Button } from "@/components/ui/button";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import mockTripsData from '@/lib/mocks/trips.json'; // Importa el archivo JSON
+import { useUser } from "@clerk/nextjs"; // CAMBIO: Importar useUser para obtener el userId del cliente
 
-interface Customer {
-  full_name: string;
-}
+// REMOVIDO: Eliminado mockTripsData
 
-interface Coordinates {
-  lat: string;
-  long: string;
-}
-
-interface Trip {
-  id: string;
-  date: string;
-  time: string; // Incluir la hora para ordenar correctamente
-  customer: Customer;
-  destination: Coordinates;
-  status: string;
-}
+import { getTripsForUser, Trip } from "@/app/actions/trips"; // CAMBIO: Importar la Server Action y la interfaz Trip
 
 export default function RecentTripsList() {
-  // Obtener los últimos 2 viajes del JSON
-  const recentTrips: Trip[] = mockTripsData
-    .sort((a, b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime()) // Ordenar por fecha y hora descendente
-    .slice(0, 2) as Trip[]; // Tomar los dos más recientes
+  const { user, isLoaded } = useUser(); // CAMBIO: Obtener user y isLoaded de Clerk
+  const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchRecentTrips() {
+      if (!isLoaded || !user?.id) {
+        setIsLoading(true);
+        return;
+      }
+
+      const userId = user.id;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // CAMBIO: Llamar directamente a la Server Action
+        const result = await getTripsForUser(userId);
+
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        const apiTrips: Trip[] = result.trips || []; // La Server Action ya maneja el caso de no encontrar viajes
+
+        // Ordenar por fecha y tomar los 2 más recientes
+        const sortedRecentTrips = apiTrips
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Ordenar por fecha descendente
+          .slice(0, 2); // Tomar los dos más recientes
+
+        setRecentTrips(sortedRecentTrips);
+
+      } catch (err: any) {
+        console.error("Error fetching recent trips:", err);
+        setError("Error al cargar los últimos viajes: " + err.message);
+        setRecentTrips([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRecentTrips();
+  }, [isLoaded, user]);
+
+  if (!isLoaded || isLoading) {
+    return (
+      <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full items-center justify-center">
+        <p className="text-slate-400">Cargando últimos viajes...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full items-center justify-center text-red-400">
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (recentTrips.length === 0) {
+    return (
+      <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full items-center justify-center">
+        <p className="text-slate-400">Aún no hay viajes recientes para mostrar.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full">
@@ -39,7 +90,8 @@ export default function RecentTripsList() {
           <li key={trip.id} className="border-b border-slate-800 pb-3 last:border-b-0 last:pb-0">
             <p className="text-white text-base">{trip.customer.full_name}</p>
             <p className="text-slate-400 text-sm">
-              {format(new Date(`${trip.date}T${trip.time}`), 'dd/MM/yyyy - HH:mm', { locale: es })} - Destino: Lat {trip.destination.lat}, Long {trip.destination.long}
+              {/* CAMBIO: Se usa solo la fecha ya que la hora no viene de la API */}
+              {format(new Date(trip.date), 'dd/MM/yyyy', { locale: es })} - Destino: Lat {trip.destination.lat}, Long {trip.destination.long}
             </p>
           </li>
         ))}

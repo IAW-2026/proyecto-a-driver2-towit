@@ -6,7 +6,7 @@ import TripDetail from "@/components/trips/TripDetail";
 export default async function TripsDetailPage({ params }: { params: { id: string } }) {
   // Redirección manejada por el middleware (proxy.ts)
 
-  const { id } = await params;
+  const { id } = params;
 
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">
