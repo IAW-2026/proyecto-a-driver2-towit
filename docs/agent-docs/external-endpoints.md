@@ -31,8 +31,13 @@ Endpoint donde al aceptar o completar un viaje se actualiza la asignación de to
 
 ## Customer details
 Obtiene el nombre completo del cliente por su ID numérico.
-* Endpoint: *GET CUSTOMER_APP_URL/api/customer/[clerk_id]/name
+* Endpoint: GET CUSTOMER_APP_URL/api/customer/[clerk_id]/name
 * Response 200:
 ```
 { "fullname": "string" }
 ```
+## Ratings
+Permite obtener la calificación promedio de un usuario.
+* Endpoint: GET FEEDBACK_APP_URL/api/avg_rating/[clerk_id]
+* Response: 200 - ```{rating: string}```
+* Error response: 404 - ```{error: "Average rating not found"}```

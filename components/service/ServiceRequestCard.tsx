@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 // Interfaz para los datos del pedido de servicio
 interface ServiceRequestCardProps {
   customerName: string;
-  customerRating?: number; // Opcional, si se obtiene de Feedback App
+  customerRating?: number | null; // Opcional, si se obtiene de Feedback App (puede ser null para N/D)
   vehicleModel: string;
   vehiclePlate: string; // Patente
   originAddress: string;
@@ -42,11 +42,11 @@ export default function ServiceRequestCard({
       <h3 className="text-xl font-bold text-yellow-400 mb-2 md:mb-4">Nueva solicitud</h3>
 
       <div className="md:space-y-3 mb-3 md:mb-6">
-        <p className="text-lg">
-          <span className="font-semibold">Cliente:</span> {customerName}
-          {customerRating && (
-            <span className="ml-2 text-yellow-400">({customerRating.toFixed(1)} ★)</span>
-          )}
+        <p className="text-lg flex items-center">
+          <span className="font-semibold mr-2">Cliente:</span> {customerName}
+          <span className="ml-2 inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-0.5 text-sm font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/20">
+            {typeof customerRating === 'number' ? `${customerRating.toFixed(1)} ★` : 'N/D'}
+          </span>
         </p>
         <p className="text-base text-slate-300">
           <span className="font-semibold">Vehículo:</span> {vehicleModel} ({vehiclePlate})

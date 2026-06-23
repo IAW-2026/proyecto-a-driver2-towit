@@ -8,6 +8,7 @@ import { useUser } from "@clerk/nextjs"; // Importar useUser
 import { getTowerData, TowerData } from "@/app/actions/tower"; // Importar la acción para obtener datos de la torre y la interfaz TowerData
 import { getTowerVehicles } from "@/app/actions/vehicle"; // NUEVO: Importar la acción para obtener vehículos
 import { getCustomerName } from "@/app/actions/customer"; // NUEVO: Importar la nueva Server Action
+import { getAverageRatingForCustomer } from "@/app/actions/feedback"; // NUEVO: Importar la Server Action para feedback
 import { useRouter } from "next/navigation"; // Nuevo: Importar useRouter
 import {
   Dialog,
@@ -56,6 +57,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   const [offerTimeRemaining, setOfferTimeRemaining] = useState<number>(0);
   // NUEVO: Estado para el nombre del cliente de la oferta
   const [customerNameForOffer, setCustomerNameForOffer] = useState<string | null>(null);
+  // NUEVO: Estado para la calificación del cliente de la oferta
+  const [customerRatingForOffer, setCustomerRatingForOffer] = useState<number | null>(null);
   // NUEVOS ESTADOS para las coordenadas de la ruta en el mapa
   const [mapRouteStart, setMapRouteStart] = useState<{ lat: number; lng: number } | null>(null); // Ubicación del Tower
   const [mapRouteEnd, setMapRouteEnd] = useState<{ lat: number; lng: number } | null>(null);     // Origen del Viaje
@@ -167,6 +170,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         setCurrentOffer(null);
         setOfferTimeRemaining(0);
         setCustomerNameForOffer(null); // Limpiar nombre del cliente
+        setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
         return;
       }
 
@@ -195,8 +199,22 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
                 console.error("Error al invocar Server Action getCustomerName:", nameError);
                 setCustomerNameForOffer("Cliente desconocido (error)"); // Fallback
               }
+              // NUEVO: Obtener la calificación del cliente usando la Server Action
+              try {
+                const customerRatingResult = await getAverageRatingForCustomer(data.trip.customer_id);
+                if (customerRatingResult.success) { // Incluso si rating es null, la operación fue exitosa
+                  setCustomerRatingForOffer(customerRatingResult.rating ?? null); // Usar nullish coalescing para asegurar null si es undefined
+                } else {
+                  console.error("Error al obtener la calificación del cliente:", customerRatingResult.error);
+                  setCustomerRatingForOffer(null); // Fallback
+                }
+              } catch (ratingError) {
+                console.error("Error al invocar Server Action getAverageRatingForCustomer:", ratingError);
+                setCustomerRatingForOffer(null); // Fallback
+              }
             } else {
               setCustomerNameForOffer("Cliente desconocido (ID no disponible)"); // Fallback
+              setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación si no hay ID
             }
 
             // Establecer las coordenadas para la ruta si hay una ubicación actual del conductor
@@ -215,6 +233,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
             setCurrentOffer(null);
             setOfferTimeRemaining(0);
             setCustomerNameForOffer(null); // Limpiar nombre del cliente
+            setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
             // Limpiar todas las coordenadas de la ruta si no hay oferta
             setMapRouteStart(null);
             setMapRouteEnd(null);
@@ -226,6 +245,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         setCurrentOffer(null);
         setOfferTimeRemaining(0);
         setCustomerNameForOffer(null); // Limpiar nombre del cliente en caso de error
+        setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente en caso de error
       }
     };
 
@@ -236,12 +256,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       setCurrentOffer(null);
       setOfferTimeRemaining(0);
       setCustomerNameForOffer(null); // Limpiar nombre del cliente
+      setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
     }
 
     return () => {
       if (pollingInterval) clearInterval(pollingInterval);
     };
-  }, [isAvailable, user?.id, isTripActive, currentOffer?.id, currentLocation]); // ELIMINADA customerAppUrl de las dependencias
+  }, [isAvailable, user?.id, isTripActive, currentOffer?.id, currentLocation]);
 
   // NUEVO EFECTO: Contador regresivo local para la oferta
   useEffect(() => {
@@ -255,6 +276,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
             setMapRouteStart(null); // Limpiar coordenadas de la ruta
             setMapRouteEnd(null);
             setMapRouteOriginToDestinationEnd(null);
+            setCustomerNameForOffer(null);  // NUEVO: Limpiar nombre del cliente
+            setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
             return 0;
           }
           return prev - 1;
@@ -366,6 +389,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         setOfferTimeRemaining(0);
         setIsTripActive(true); // Marcar que hay un viaje activo. Las rutas se mantendrán dibujadas.
         setCustomerNameForOffer(null); // Limpiar nombre del cliente al aceptar
+        setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente al aceptar
         // NO se limpian las rutas aquí. El mapa se centrará en el tower porque isTripActive es true.
       } else {
         console.error("Error al aceptar la oferta:", data.error);
@@ -388,6 +412,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     setCurrentOffer(null); // Limpiar la oferta actual de la UI
     setOfferTimeRemaining(0);
     setCustomerNameForOffer(null); // Limpiar nombre del cliente al rechazar
+    setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente al rechazar
     // Al rechazar, limpiar las rutas y permitir que el mapa se centre en el tower (punto 3)
     setMapRouteStart(null);
     setMapRouteEnd(null);
@@ -450,10 +475,10 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       </div>
 
       {/* RENDERIZADO CONDICIONAL DE LA TARJETA DE OFERTA */}
-      {currentOffer && offerTimeRemaining > 0 && (
+      {currentOffer && offerTimeRemaining > 0 && customerNameForOffer !== null && ( // NUEVO: Añadir customerNameForOffer !== null a la condición
         <ServiceRequestCard
           // Estos datos provienen del `check-offer` o son placeholders
-          customerName={(customerNameForOffer || "") + ` (Quedan ${offerTimeRemaining}s)`} // Usar el nombre obtenido o el fallback
+          customerName={customerNameForOffer || ""} // Usar el nombre obtenido o el fallback
           vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
           vehiclePlate="N/D" // No proporcionado por check-offer
           originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`} // Geocodificar para mostrar dirección real
@@ -462,6 +487,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           onAccept={handleAcceptOffer}
           onReject={handleRejectOffer} // NUEVO: Pasar la función handleRejectOffer
           tripId={currentOffer.id}
+          customerRating={customerRatingForOffer} // NUEVO: Pasar la calificación real
         />
       )}
 
