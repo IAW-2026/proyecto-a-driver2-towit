@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
-import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation } from "@/app/actions/redis-tower"; // Importar las nuevas acciones
+import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower"; // Importar VehicleProfileData
 
 interface Vehicle { // Definir la interfaz Vehicle para mayor claridad
   vehicle_id: string;
@@ -25,6 +25,7 @@ interface Vehicle { // Definir la interfaz Vehicle para mayor claridad
   model: string;
   year: number;
   max_load: number;
+  deactivated: boolean; // Asegurar que esta propiedad esté presente si viene de Prisma
 }
 
 // Importar InteractiveMap dinámicamente con SSR deshabilitado
@@ -33,45 +34,45 @@ const DynamicInteractiveMap = dynamic(() => import("@/components/service/Interac
 });
 
 interface ServicePageClientProps {
-  initialIsAvailable: boolean; // Nueva prop para el estado inicial de disponibilidad
-  // customerAppUrl: string; // ELIMINADO: Ya no se necesita en el cliente
+  initialIsAvailable: boolean;
+  initialVehicle: VehicleProfileData | null; // NUEVO: Prop para el vehículo inicial
 }
 
-export default function ServicePageClient({ initialIsAvailable }: ServicePageClientProps) { // ELIMINADO customerAppUrl de props
-  const { user, isLoaded } = useUser(); // Obtener el usuario de Clerk
-  const router = useRouter(); // Nuevo: Inicializar useRouter
-  // Inicializar el estado de disponibilidad con la prop recibida de Redis
+export default function ServicePageClient({ initialIsAvailable, initialVehicle }: ServicePageClientProps) {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
-  const [towerData, setTowerData] = useState<TowerData | null>(null); // Estado para los datos de la torre
-  const [vehicles, setVehicles] = useState<Vehicle[] | null>(null); // NUEVO: Estado para los vehículos del usuario
-  const [isLoading, setIsLoading] = useState(true); // Estado unificado para la carga inicial
-  const [showRedirectionPopup, setShowRedirectionPopup] = useState(false); // NUEVO: Estado para el popup de redirección
+  const [towerData, setTowerData] = useState<TowerData | null>(null);
+
+  // NUEVO ESTADO: Lista completa de vehículos del usuario desde la DB
+  const [allUserVehiclesFromDB, setAllUserVehiclesFromDB] = useState<Vehicle[] | null>(null);
+  // NUEVO ESTADO: El vehículo actualmente seleccionado para la disponibilidad
+  const [selectedVehicleForAvailability, setSelectedVehicleForAvailability] = useState<VehicleProfileData | null>(initialVehicle);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [showRedirectionPopup, setShowRedirectionPopup] = useState(false);
   const [redirectReason, setRedirectReason] = useState("");
   const [recheckTrigger, setRecheckTrigger] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; long: number } | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
-  const [arePrerequisitesLoaded, setArePrerequisitesLoaded] = useState(false); // NUEVO: Estado para saber si los datos esenciales están cargados
+  const [arePrerequisitesLoaded, setArePrerequisitesLoaded] = useState(false);
 
   // NUEVOS ESTADOS para gestionar la oferta
   const [currentOffer, setCurrentOffer] = useState<any | null>(null);
   const [offerTimeRemaining, setOfferTimeRemaining] = useState<number>(0);
-  // NUEVO: Estado para el nombre del cliente de la oferta
   const [customerNameForOffer, setCustomerNameForOffer] = useState<string | null>(null);
-  // NUEVO: Estado para la calificación del cliente de la oferta
   const [customerRatingForOffer, setCustomerRatingForOffer] = useState<number | null>(null);
-  // NUEVOS ESTADOS para las coordenadas de la ruta en el mapa
-  const [mapRouteStart, setMapRouteStart] = useState<{ lat: number; lng: number } | null>(null); // Ubicación del Tower
-  const [mapRouteEnd, setMapRouteEnd] = useState<{ lat: number; lng: number } | null>(null);     // Origen del Viaje
-  const [mapRouteOriginToDestinationEnd, setMapRouteOriginToDestinationEnd] = useState<{ lat: number; lng: number } | null>(null); // Destino final del Viaje
+  const [mapRouteStart, setMapRouteStart] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapRouteEnd, setMapRouteEnd] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapRouteOriginToDestinationEnd, setMapRouteOriginToDestinationEnd] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Variable para simular si hay un viaje activo
   const [isTripActive, setIsTripActive] = useState(false);
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
   useEffect(() => {
     async function loadServicePrerequisites() {
-      if (!isLoaded || !user?.id) { // No esperar por currentLocation para los prerrequisitos
-        setIsLoading(true); // Mantener cargando hasta que user?.id esté disponible
+      if (!isLoaded || !user?.id) {
+        setIsLoading(true);
         return;
       }
 
@@ -80,7 +81,6 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       let reason = "";
 
       try {
-        // Ejecutar llamadas a la base de datos en paralelo
         const [towerResult, vehiclesResult] = await Promise.all([
           getTowerData(user.id),
           getTowerVehicles()
@@ -98,8 +98,20 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           reason = "Error al cargar los datos de la torre";
         }
 
+        // NUEVO: Manejar la lista completa de vehículos y el vehículo seleccionado
         if (vehiclesResult.success && vehiclesResult.data && (vehiclesResult.data as any[]).length > 0) {
-          setVehicles(vehiclesResult.data as any[]);
+          setAllUserVehiclesFromDB(vehiclesResult.data as Vehicle[]); // Guardar todos los vehículos
+
+          // Si no hay un vehículo seleccionado aún (por prop inicial o por fallback)
+          if (!selectedVehicleForAvailability) {
+            const firstDbVehicle = (vehiclesResult.data as Vehicle[])[0]; // Tomar el primer vehículo de la DB
+            setSelectedVehicleForAvailability({
+              brand: firstDbVehicle.brand,
+              model: firstDbVehicle.model,
+              year: firstDbVehicle.year,
+              max_load: firstDbVehicle.max_load,
+            });
+          }
         } else {
           if (!needsRedirect) {
             needsRedirect = true;
@@ -127,13 +139,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           router.push("/dashboard");
         }, 3000);
       } finally {
-        setIsLoading(false); // Finaliza la carga de los prerrequisitos
-        setArePrerequisitesLoaded(true); // NUEVO: Marca que los prerrequisitos han sido cargados
+        setIsLoading(false);
+        setArePrerequisitesLoaded(true);
       }
     }
 
     loadServicePrerequisites();
-  }, [isLoaded, user?.id, router, recheckTrigger]); // Quitar currentLocation de las dependencias
+  }, [isLoaded, user?.id, router, recheckTrigger, selectedVehicleForAvailability]); // Añadir selectedVehicleForAvailability a dependencias
 
   // NUEVO: Efecto para obtener y actualizar la ubicación del usuario
   useEffect(() => {
@@ -158,7 +170,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     } else {
       console.warn("ServicePageClient: Geolocation no soportado o no disponible.");
     }
-  }, []); // Se ejecuta una vez al montar el componente
+  }, []);
 
   // NUEVO EFECTO: Polling para ofertas de viaje
   useEffect(() => {
@@ -166,11 +178,10 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
 
     const checkOffers = async () => {
       if (!user?.id || !isAvailable || isTripActive) {
-        // Si el tower no está logueado, no está disponible o está en un viaje, no hay ofertas.
         setCurrentOffer(null);
         setOfferTimeRemaining(0);
-        setCustomerNameForOffer(null); // Limpiar nombre del cliente
-        setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
+        setCustomerNameForOffer(null);
+        setCustomerRatingForOffer(null);
         return;
       }
 
@@ -179,13 +190,11 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         const data = await response.json();
 
         if (data.has_offer) {
-          // Solo actualizar si la oferta del viaje ha cambiado para evitar re-renderizados innecesarios
           if (currentOffer?.id !== data.trip.id) {
             setCurrentOffer(data.trip);
             setOfferTimeRemaining(data.time_remaining);
             console.log(data)
 
-            // NUEVO: Obtener el nombre del cliente usando la Server Action
             if (data.trip.customer_id) {
               try {
                 const customerNameResult = await getCustomerName(data.trip.customer_id);
@@ -193,48 +202,43 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
                   setCustomerNameForOffer(customerNameResult.fullname);
                 } else {
                   console.error("Error al obtener el nombre del cliente:", customerNameResult.error);
-                  setCustomerNameForOffer("Cliente desconocido"); // Fallback
+                  setCustomerNameForOffer("Cliente desconocido");
                 }
               } catch (nameError) {
                 console.error("Error al invocar Server Action getCustomerName:", nameError);
-                setCustomerNameForOffer("Cliente desconocido (error)"); // Fallback
+                setCustomerNameForOffer("Cliente desconocido (error)");
               }
-              // NUEVO: Obtener la calificación del cliente usando la Server Action
               try {
                 const customerRatingResult = await getAverageRatingForCustomer(data.trip.customer_id);
-                if (customerRatingResult.success) { // Incluso si rating es null, la operación fue exitosa
-                  setCustomerRatingForOffer(customerRatingResult.rating ?? null); // Usar nullish coalescing para asegurar null si es undefined
+                if (customerRatingResult.success) {
+                  setCustomerRatingForOffer(customerRatingResult.rating ?? null);
                 } else {
                   console.error("Error al obtener la calificación del cliente:", customerRatingResult.error);
-                  setCustomerRatingForOffer(null); // Fallback
+                  setCustomerRatingForOffer(null);
                 }
               } catch (ratingError) {
                 console.error("Error al invocar Server Action getAverageRatingForCustomer:", ratingError);
-                setCustomerRatingForOffer(null); // Fallback
+                setCustomerRatingForOffer(null);
               }
             } else {
-              setCustomerNameForOffer("Cliente desconocido (ID no disponible)"); // Fallback
-              setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación si no hay ID
+              setCustomerNameForOffer("Cliente desconocido (ID no disponible)");
+              setCustomerRatingForOffer(null);
             }
 
-            // Establecer las coordenadas para la ruta si hay una ubicación actual del conductor
             if (currentLocation) {
-              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // Tower a Origen
-              setMapRouteEnd({ lat: parseFloat(data.trip.origin.lat), lng: parseFloat(data.trip.origin.long) }); // Origen del Viaje
-              setMapRouteOriginToDestinationEnd({ lat: parseFloat(data.trip.destination.lat), lng: parseFloat(data.trip.destination.long) }); // Destino Final
+              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long });
+              setMapRouteEnd({ lat: parseFloat(data.trip.origin.lat), lng: parseFloat(data.trip.origin.long) });
+              setMapRouteOriginToDestinationEnd({ lat: parseFloat(data.trip.destination.lat), lng: parseFloat(data.trip.destination.long) });
             }
           } else {
-            // Si la oferta es la misma, solo actualizar el tiempo restante
             setOfferTimeRemaining(data.time_remaining);
           }
         } else {
-          // Solo limpiar si realmente había una oferta activa para evitar re-renderizados innecesarios
           if (currentOffer !== null) {
             setCurrentOffer(null);
             setOfferTimeRemaining(0);
-            setCustomerNameForOffer(null); // Limpiar nombre del cliente
-            setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
-            // Limpiar todas las coordenadas de la ruta si no hay oferta
+            setCustomerNameForOffer(null);
+            setCustomerRatingForOffer(null);
             setMapRouteStart(null);
             setMapRouteEnd(null);
             setMapRouteOriginToDestinationEnd(null);
@@ -244,19 +248,19 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         console.error("Error checking for offers:", error);
         setCurrentOffer(null);
         setOfferTimeRemaining(0);
-        setCustomerNameForOffer(null); // Limpiar nombre del cliente en caso de error
-        setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente en caso de error
+        setCustomerNameForOffer(null);
+        setCustomerRatingForOffer(null);
       }
     };
 
     if (isAvailable && user?.id) {
-      checkOffers(); // Una verificación inicial inmediata
-      pollingInterval = setInterval(checkOffers, 3000); // Poll cada 3 segundos
+      checkOffers();
+      pollingInterval = setInterval(checkOffers, 3000);
     } else {
       setCurrentOffer(null);
       setOfferTimeRemaining(0);
-      setCustomerNameForOffer(null); // Limpiar nombre del cliente
-      setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
+      setCustomerNameForOffer(null);
+      setCustomerRatingForOffer(null);
     }
 
     return () => {
@@ -272,12 +276,12 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         setOfferTimeRemaining(prev => {
           if (prev <= 1) {
             clearInterval(countdownTimer!);
-            setCurrentOffer(null); // La oferta expira
-            setMapRouteStart(null); // Limpiar coordenadas de la ruta
+            setCurrentOffer(null);
+            setMapRouteStart(null);
             setMapRouteEnd(null);
             setMapRouteOriginToDestinationEnd(null);
-            setCustomerNameForOffer(null);  // NUEVO: Limpiar nombre del cliente
-            setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente
+            setCustomerNameForOffer(null);
+            setCustomerRatingForOffer(null);
             return 0;
           }
           return prev - 1;
@@ -289,7 +293,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     return () => {
       if (countdownTimer) clearInterval(countdownTimer);
     };
-  }, [currentOffer, offerTimeRemaining]); // Añadidas dependencias de limpieza de mapa
+  }, [currentOffer, offerTimeRemaining]);
 
 
   // Efecto para gestionar el heartbeat cuando el tower está disponible
@@ -297,67 +301,55 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     let intervalId: NodeJS.Timeout | null = null;
 
     if (isAvailable && user?.id && currentLocation) {
-      // Función para refrescar el heartbeat y la ubicación
       const updateHeartbeat = async () => {
         if (currentLocation) {
           await refreshTowerHeartbeatAndLocation(currentLocation);
         }
       };
 
-      // Iniciar el intervalo para actualizar cada 20 segundos
-      intervalId = setInterval(updateHeartbeat, 20000); // 20 segundos
+      intervalId = setInterval(updateHeartbeat, 20000);
 
-      // Realizar una actualización inmediata al activarse la disponibilidad por primera vez
       updateHeartbeat();
 
     } else if (intervalId) {
-      clearInterval(intervalId); // Limpiar el intervalo si ya no está disponible
+      clearInterval(intervalId);
     }
 
     return () => {
       if (intervalId) {
-        clearInterval(intervalId); // Limpiar el intervalo al desmontar o cambiar la dependencia
+        clearInterval(intervalId);
       }
     };
-  }, [isAvailable, user?.id, currentLocation]); // Depende de isAvailable, user.id y currentLocation
+  }, [isAvailable, user?.id, currentLocation]);
 
   const handleAliasUpdateSuccess = useCallback(() => {
-    setRecheckTrigger(prev => !prev); // Forzar la re-evaluación de los prerrequisitos del servicio
+    setRecheckTrigger(prev => !prev);
   }, []);
 
   // Función para manejar el cambio de disponibilidad
   const handleToggleAvailability = async () => {
     if (!user?.id || !currentLocation) {
-      // Considerar un log interno o manejo de errores sin toast si es crítico para el usuario
       console.error("No se pudo obtener la información de usuario o la ubicación para cambiar la disponibilidad.");
       return;
     }
 
     const newAvailabilityState = !isAvailable;
 
-    if (!vehicles || vehicles.length === 0) {
-      console.error("No hay vehículos registrados para cambiar la disponibilidad.");
+    // Usar selectedVehicleForAvailability para enviar a Redis
+    if (!selectedVehicleForAvailability) {
+      console.error("No hay un vehículo seleccionado para cambiar la disponibilidad.");
       return;
     }
-
-    const activeVehicle = vehicles[0]; // Seleccionar el primer vehículo como el activo
 
     const success = await toggleTowerAvailability(
       newAvailabilityState,
       newAvailabilityState ? currentLocation : null,
-      newAvailabilityState ? {
-        brand: activeVehicle.brand,
-        model: activeVehicle.model,
-        year: activeVehicle.year,
-        max_load: activeVehicle.max_load,
-      } : null // Pasar detalles del vehículo solo si se está activando la disponibilidad
+      newAvailabilityState ? selectedVehicleForAvailability : null // Pasar el vehículo seleccionado
     );
 
     if (success) {
       setIsAvailable(newAvailabilityState);
-      // No se notifica al usuario, ya lo ve reflejado en el botón.
     } else {
-      // Considerar un log interno o manejo de errores sin toast
       console.error("Hubo un error al actualizar tu estado de disponibilidad en el servidor.");
     }
   };
@@ -385,19 +377,16 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
 
       if (data.success) {
         console.log("Oferta aceptada:", data);
-        setCurrentOffer(null); // Limpiar la oferta actual de la UI
+        setCurrentOffer(null);
         setOfferTimeRemaining(0);
-        setIsTripActive(true); // Marcar que hay un viaje activo. Las rutas se mantendrán dibujadas.
-        setCustomerNameForOffer(null); // Limpiar nombre del cliente al aceptar
-        setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente al aceptar
-        // NO se limpian las rutas aquí. El mapa se centrará en el tower porque isTripActive es true.
+        setIsTripActive(true);
+        setCustomerNameForOffer(null);
+        setCustomerRatingForOffer(null);
       } else {
         console.error("Error al aceptar la oferta:", data.error);
-        // Opcional: Mostrar un mensaje de error al usuario
       }
     } catch (error) {
       console.error("Error en la solicitud para aceptar oferta:", error);
-      // Opcional: Mostrar un mensaje de error de red
     }
   };
 
@@ -408,12 +397,10 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       return;
     }
 
-
-    setCurrentOffer(null); // Limpiar la oferta actual de la UI
+    setCurrentOffer(null);
     setOfferTimeRemaining(0);
-    setCustomerNameForOffer(null); // Limpiar nombre del cliente al rechazar
-    setCustomerRatingForOffer(null); // NUEVO: Limpiar calificación del cliente al rechazar
-    // Al rechazar, limpiar las rutas y permitir que el mapa se centre en el tower (punto 3)
+    setCustomerNameForOffer(null);
+    setCustomerRatingForOffer(null);
     setMapRouteStart(null);
     setMapRouteEnd(null);
     setMapRouteOriginToDestinationEnd(null);
@@ -434,26 +421,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
 
       if (data.success) {
         console.log("Oferta rechazada:", data);
-        // El estado isTripActive no cambia porque no se aceptó el viaje
       } else {
         console.error("Error al rechazar la oferta:", data.error);
-        // Opcional: Mostrar un mensaje de error al usuario
       }
     } catch (error) {
       console.error("Error en la solicitud para rechazar oferta:", error);
-      // Opcional: Mostrar un mensaje de error de red
     }
   };
-
-  // Mostrar un estado de carga general.
-  // if (!isLoaded || isLoading) {
-  //   return (
-  //     <div className="flex flex-col h-screen w-screen items-center justify-center text-white">
-  //       Cargando servicio...
-  //     </div>
-  //   );
-  // }
-
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
@@ -461,10 +435,9 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         isAvailable={isAvailable}
         setIsAvailable={handleToggleAvailability}
         isTripActive={isTripActive}
-        isButtonEnabled={arePrerequisitesLoaded} // NUEVO: Habilitar el botón solo si los prerrequisitos están cargados
+        isButtonEnabled={arePrerequisitesLoaded && !!selectedVehicleForAvailability} // Habilitar si los requisitos están cargados Y hay un vehículo seleccionado
       />
       <div className="flex-1 w-full h-full">
-        {/* Renderiza el mapa incondicionalmente */}
         <DynamicInteractiveMap
           userLocation={currentLocation ? { lat: currentLocation.lat, lng: currentLocation.long } : null}
           routeStart={mapRouteStart}
@@ -474,20 +447,18 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         />
       </div>
 
-      {/* RENDERIZADO CONDICIONAL DE LA TARJETA DE OFERTA */}
-      {currentOffer && offerTimeRemaining > 0 && customerNameForOffer !== null && ( // NUEVO: Añadir customerNameForOffer !== null a la condición
+      {currentOffer && offerTimeRemaining > 0 && customerNameForOffer !== null && (
         <ServiceRequestCard
-          // Estos datos provienen del `check-offer` o son placeholders
-          customerName={customerNameForOffer || ""} // Usar el nombre obtenido o el fallback
+          customerName={customerNameForOffer || ""}
           vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
-          vehiclePlate="N/D" // No proporcionado por check-offer
-          originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`} // Geocodificar para mostrar dirección real
-          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`} // Geocodificar para mostrar dirección real
-          serviceValue={150.00} // Valor ficticio, no proporcionado por check-offer
+          vehiclePlate="N/D"
+          originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`}
+          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`}
+          serviceValue={150.00}
           onAccept={handleAcceptOffer}
-          onReject={handleRejectOffer} // NUEVO: Pasar la función handleRejectOffer
+          onReject={handleRejectOffer}
           tripId={currentOffer.id}
-          customerRating={customerRatingForOffer} // NUEVO: Pasar la calificación real
+          customerRating={customerRatingForOffer}
         />
       )}
 

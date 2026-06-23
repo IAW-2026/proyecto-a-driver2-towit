@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redis } from "@/lib/redis-client"; // Importa la instancia de Redis desde el nuevo archivo
 
-interface VehicleProfileData {
+export interface VehicleProfileData {
   brand: string;
   model: string;
   year: number;
@@ -27,6 +27,29 @@ export async function getTowerAvailabilityStatus(): Promise<boolean> {
   } catch (error) {
     console.error("Error fetching tower availability status from Redis:", error);
     return false;
+  }
+}
+
+/**
+ * NUEVO: Acción de servidor para obtener los detalles del vehículo inicial de un tower desde Redis.
+ */
+export async function getTowerInitialVehicle(): Promise<VehicleProfileData | null> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    console.warn("No user ID found, cannot fetch tower initial vehicle.");
+    return null;
+  }
+
+  try {
+    const towerProfile = await redis.hgetall(`tower:profile:${userId}`);
+    if (towerProfile && towerProfile.vehicle) {
+      return towerProfile.vehicle as unknown as VehicleProfileData;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching tower initial vehicle from Redis:", error);
+    return null;
   }
 }
 
