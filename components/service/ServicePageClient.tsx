@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs"; // Importar useUser
 import { getTowerData, TowerData } from "@/app/actions/tower"; // Importar la acción para obtener datos de la torre y la interfaz TowerData
 import { getTowerVehicles } from "@/app/actions/vehicle"; // NUEVO: Importar la acción para obtener vehículos
+import { getCustomerName } from "@/app/actions/customer"; // NUEVO: Importar la nueva Server Action
 import { useRouter } from "next/navigation"; // Nuevo: Importar useRouter
 import {
   Dialog,
@@ -32,9 +33,10 @@ const DynamicInteractiveMap = dynamic(() => import("@/components/service/Interac
 
 interface ServicePageClientProps {
   initialIsAvailable: boolean; // Nueva prop para el estado inicial de disponibilidad
+  // customerAppUrl: string; // ELIMINADO: Ya no se necesita en el cliente
 }
 
-export default function ServicePageClient({ initialIsAvailable }: ServicePageClientProps) {
+export default function ServicePageClient({ initialIsAvailable }: ServicePageClientProps) { // ELIMINADO customerAppUrl de props
   const { user, isLoaded } = useUser(); // Obtener el usuario de Clerk
   const router = useRouter(); // Nuevo: Inicializar useRouter
   // Inicializar el estado de disponibilidad con la prop recibida de Redis
@@ -52,6 +54,8 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
   // NUEVOS ESTADOS para gestionar la oferta
   const [currentOffer, setCurrentOffer] = useState<any | null>(null);
   const [offerTimeRemaining, setOfferTimeRemaining] = useState<number>(0);
+  // NUEVO: Estado para el nombre del cliente de la oferta
+  const [customerNameForOffer, setCustomerNameForOffer] = useState<string | null>(null);
   // NUEVOS ESTADOS para las coordenadas de la ruta en el mapa
   const [mapRouteStart, setMapRouteStart] = useState<{ lat: number; lng: number } | null>(null); // Ubicación del Tower
   const [mapRouteEnd, setMapRouteEnd] = useState<{ lat: number; lng: number } | null>(null);     // Origen del Viaje
@@ -158,10 +162,11 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     let pollingInterval: NodeJS.Timeout | null = null;
 
     const checkOffers = async () => {
-      if (!user?.id || !isAvailable || isTripActive) { // Añadido: `isTripActive`
+      if (!user?.id || !isAvailable || isTripActive) {
         // Si el tower no está logueado, no está disponible o está en un viaje, no hay ofertas.
         setCurrentOffer(null);
         setOfferTimeRemaining(0);
+        setCustomerNameForOffer(null); // Limpiar nombre del cliente
         return;
       }
 
@@ -174,6 +179,26 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           if (currentOffer?.id !== data.trip.id) {
             setCurrentOffer(data.trip);
             setOfferTimeRemaining(data.time_remaining);
+            console.log(data)
+
+            // NUEVO: Obtener el nombre del cliente usando la Server Action
+            if (data.trip.customer_id) {
+              try {
+                const customerNameResult = await getCustomerName(data.trip.customer_id);
+                if (customerNameResult.success && customerNameResult.fullname) {
+                  setCustomerNameForOffer(customerNameResult.fullname);
+                } else {
+                  console.error("Error al obtener el nombre del cliente:", customerNameResult.error);
+                  setCustomerNameForOffer("Cliente desconocido"); // Fallback
+                }
+              } catch (nameError) {
+                console.error("Error al invocar Server Action getCustomerName:", nameError);
+                setCustomerNameForOffer("Cliente desconocido (error)"); // Fallback
+              }
+            } else {
+              setCustomerNameForOffer("Cliente desconocido (ID no disponible)"); // Fallback
+            }
+
             // Establecer las coordenadas para la ruta si hay una ubicación actual del conductor
             if (currentLocation) {
               setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // Tower a Origen
@@ -189,6 +214,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           if (currentOffer !== null) {
             setCurrentOffer(null);
             setOfferTimeRemaining(0);
+            setCustomerNameForOffer(null); // Limpiar nombre del cliente
             // Limpiar todas las coordenadas de la ruta si no hay oferta
             setMapRouteStart(null);
             setMapRouteEnd(null);
@@ -199,6 +225,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         console.error("Error checking for offers:", error);
         setCurrentOffer(null);
         setOfferTimeRemaining(0);
+        setCustomerNameForOffer(null); // Limpiar nombre del cliente en caso de error
       }
     };
 
@@ -208,12 +235,13 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     } else {
       setCurrentOffer(null);
       setOfferTimeRemaining(0);
+      setCustomerNameForOffer(null); // Limpiar nombre del cliente
     }
 
     return () => {
       if (pollingInterval) clearInterval(pollingInterval);
     };
-  }, [isAvailable, user?.id, isTripActive]); // Añadido: `isTripActive` a las dependencias
+  }, [isAvailable, user?.id, isTripActive, currentOffer?.id, currentLocation]); // ELIMINADA customerAppUrl de las dependencias
 
   // NUEVO EFECTO: Contador regresivo local para la oferta
   useEffect(() => {
@@ -337,6 +365,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
         setCurrentOffer(null); // Limpiar la oferta actual de la UI
         setOfferTimeRemaining(0);
         setIsTripActive(true); // Marcar que hay un viaje activo. Las rutas se mantendrán dibujadas.
+        setCustomerNameForOffer(null); // Limpiar nombre del cliente al aceptar
         // NO se limpian las rutas aquí. El mapa se centrará en el tower porque isTripActive es true.
       } else {
         console.error("Error al aceptar la oferta:", data.error);
@@ -358,6 +387,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
 
     setCurrentOffer(null); // Limpiar la oferta actual de la UI
     setOfferTimeRemaining(0);
+    setCustomerNameForOffer(null); // Limpiar nombre del cliente al rechazar
     // Al rechazar, limpiar las rutas y permitir que el mapa se centre en el tower (punto 3)
     setMapRouteStart(null);
     setMapRouteEnd(null);
@@ -423,9 +453,9 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
       {currentOffer && offerTimeRemaining > 0 && (
         <ServiceRequestCard
           // Estos datos provienen del `check-offer` o son placeholders
-          customerName={`Cliente Nuevo (Quedan ${offerTimeRemaining}s)`} // Placeholder y contador
+          customerName={(customerNameForOffer || "") + ` (Quedan ${offerTimeRemaining}s)`} // Usar el nombre obtenido o el fallback
           vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
-          vehiclePlate="Pendiente" // No proporcionado por check-offer
+          vehiclePlate="N/D" // No proporcionado por check-offer
           originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`} // Geocodificar para mostrar dirección real
           destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`} // Geocodificar para mostrar dirección real
           serviceValue={150.00} // Valor ficticio, no proporcionado por check-offer

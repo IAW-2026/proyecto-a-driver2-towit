@@ -28,6 +28,8 @@ Endpoint donde al aceptar o completar un viaje se actualiza la asignación de to
 * Response 200
 ```{}```
 ---
+
+## Customer details
 Obtiene el nombre completo del cliente por su ID numérico.
 * Endpoint: *GET CUSTOMER_APP_URL/api/customer/[clerk_id]/name
 * Response 200:

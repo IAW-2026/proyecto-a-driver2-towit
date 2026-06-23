@@ -52,6 +52,7 @@ export async function GET(req: Request) {
       time_remaining: secondsRemaining, // Ej: 12 (el frontend sabe que cuenta desde 12)
       trip: {
         id: tripData.trip_id,
+        customer_id: tripData.customer_id,
         origin: { lat: tripData.trip_origin_lat, long: tripData.trip_origin_long },
         destination: { lat: tripData.trip_destination_lat, long: tripData.trip_destination_long },
         vehicle: {
