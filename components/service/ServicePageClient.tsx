@@ -224,6 +224,9 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
           if (prev <= 1) {
             clearInterval(countdownTimer!);
             setCurrentOffer(null); // La oferta expira
+            setMapRouteStart(null); // Limpiar coordenadas de la ruta
+            setMapRouteEnd(null);
+            setMapRouteOriginToDestinationEnd(null);
             return 0;
           }
           return prev - 1;
@@ -235,7 +238,7 @@ export default function ServicePageClient({ initialIsAvailable }: ServicePageCli
     return () => {
       if (countdownTimer) clearInterval(countdownTimer);
     };
-  }, [currentOffer, offerTimeRemaining]);
+  }, [currentOffer, offerTimeRemaining]); // Añadidas dependencias de limpieza de mapa
 
 
   // Efecto para gestionar el heartbeat cuando el tower está disponible

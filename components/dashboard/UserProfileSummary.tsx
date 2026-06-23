@@ -117,6 +117,12 @@ export default function UserProfileSummary() {
     fetchAllData();
   }, [fetchAllData]);
 
+  // Si no hay datos de Tower o el alias de pagos no está configurado, mostrar el botón.
+  const hasPaymentAlias = !!towerData?.payments_alias;
+
+  const avgRating = 4.8;
+  const currentVehicle = vehicles?.find(v => v.vehicle_id === selectedVehicleId) || null;
+
   const handleToggleAvailability = useCallback(async () => { // Hacemos la función asíncrona
     if (!vehicles || vehicles.length === 0) {
       openNoVehicleErrorModal();
@@ -167,12 +173,6 @@ border border-slate-800">
     return null;
   }
 
-  // Si no hay datos de Tower o el alias de pagos no está configurado, mostrar el botón.
-  const hasPaymentAlias = !!towerData?.payments_alias;
-
-  const avgRating = 4.8;
-  const currentVehicle = vehicles?.find(v => v.vehicle_id === selectedVehicleId) || null;
-
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col       
 h-full">
@@ -213,8 +213,8 @@ h-full">
               <Button
                 onClick={handleToggleAvailability}
                 className={`flex-1 font-bold ${isAvailable
-                    ? "bg-green-600 hover:bg-green-500 text-white cursor-pointer"
-                    : "bg-slate-700 hover:bg-slate-600 text-white"
+                  ? "bg-green-600 hover:bg-green-500 text-white cursor-pointer"
+                  : "bg-slate-700 hover:bg-slate-600 text-white"
                   }`}
                 disabled={!selectedVehicleId} // Deshabilitar si no hay vehículo seleccionado
               >
