@@ -7,7 +7,7 @@ import ServiceTripStartConfirmationCard from "@/components/service/ServiceTripSt
 import ServiceTripEndingConfirmationCard from "@/components/service/ServiceTripEndingConfirmationCard"; // NUEVO: Importar la tarjeta de finalización
 import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
-import { getTowerData, TowerData } from "@/app/actions/tower";
+import { getTowerData, getTowerIdByClerkId, TowerData } from "@/app/actions/tower";
 import { getTowerVehicles } from "@/app/actions/vehicle";
 import { getCustomerName } from "@/app/actions/customer";
 import { getAverageRatingForCustomer } from "@/app/actions/feedback";
@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
 import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower";
+import { recordAcceptedAssignment } from "@/app/actions/assignments"; // NUEVO: Importar la Server Action
 import * as turf from '@turf/turf'
 
 interface Vehicle {
@@ -341,25 +342,14 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       const originLat = parseFloat(activeTripDetails.origin.lat);
       const originLong = parseFloat(activeTripDetails.origin.long);
 
-      console.log("Depuración Tarjeta Inicio Viaje:");
-      console.log("  isTripActive:", isTripActive);
-      console.log("  isTripStartedLocallyConfirmed:", isTripStartedLocallyConfirmed);
-      console.log("  currentLocation:", currentLocation);
-      console.log("  activeTripDetails:", activeTripDetails); // Usar activeTripDetails
-      console.log("  Origen de la oferta (lat, long):", originLat, originLong);
-
       if (!isNaN(originLat) && !isNaN(originLong)) {
         const currentLocationPoint = turf.point([currentLocation.lat, currentLocation.long]);
         const originLocationPoint = turf.point([originLat, originLong]);
         const distance = turf.distance(currentLocationPoint, originLocationPoint, {units: 'meters'});
-            
-        console.log("  Distancia al origen:", distance, "metros"); // Imprime la distancia        
 
         if (distance <= 50) {
-          console.log("  ¡Dentro del rango de 50m! Mostrando tarjeta de inicio.");
           setShowStartTripConfirmation(true);
         } else {
-          console.log("  Fuera del rango de 50m. No mostrando tarjeta de inicio.");
           setShowStartTripConfirmation(false);
         }
       } else {
@@ -367,11 +357,6 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         setShowStartTripConfirmation(false);
       }
     } else {
-      console.log("Depuración Tarjeta Inicio Viaje: Condiciones NO cumplidas para mostrar.");
-      console.log(String(isTripActive))
-      console.log(String(isTripStartedLocallyConfirmed))
-      console.log(currentLocation)
-      console.log(activeTripDetails) // Usar activeTripDetails
       setShowStartTripConfirmation(false);
     }
   }, [isTripActive, isTripStartedLocallyConfirmed, currentLocation, activeTripDetails]); // Dependencia: activeTripDetails
@@ -453,10 +438,6 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       }
     };
   }, [isAvailable, user?.id, currentLocation]);
-
-  const handleAliasUpdateSuccess = useCallback(() => {
-    setRecheckTrigger(prev => !prev);
-  }, []);
 
   // Función para manejar el cambio de disponibilidad (EXISTENTE)
   const handleToggleAvailability = async () => {
@@ -553,6 +534,24 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
           setMapRouteStart({ lat: currentLocation.lat, long: currentLocation.long }); // Driver's current location
           setMapRouteEnd({ lat: parseFloat(currentOffer.origin.lat), long: parseFloat(currentOffer.origin.long) }); // Trip origin
           setMapRouteOriginToDestinationEnd({ lat: parseFloat(currentOffer.destination.lat), long: parseFloat(currentOffer.destination.long) }); // Final destination for context
+        }
+
+        // NUEVO: Registrar el viaje aceptado como una asignación en la base de datos
+        if (user?.id && currentOffer) { // Usar activeTripDetails que ya tiene la info de la oferta
+          const assignmentData = {
+            tripId: currentOffer.id,
+            towerId: (await getTowerIdByClerkId(user.id)).towerId!,
+            location: { // La ubicación del origen del viaje
+              lat: currentOffer.origin.lat,
+              long: currentOffer.origin.long,
+            },
+          };
+          const assignmentResult = await recordAcceptedAssignment(assignmentData);
+          if (assignmentResult.success) {
+            console.log("Asignación de viaje aceptada registrada en la DB con ID:", assignmentResult.assignmentId);
+          } else {
+            console.error("Fallo al registrar la asignación de viaje aceptada en la DB:", assignmentResult.error);
+          }
         }
 
         // Limpiar la oferta pendiente una vez aceptada

@@ -145,6 +145,35 @@ export async function getTowerData(userId: string): Promise<UpdateTowerDetailsRe
   }
 }
 
+/**
+ * Obtiene el tower_id de la base de datos a partir de un clerk_id.
+ * @param clerkId El Clerk ID del usuario Tower.
+ * @returns Una promesa que resuelve con un objeto indicando el éxito, el tower_id o un error.
+ */
+export async function getTowerIdByClerkId(clerkId: string): Promise<{ success: boolean; towerId?: string; error?: string }> {
+  if (!clerkId) {
+    return { success: false, error: "Clerk ID es requerido." };
+  }
+
+  try {
+    const tower = await prisma.tower.findUnique({
+      where: { clerk_id: clerkId },
+      select: {
+        tower_id: true,
+      },
+    });
+
+    if (!tower) {
+      return { success: false, error: "Tower no encontrado para el Clerk ID proporcionado." };
+    }
+
+    return { success: true, towerId: tower.tower_id };
+  } catch (error: any) {
+    console.error(`Error al obtener tower_id para Clerk ID ${clerkId}:`, error);
+    return { success: false, error: error.message || "Fallo al obtener el tower_id." };
+  }
+}
+
 
 export async function updatePaymentAlias(
   clerkId: string,

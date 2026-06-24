@@ -295,8 +295,6 @@ export default function InteractiveMap({
         });
       }
 
-      console.log("InteractiveMap: Marcador del conductor añadido.");
-
       // Centrar el mapa en la ubicación del usuario la primera vez, solo si no hay rutas activas
       if (!isTripActive && !isRouteDrawn) {
           map.current?.flyTo({
@@ -367,7 +365,6 @@ export default function InteractiveMap({
     // NUEVO: Limpiar las rutas completas cacheada
     fullRouteActiveLegRef.current = null;
     fullRouteTripContextRef.current = null;
-    console.log("InteractiveMap: Rutas y marcadores de viaje limpiados.");
   }, [isMapLoaded]);
 
   // NUEVO/ACTUALIZADO: Efecto principal para dibujar/actualizar rutas y marcadores
@@ -392,7 +389,6 @@ export default function InteractiveMap({
             fullRouteActiveLegRef.current.geometry.coordinates[0][1] !== driverLngLat[1] ||
             fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![0] !== tripOriginLngLat[0] ||
             fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![1] !== tripOriginLngLat[1]) {
-          console.log("InteractiveMap: Fetching new route DRIVER -> TRIP_ORIGIN (active leg)");
           const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLngLat.join(',')};${tripOriginLngLat.join(',')}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
           const query = await fetch(url);
           const json = await query.json();
@@ -407,7 +403,6 @@ export default function InteractiveMap({
 
         // 2. Limpiar la ruta de contexto (TRIP_ORIGIN -> TRIP_DESTINATION)
         // NUEVO: Ya no queremos mostrar la ruta completa del viaje mientras el conductor se dirige al origen.
-        console.log("InteractiveMap: Limpiando ruta de contexto (TRIP_ORIGIN -> TRIP_DESTINATION) al aceptar viaje.");
         const tripContextSource = map.current!.getSource(tripContextRouteSourceId) as mapboxgl.GeoJSONSource;
         if (tripContextSource) {
             tripContextSource.setData({ type: "FeatureCollection", features: [] });
@@ -442,7 +437,6 @@ export default function InteractiveMap({
             fullRouteActiveLegRef.current.geometry.coordinates[0][1] !== driverLngLat[1] ||
             fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![0] !== tripDestinationLngLat[0] ||
             fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![1] !== tripDestinationLngLat[1]) {
-          console.log("InteractiveMap: Fetching new route DRIVER -> TRIP_DESTINATION (active leg)");
           const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLngLat.join(',')};${tripDestinationLngLat.join(',')}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
           const query = await fetch(url);
           const json = await query.json();
@@ -488,7 +482,6 @@ export default function InteractiveMap({
             fullRouteActiveLegRef.current.geometry.coordinates[0][1] !== driverLoc.lat ||
             fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![0] !== tripOrigin.long ||
             fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![1] !== tripOrigin.lat) {
-          console.log("InteractiveMap: Fetching new route TOWER -> TRIP_ORIGIN (offer)");
           const url1 = `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLoc.long},${driverLoc.lat};${tripOrigin.long},${tripOrigin.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
           const query1 = await fetch(url1);
           const json1 = await query1.json();
@@ -503,7 +496,6 @@ export default function InteractiveMap({
             fullRouteTripContextRef.current.geometry.coordinates[0][1] !== tripOrigin.lat ||
             fullRouteTripContextRef.current.geometry.coordinates.at(-1)![0] !== finalDestination.long ||
             fullRouteTripContextRef.current.geometry.coordinates.at(-1)![1] !== finalDestination.lat) {
-          console.log("InteractiveMap: Fetching new route TRIP_ORIGIN -> TRIP_DESTINATION (offer)");
           const url2 = `https://api.mapbox.com/directions/v5/mapbox/driving/${tripOrigin.long},${tripOrigin.lat};${finalDestination.long},${finalDestination.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
           const query2 = await fetch(url2);
           const json2 = await query2.json();
