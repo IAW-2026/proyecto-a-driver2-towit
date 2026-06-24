@@ -30,6 +30,12 @@ interface Vehicle {
   deactivated: boolean;
 }
 
+// Definir la interfaz Coordinates para compatibilidad con InteractiveMap
+interface Coordinates {
+  lat: number;
+  long: number;
+}
+
 // Importar InteractiveMap dinámicamente con SSR deshabilitado
 const DynamicInteractiveMap = dynamic(() => import("@/components/service/InteractiveMap"), {
   ssr: false,
@@ -78,9 +84,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const [offerTimeRemaining, setOfferTimeRemaining] = useState<number>(0);
   const [customerNameForOffer, setCustomerNameForOffer] = useState<string | null>(null);
   const [customerRatingForOffer, setCustomerRatingForOffer] = useState<number | null>(null);
-  const [mapRouteStart, setMapRouteStart] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapRouteEnd, setMapRouteEnd] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapRouteOriginToDestinationEnd, setMapRouteOriginToDestinationEnd] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapRouteStart, setMapRouteStart] = useState<Coordinates | null>(null);
+  const [mapRouteEnd, setMapRouteEnd] = useState<Coordinates | null>(null);
+  const [mapRouteOriginToDestinationEnd, setMapRouteOriginToDestinationEnd] = useState<Coordinates | null>(null);
 
   const [isTripActive, setIsTripActive] = useState(false);
   // NUEVO ESTADO: Para controlar la visibilidad de la tarjeta de confirmación de inicio de viaje
@@ -92,6 +98,19 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   // NUEVO ESTADO: Para el estado local después de confirmar la finalización (dummy por ahora)
   const [isTripEndedLocallyConfirmed, setIsTripEndedLocallyConfirmed] = useState(false);
 
+  // NUEVO: Estado para el modo de ubicación manual
+  const [isManualLocationMode, setIsManualLocationMode] = useState(false);
+
+  // NUEVO: Función para alternar el modo de ubicación manual
+  const toggleManualLocationMode = useCallback(() => {
+    setIsManualLocationMode(prevMode => !prevMode);
+  }, []);
+
+  // NUEVO: Función para manejar el cambio de ubicación desde el mapa en modo manual
+  const handleManualLocationChange = useCallback((location: Coordinates) => {
+    setCurrentLocation({ lat: location.lat, long: location.long });
+    console.log("Ubicación manual establecida:", location);
+  }, []);
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
   useEffect(() => {
@@ -174,6 +193,15 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
   // Efecto para obtener y actualizar la ubicación del usuario
   useEffect(() => {
+    if (isManualLocationMode) {
+      // Si está en modo manual, no uses navigator.geolocation
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        setWatchId(null);
+      }
+      return;
+    }
+
     if (typeof window !== 'undefined' && navigator.geolocation) {
       const id = navigator.geolocation.watchPosition(
         (position) => {
@@ -190,12 +218,13 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       return () => {
         if (id !== null) {
           navigator.geolocation.clearWatch(id);
+          setWatchId(null); // Asegurarse de limpiar el watchId al desmontar o cambiar de modo
         }
       };
     } else {
       console.warn("ServicePageClient: Geolocation no soportado o no disponible.");
     }
-  }, []);
+  }, [isManualLocationMode]); // Dependencia clave: isManualLocationMode
 
   // EFECTO 1: Polling para ofertas de viaje (EXISTENTE)
   useEffect(() => {
@@ -252,15 +281,15 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
             }
 
             if (currentLocation) {
-              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // NUEVO: Actualizar inicio de ruta a ubicación actual del conductor
-              setMapRouteEnd({ lat: parseFloat(data.trip.origin.lat), lng: parseFloat(data.trip.origin.long) });
-              setMapRouteOriginToDestinationEnd({ lat: parseFloat(data.trip.destination.lat), lng: parseFloat(data.trip.destination.long) });
+              setMapRouteStart({ lat: currentLocation.lat, long: currentLocation.long }); // NUEVO: Actualizar inicio de ruta a ubicación actual del conductor
+              setMapRouteEnd({ lat: parseFloat(data.trip.origin.lat), long: parseFloat(data.trip.origin.long) });
+              setMapRouteOriginToDestinationEnd({ lat: parseFloat(data.trip.destination.lat), long: parseFloat(data.trip.destination.long) });
             }
           } else {
             setOfferTimeRemaining(data.time_remaining);
             // NUEVO: Si es la misma oferta, pero la ubicación del conductor ha cambiado, actualizar mapRouteStart
             if (currentLocation && isAvailable && !isTripActive) {
-              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long });
+              setMapRouteStart({ lat: currentLocation.lat, long: currentLocation.long });
             }
           }
         } else {
@@ -467,9 +496,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
         // Configurar las rutas para la primera pierna del viaje: conductor -> origen del viaje
         if (currentLocation && currentOffer && currentOffer.origin && currentOffer.destination) {
-          setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // Driver's current location
-          setMapRouteEnd({ lat: parseFloat(currentOffer.origin.lat), lng: parseFloat(currentOffer.origin.long) }); // Trip origin
-          setMapRouteOriginToDestinationEnd({ lat: parseFloat(currentOffer.destination.lat), lng: parseFloat(currentOffer.destination.long) }); // Final destination for context
+          setMapRouteStart({ lat: currentLocation.lat, long: currentLocation.long }); // Driver's current location
+          setMapRouteEnd({ lat: parseFloat(currentOffer.origin.lat), long: parseFloat(currentOffer.origin.long) }); // Trip origin
+          setMapRouteOriginToDestinationEnd({ lat: parseFloat(currentOffer.destination.lat), long: parseFloat(currentOffer.destination.long) }); // Final destination for context
         }
 
         setCustomerNameForOffer(null);
@@ -530,8 +559,8 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
     // Configurar las rutas para la segunda pierna del viaje: conductor -> destino final
     if (currentOffer && currentLocation) {
-      setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // Driver's current location
-      setMapRouteEnd({ lat: parseFloat(currentOffer.destination.lat), lng: parseFloat(currentOffer.destination.long) }); // Final destination
+      setMapRouteStart({ lat: currentLocation.lat, long: currentLocation.long }); // Driver's current location
+      setMapRouteEnd({ lat: parseFloat(currentOffer.destination.lat), long: parseFloat(currentOffer.destination.long) }); // Final destination
       // mapRouteOriginToDestinationEnd ya contiene el destino final, no necesita cambiarse
     }
   };
@@ -559,15 +588,19 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         setIsAvailable={handleToggleAvailability}
         isTripActive={isTripActive}
         isButtonEnabled={arePrerequisitesLoaded && !!selectedVehicleForAvailability}
+        isManualLocationMode={isManualLocationMode} // NUEVO: Pasar la prop
+        toggleManualLocationMode={toggleManualLocationMode} // NUEVO: Pasar la prop
       />
       <div className="flex-1 w-full h-full">
         <DynamicInteractiveMap
-          userLocation={currentLocation ? { lat: currentLocation.lat, lng: currentLocation.long } : null}
+          userLocation={currentLocation ? { lat: currentLocation.lat, long: currentLocation.long } : null}
           routeStart={mapRouteStart}
           routeEnd={mapRouteEnd}
           tripDestination={mapRouteOriginToDestinationEnd}
           isTripActive={isTripActive}
           isEnRouteToDestination={isTripStartedLocallyConfirmed} // NUEVA PROP
+          isManualLocationMode={isManualLocationMode} // NUEVO: Pasar el estado del modo manual
+          onManualLocationChange={handleManualLocationChange} // NUEVO: Pasar el callback
         />
       </div>
 

@@ -6,25 +6,36 @@ import "mapbox-gl/dist/mapbox-gl.css";
 // No se necesita `polyline` de @mapbox/polyline directamente para GeoJSON, Mapbox GL JS lo maneja.
 
 // Definir las coordenadas del centro de Bahía Blanca
-const BAHIA_BLANCA_CENTER = { lat: -38.7196, lng: -62.2651 }; // Plaza Rivadavia
+const BAHIA_BLANCA_CENTER = { lat: -38.7196, long: -62.2651 }; // Plaza Rivadavia
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 
 interface Coordinates {
   lat: number;
-  lng: number;
+  long: number; // Cambio de lng a long para consistencia
 }
 
 interface InteractiveMapProps {
   userLocation?: Coordinates | null;
-  routeStart?: Coordinates | null; // La ubicación actual del conductor (dinámica)
-  routeEnd?: Coordinates | null; // El objetivo de la etapa actual (origen del viaje o destino final)
-  tripDestination?: Coordinates | null; // El destino final del viaje (estático para contexto)
+  routeStart?: Coordinates | null;
+  routeEnd?: Coordinates | null;
+  tripDestination?: Coordinates | null;
   isTripActive: boolean;
-  isEnRouteToDestination: boolean; // NUEVO: True si ya se confirmó el inicio del viaje (yendo a destino final)
+  isEnRouteToDestination: boolean;
+  isManualLocationMode?: boolean; // NUEVO: Prop para indicar si el modo manual está activo
+  onManualLocationChange?: (location: Coordinates) => void; // NUEVO: Callback para la ubicación manual
 }
 
-export default function InteractiveMap({ userLocation, routeStart, routeEnd, tripDestination, isTripActive, isEnRouteToDestination }: InteractiveMapProps) {
+export default function InteractiveMap({
+  userLocation,
+  routeStart,
+  routeEnd,
+  tripDestination,
+  isTripActive,
+  isEnRouteToDestination,
+  isManualLocationMode, // NUEVO
+  onManualLocationChange, // NUEVO
+}: InteractiveMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const driverMarker = useRef<Marker | null>(null);
@@ -56,7 +67,7 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/navigation-day-v1",
-      center: [BAHIA_BLANCA_CENTER.lng, BAHIA_BLANCA_CENTER.lat], // Centrado inicial por defecto
+      center: [BAHIA_BLANCA_CENTER.long, BAHIA_BLANCA_CENTER.lat], // Centrado inicial por defecto
       zoom: 12, // Zoom inicial por defecto
       pitch: 45,
     });
@@ -117,6 +128,27 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
     };
   }, []);
 
+  // NUEVO: Efecto para añadir/remover listener de clic para el modo manual
+  useEffect(() => {
+    if (!map.current || !isMapLoaded || !onManualLocationChange) return;
+
+    const mapClickHandler = (e: mapboxgl.MapMouseEvent) => {
+      if (isManualLocationMode) {
+        onManualLocationChange({ lat: e.lngLat.lat, long: e.lngLat.lng });
+      }
+    };
+
+    if (isManualLocationMode) {
+      map.current.on('click', mapClickHandler);
+    } else {
+      map.current.off('click', mapClickHandler);
+    }
+
+    return () => {
+      map.current?.off('click', mapClickHandler);
+    };
+  }, [isMapLoaded, isManualLocationMode, onManualLocationChange]);
+
   // Función auxiliar para crear elementos de marcador personalizados (movida al scope del componente)
   const createCustomMarkerElement = useCallback((color: string) => {
     const el = document.createElement('div');
@@ -152,7 +184,7 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
     for (let i = 0; i < routeCoords.length; i++) {
       const [lng, lat] = routeCoords[i];
       const dist = Math.sqrt(
-        Math.pow(lng - currentLocation.lng, 2) +
+        Math.pow(lng - currentLocation.long, 2) + // Usar currentLocation.long
         Math.pow(lat - currentLocation.lat, 2)
       );
       if (dist < minDistance) {
@@ -170,7 +202,7 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
     // Crea una nueva LineString desde el punto más cercano hasta el final de la ruta
     const remainingCoords = routeCoords.slice(closestPointIndex);
     // Inserta la ubicación actual del conductor como el primer punto para una transición suave
-    remainingCoords.unshift([currentLocation.lng, currentLocation.lat]);
+    remainingCoords.unshift([currentLocation.long, currentLocation.lat]);
 
     return {
       type: "Feature",
@@ -195,13 +227,13 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
       // Marcador de Origen del Viaje (si aplica)
       if (tripOrigin && (!isTripActive || (isTripActive && !isEnRouteToDestination))) { // Mostrar si es oferta o si estamos yendo al origen
           if (originMarker.current) {
-              originMarker.current.setLngLat([tripOrigin.lng, tripOrigin.lat]);
+              originMarker.current.setLngLat([tripOrigin.long, tripOrigin.lat]);
           } else {
               originMarker.current = new mapboxgl.Marker({
                   element: createCustomMarkerElement('#FF0000'), // Rojo para el origen del viaje
                   anchor: 'center',
               })
-              .setLngLat([tripOrigin.lng, tripOrigin.lat])
+              .setLngLat([tripOrigin.long, tripOrigin.lat])
               .addTo(map.current!);
           }
       } else if (originMarker.current) {
@@ -212,13 +244,13 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
       // Marcador de Destino Final del Viaje
       if (tripDestination) {
           if (destinationMarker.current) {
-              destinationMarker.current.setLngLat([tripDestination.lng, tripDestination.lat]);
+              destinationMarker.current.setLngLat([tripDestination.long, tripDestination.lat]);
           } else {
               destinationMarker.current = new mapboxgl.Marker({
                   element: createCustomMarkerElement('#00FF00'), // Verde para el destino del viaje
                   anchor: 'center',
               })
-              .setLngLat([tripDestination.lng, tripDestination.lat])
+              .setLngLat([tripDestination.long, tripDestination.lat])
               .addTo(map.current!);
           }
       } else if (destinationMarker.current) {
@@ -250,16 +282,25 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
       driverMarker.current = new mapboxgl.Marker({
         element: el,
         anchor: 'center',
+        draggable: isManualLocationMode, // NUEVO: Hacerlo arrastrable si está en modo manual
       })
-      .setLngLat([userLocation.lng, userLocation.lat])
+      .setLngLat([userLocation.long, userLocation.lat]) // Usar userLocation.long
       .addTo(map.current!);
+
+      // NUEVO: Listener para dragend si el marcador es arrastrable
+      if (isManualLocationMode && onManualLocationChange) {
+        driverMarker.current.on('dragend', () => {
+          const lngLat = driverMarker.current!.getLngLat();
+          onManualLocationChange({ lat: lngLat.lat, long: lngLat.lng });
+        });
+      }
 
       console.log("InteractiveMap: Marcador del conductor añadido.");
 
       // Centrar el mapa en la ubicación del usuario la primera vez, solo si no hay rutas activas
       if (!isTripActive && !isRouteDrawn) {
           map.current?.flyTo({
-              center: [userLocation.lng, userLocation.lat],
+              center: [userLocation.long, userLocation.lat], // Usar userLocation.long
               zoom: 16,
               essential: true,
           });
@@ -267,12 +308,28 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
 
     } else {
       // Si ya existe, simplemente moverlo
-      driverMarker.current.setLngLat([userLocation.lng, userLocation.lat]);
+      driverMarker.current.setLngLat([userLocation.long, userLocation.lat]); // Usar userLocation.long
+      // NUEVO: Actualizar la propiedad draggable si cambia el modo
+      if (driverMarker.current.isDraggable() !== isManualLocationMode) {
+        driverMarker.current.setDraggable(isManualLocationMode || false);
+        // Asegurarse de que el listener de dragend esté presente si se vuelve arrastrable
+        // y de que no se añadan múltiples listeners. Mapbox GL JS los añade de forma segura.
+        if (isManualLocationMode && onManualLocationChange) {
+            driverMarker.current.on('dragend', () => {
+                const lngLat = driverMarker.current!.getLngLat();
+                onManualLocationChange({ lat: lngLat.lat, long: lngLat.lng });
+            });
+        }
+        // No es necesario un 'else if (!isManualLocationMode) { driverMarker.current.off('dragend', ...)}'
+        // ya que `setDraggable(false)` desactiva la interacción de arrastre,
+        // haciendo el listener inactivo de facto hasta que se vuelva a activar `setDraggable(true)`.
+      }
+
 
       // Solo vuelve a centrar el mapa en el conductor si no hay rutas activas ni viaje en curso.
       if (!isTripActive && !isRouteDrawn) {
         map.current?.flyTo({
-          center: [userLocation.lng, userLocation.lat],
+          center: [userLocation.long, userLocation.lat], // Usar userLocation.long
           zoom: map.current.getZoom() < 16 ? 16 : map.current.getZoom(),
           duration: 1000,
           essential: true,
@@ -280,7 +337,7 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
       }
     }
 
-  }, [userLocation, isMapLoaded, createCustomMarkerElement, isTripActive, isRouteDrawn]); // Añadidas dependencias relevantes
+  }, [userLocation, isMapLoaded, createCustomMarkerElement, isTripActive, isRouteDrawn, isManualLocationMode, onManualLocationChange]); // Añadidas dependencias relevantes
 
   // === Función para borrar todas las rutas y marcadores de viaje ===
   const clearRoutesAndMarkers = useCallback(() => {
@@ -321,12 +378,12 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
     }
 
     const fetchAndDrawRoutes = async () => {
-      const driverLngLat: [number, number] = [userLocation.lng, userLocation.lat];
+      const driverLngLat: [number, number] = [userLocation.long, userLocation.lat];
 
       // --- ESCENARIO 1: Viaje ACTIVO - yendo al ORIGEN del viaje (Leg 1) ---
       if (isTripActive && !isEnRouteToDestination && routeStart && routeEnd && tripDestination) {
-        const tripOriginLngLat: [number, number] = [routeEnd.lng, routeEnd.lat]; // routeEnd es ahora el origen del viaje
-        const tripDestinationLngLat: [number, number] = [tripDestination.lng, tripDestination.lat]; // Destino final
+        const tripOriginLngLat: [number, number] = [routeEnd.long, routeEnd.lat]; // routeEnd es ahora el origen del viaje
+        const tripDestinationLngLat: [number, number] = [tripDestination.long, tripDestination.lat]; // Destino final
 
         // 1. Obtener/actualizar ruta DRIVER -> TRIP_ORIGIN (pierna activa)
         // Solo obtener de la API si los puntos de inicio/fin han cambiado o si la ruta no está cacheada
@@ -377,7 +434,7 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
       }
       // --- ESCENARIO 2: Viaje ACTIVO - yendo al DESTINO final del viaje (Leg 2) ---
       else if (isTripActive && isEnRouteToDestination && routeStart && routeEnd && tripDestination) {
-        const tripDestinationLngLat: [number, number] = [routeEnd.lng, routeEnd.lat]; // routeEnd es ahora el destino final
+        const tripDestinationLngLat: [number, number] = [routeEnd.long, routeEnd.lat]; // routeEnd es ahora el destino final
 
         // 1. Obtener/actualizar ruta DRIVER -> TRIP_DESTINATION (pierna activa)
         if (!fullRouteActiveLegRef.current ||
@@ -427,12 +484,12 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
 
         // 1. Obtener/actualizar ruta TOWER -> TRIP_ORIGIN (para la oferta)
         if (!fullRouteActiveLegRef.current ||
-            fullRouteActiveLegRef.current.geometry.coordinates[0][0] !== driverLoc.lng ||
+            fullRouteActiveLegRef.current.geometry.coordinates[0][0] !== driverLoc.long ||
             fullRouteActiveLegRef.current.geometry.coordinates[0][1] !== driverLoc.lat ||
-            fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![0] !== tripOrigin.lng ||
+            fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![0] !== tripOrigin.long ||
             fullRouteActiveLegRef.current.geometry.coordinates.at(-1)![1] !== tripOrigin.lat) {
           console.log("InteractiveMap: Fetching new route TOWER -> TRIP_ORIGIN (offer)");
-          const url1 = `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLoc.lng},${driverLoc.lat};${tripOrigin.lng},${tripOrigin.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
+          const url1 = `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLoc.long},${driverLoc.lat};${tripOrigin.long},${tripOrigin.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
           const query1 = await fetch(url1);
           const json1 = await query1.json();
           const route1 = json1.routes && json1.routes.length > 0 ? json1.routes[0].geometry : null;
@@ -442,12 +499,12 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
 
         // 2. Obtener/actualizar ruta TRIP_ORIGIN -> TRIP_DESTINATION (para la oferta)
         if (!fullRouteTripContextRef.current ||
-            fullRouteTripContextRef.current.geometry.coordinates[0][0] !== tripOrigin.lng ||
+            fullRouteTripContextRef.current.geometry.coordinates[0][0] !== tripOrigin.long ||
             fullRouteTripContextRef.current.geometry.coordinates[0][1] !== tripOrigin.lat ||
-            fullRouteTripContextRef.current.geometry.coordinates.at(-1)![0] !== finalDestination.lng ||
+            fullRouteTripContextRef.current.geometry.coordinates.at(-1)![0] !== finalDestination.long ||
             fullRouteTripContextRef.current.geometry.coordinates.at(-1)![1] !== finalDestination.lat) {
           console.log("InteractiveMap: Fetching new route TRIP_ORIGIN -> TRIP_DESTINATION (offer)");
-          const url2 = `https://api.mapbox.com/directions/v5/mapbox/driving/${tripOrigin.lng},${tripOrigin.lat};${finalDestination.lng},${finalDestination.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
+          const url2 = `https://api.mapbox.com/directions/v5/mapbox/driving/${tripOrigin.long},${tripOrigin.lat};${finalDestination.long},${finalDestination.lat}?alternatives=false&geometries=geojson&steps=false&access_token=${mapboxgl.accessToken}`;
           const query2 = await fetch(url2);
           const json2 = await query2.json();
           const route2 = json2.routes && json2.routes.length > 0 ? json2.routes[0].geometry : null;
@@ -466,8 +523,8 @@ export default function InteractiveMap({ userLocation, routeStart, routeEnd, tri
         // Ajustar límites del mapa para conductor, origen y destino
         const bounds = new mapboxgl.LngLatBounds();
         bounds.extend(driverLngLat);
-        bounds.extend([tripOrigin.lng, tripOrigin.lat]);
-        bounds.extend([finalDestination.lng, finalDestination.lat]);
+        bounds.extend([tripOrigin.long, tripOrigin.lat]);
+        bounds.extend([finalDestination.long, finalDestination.lat]);
         map.current!.fitBounds(bounds, { padding: 100, duration: 1500, essential: false });
 
         setIsRouteDrawn(true);

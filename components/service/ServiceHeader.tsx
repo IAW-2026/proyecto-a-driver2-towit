@@ -2,15 +2,25 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import { UserButton } from "@clerk/nextjs";
 import React from "react";
+import LocationModeToggle from "@/components/service/LocationModeToggle"; // NUEVO: Importar LocationModeToggle
 
 interface ServiceHeaderProps {
   isAvailable: boolean;
   setIsAvailable: React.Dispatch<React.SetStateAction<boolean>>;
   isTripActive: boolean;
   isButtonEnabled: boolean; // NUEVO: Prop para habilitar/deshabilitar el botón
+  isManualLocationMode: boolean; // NUEVO: Prop para el modo de ubicación manual
+  toggleManualLocationMode: () => void; // NUEVO: Función para alternar el modo
 }
 
-export default function ServiceHeader({ isAvailable, setIsAvailable, isTripActive, isButtonEnabled }: ServiceHeaderProps) {
+export default function ServiceHeader({
+  isAvailable,
+  setIsAvailable,
+  isTripActive,
+  isButtonEnabled,
+  isManualLocationMode, // NUEVO
+  toggleManualLocationMode, // NUEVO
+}: ServiceHeaderProps) {
   const handleToggleAvailability = () => {
     setIsAvailable(prev => !prev);
   };
@@ -27,6 +37,10 @@ export default function ServiceHeader({ isAvailable, setIsAvailable, isTripActiv
           </Link>
         </div>
         <div className="flex items-center gap-4">
+          <LocationModeToggle // NUEVO: Añadir el componente de alternancia de modo de ubicación
+            isManualLocationMode={isManualLocationMode}
+            toggleManualLocationMode={toggleManualLocationMode}
+          />
           <Button
             onClick={handleToggleAvailability}
             className={`font-bold ${
