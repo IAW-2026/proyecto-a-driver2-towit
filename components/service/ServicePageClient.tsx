@@ -673,7 +673,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
           vehiclePlate="N/D"
           originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`}
           destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`}
-          serviceValue={150.00} // Asume un valor fijo por ahora, o tómalo de currentOffer
+          serviceValue={currentOffer.service_value} // Asume un valor fijo por ahora, o tómalo de currentOffer
           onAccept={handleAcceptOffer}
           onReject={handleRejectOffer}
           tripId={currentOffer.id}

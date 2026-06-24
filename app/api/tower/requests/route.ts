@@ -17,6 +17,7 @@ const requestBodySchema = z.object({
     year: z.number(),
   }),
   preferred_tow_type: z.string(),
+  service_value: z.number(),
 });
 
 /**
@@ -40,7 +41,7 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
       );
     }
 
-    const { customer_id, trip, preferred_tow_type, vehicle_data } = parsedBody.data;
+    const { customer_id, trip, preferred_tow_type, vehicle_data, service_value } = parsedBody.data;
 
     // 1. Verificar si hay towers disponibles en Redis para cumplir la condición de error.
     // Aunque no se asignará aquí, se necesita saber si hay *algún* tower en el sistema de geolocalización.
@@ -132,6 +133,7 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
       status: 'pending', // Estado inicial
       current_tower_index: '0', //puntero inicial: empezamos ofreciendo al índice 0 (tower más cercano)
       // Los campos tower_clerk_id, tower_location_lat/long se añadirán cuando la solicitud sea aceptada por otra lógica
+      service_value: service_value
     };
 
     // Usar Pipeline para HSET y EXPIRE de forma atómica

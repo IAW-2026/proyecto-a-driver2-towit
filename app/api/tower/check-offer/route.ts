@@ -60,7 +60,8 @@ export async function GET(req: Request) {
           model: tripData.vehicle_model,
           year: parseInt(tripData.vehicle_year as string, 10)
         },
-        preferred_tow_type: tripData.preferred_tow_type
+        preferred_tow_type: tripData.preferred_tow_type,
+        service_value: tripData.service_value
       }
     });
 
