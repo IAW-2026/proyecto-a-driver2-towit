@@ -3,10 +3,11 @@
 import dynamic from "next/dynamic";
 import ServiceHeader from "@/components/service/ServiceHeader";
 import ServiceRequestCard from "@/components/service/ServiceRequestCard";
+import ServiceTripStartConfirmationCard from "@/components/service/ServiceTripStartConfirmationCard"; // NUEVO: Importar la nueva tarjeta
 import React, { useState, useEffect, useCallback } from "react";
-import { useUser } from "@clerk/nextjs"; // Importar useUser
-import { getTowerData, TowerData } from "@/app/actions/tower"; // Importar la acción para obtener datos de la torre y la interfaz TowerData
-import { getTowerVehicles } from "@/app/actions/vehicle"; // NUEVO: Importar la acción para obtener vehículos
+import { useUser } from "@clerk/nextjs";
+import { getTowerData, TowerData } from "@/app/actions/tower";
+import { getTowerVehicles } from "@/app/actions/vehicle";
 import { getCustomerName } from "@/app/actions/customer"; // NUEVO: Importar la nueva Server Action
 import { getAverageRatingForCustomer } from "@/app/actions/feedback"; // NUEVO: Importar la Server Action para feedback
 import { useRouter } from "next/navigation"; // Nuevo: Importar useRouter
@@ -17,15 +18,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
-import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower"; // Importar VehicleProfileData
+import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower";
 
-interface Vehicle { // Definir la interfaz Vehicle para mayor claridad
+interface Vehicle {
   vehicle_id: string;
   brand: string;
   model: string;
   year: number;
   max_load: number;
-  deactivated: boolean; // Asegurar que esta propiedad esté presente si viene de Prisma
+  deactivated: boolean;
 }
 
 // Importar InteractiveMap dinámicamente con SSR deshabilitado
@@ -35,8 +36,25 @@ const DynamicInteractiveMap = dynamic(() => import("@/components/service/Interac
 
 interface ServicePageClientProps {
   initialIsAvailable: boolean;
-  initialVehicle: VehicleProfileData | null; // NUEVO: Prop para el vehículo inicial
+  initialVehicle: VehicleProfileData | null;
 }
+
+// Función auxiliar para calcular distancia (Mover a utils.ts si ya existe, pero por ahora aquí)
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Radius of Earth in meters
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distance in meters
+}
+
 
 export default function ServicePageClient({ initialIsAvailable, initialVehicle }: ServicePageClientProps) {
   const { user, isLoaded } = useUser();
@@ -44,9 +62,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const [isAvailable, setIsAvailable] = useState(initialIsAvailable);
   const [towerData, setTowerData] = useState<TowerData | null>(null);
 
-  // NUEVO ESTADO: Lista completa de vehículos del usuario desde la DB
   const [allUserVehiclesFromDB, setAllUserVehiclesFromDB] = useState<Vehicle[] | null>(null);
-  // NUEVO ESTADO: El vehículo actualmente seleccionado para la disponibilidad
   const [selectedVehicleForAvailability, setSelectedVehicleForAvailability] = useState<VehicleProfileData | null>(initialVehicle);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +73,6 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const [watchId, setWatchId] = useState<number | null>(null);
   const [arePrerequisitesLoaded, setArePrerequisitesLoaded] = useState(false);
 
-  // NUEVOS ESTADOS para gestionar la oferta
   const [currentOffer, setCurrentOffer] = useState<any | null>(null);
   const [offerTimeRemaining, setOfferTimeRemaining] = useState<number>(0);
   const [customerNameForOffer, setCustomerNameForOffer] = useState<string | null>(null);
@@ -67,6 +82,11 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const [mapRouteOriginToDestinationEnd, setMapRouteOriginToDestinationEnd] = useState<{ lat: number; lng: number } | null>(null);
 
   const [isTripActive, setIsTripActive] = useState(false);
+  // NUEVO ESTADO: Para controlar la visibilidad de la tarjeta de confirmación de inicio de viaje
+  const [showStartTripConfirmation, setShowStartTripConfirmation] = useState(false);
+  // NUEVO ESTADO: Para el estado local después de confirmar el inicio (dummy por ahora)
+  const [isTripStartedLocallyConfirmed, setIsTripStartedLocallyConfirmed] = useState(false);
+
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
   useEffect(() => {
@@ -145,9 +165,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     }
 
     loadServicePrerequisites();
-  }, [isLoaded, user?.id, router, recheckTrigger, selectedVehicleForAvailability]); // Añadir selectedVehicleForAvailability a dependencias
+  }, [isLoaded, user?.id, router, recheckTrigger, selectedVehicleForAvailability]);
 
-  // NUEVO: Efecto para obtener y actualizar la ubicación del usuario
+  // Efecto para obtener y actualizar la ubicación del usuario
   useEffect(() => {
     if (typeof window !== 'undefined' && navigator.geolocation) {
       const id = navigator.geolocation.watchPosition(
@@ -172,7 +192,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     }
   }, []);
 
-  // NUEVO EFECTO: Polling para ofertas de viaje
+  // EFECTO 1: Polling para ofertas de viaje (EXISTENTE)
   useEffect(() => {
     let pollingInterval: NodeJS.Timeout | null = null;
 
@@ -268,7 +288,33 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     };
   }, [isAvailable, user?.id, isTripActive, currentOffer?.id, currentLocation]);
 
-  // NUEVO EFECTO: Contador regresivo local para la oferta
+  // NUEVO EFECTO 2: Para detectar cercanía al origen del viaje y mostrar la tarjeta de confirmación
+  useEffect(() => {
+    if (isTripActive && !isTripStartedLocallyConfirmed && currentLocation && currentOffer) {
+      const originLat = parseFloat(currentOffer.origin.lat);
+      const originLong = parseFloat(currentOffer.origin.long);
+
+      if (!isNaN(originLat) && !isNaN(originLong)) {
+        const distance = getDistanceInMeters(
+          currentLocation.lat,
+          currentLocation.long,
+          originLat,
+          originLong
+        );
+
+        if (distance <= 50) { // Si está a 50 metros o menos del origen
+          setShowStartTripConfirmation(true);
+        } else {
+          setShowStartTripConfirmation(false);
+        }
+      }
+    } else {
+      // Reiniciar si el viaje no está activo, ya se confirmó localmente, o faltan datos
+      setShowStartTripConfirmation(false);
+    }
+  }, [isTripActive, isTripStartedLocallyConfirmed, currentLocation, currentOffer]); // Dependencias clave
+
+  // Contador regresivo local para la oferta (EXISTENTE)
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout | null = null;
     if (currentOffer && offerTimeRemaining > 0) {
@@ -295,8 +341,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     };
   }, [currentOffer, offerTimeRemaining]);
 
-
-  // Efecto para gestionar el heartbeat cuando el tower está disponible
+  // Efecto para gestionar el heartbeat cuando el tower está disponible (EXISTENTE)
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
 
@@ -326,7 +371,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     setRecheckTrigger(prev => !prev);
   }, []);
 
-  // Función para manejar el cambio de disponibilidad
+  // Función para manejar el cambio de disponibilidad (EXISTENTE)
   const handleToggleAvailability = async () => {
     if (!user?.id || !currentLocation) {
       console.error("No se pudo obtener la información de usuario o la ubicación para cambiar la disponibilidad.");
@@ -429,13 +474,21 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     }
   };
 
+  // NUEVA FUNCIÓN: Para manejar la confirmación de inicio de viaje (dummy por ahora)
+  const handleConfirmTripStart = (tripId: string) => {
+    console.log(`Inicio de viaje ${tripId} confirmado localmente.`);
+    setIsTripStartedLocallyConfirmed(true); // Marca el viaje como iniciado localmente
+    setShowStartTripConfirmation(false); // Oculta la tarjeta de confirmación
+    // A futuro: Aquí se enviará una llamada a la API para actualizar el estado del viaje en el backend.
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       <ServiceHeader
         isAvailable={isAvailable}
         setIsAvailable={handleToggleAvailability}
         isTripActive={isTripActive}
-        isButtonEnabled={arePrerequisitesLoaded && !!selectedVehicleForAvailability} // Habilitar si los requisitos están cargados Y hay un vehículo seleccionado
+        isButtonEnabled={arePrerequisitesLoaded && !!selectedVehicleForAvailability}
       />
       <div className="flex-1 w-full h-full">
         <DynamicInteractiveMap
@@ -447,18 +500,30 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         />
       </div>
 
-      {currentOffer && offerTimeRemaining > 0 && customerNameForOffer !== null && (
+      {/* Renderizado condicional de la tarjeta de solicitud de servicio */}
+      {currentOffer && offerTimeRemaining > 0 && customerNameForOffer !== null && !isTripActive && (
         <ServiceRequestCard
           customerName={customerNameForOffer || ""}
           vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
           vehiclePlate="N/D"
           originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`}
           destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`}
-          serviceValue={150.00}
+          serviceValue={150.00} // Asume un valor fijo por ahora, o tómalo de currentOffer
           onAccept={handleAcceptOffer}
           onReject={handleRejectOffer}
           tripId={currentOffer.id}
           customerRating={customerRatingForOffer}
+        />
+      )}
+
+      {/* NUEVO: Renderizado condicional de la tarjeta de confirmación de inicio de viaje */}
+      {isTripActive && showStartTripConfirmation && !isTripStartedLocallyConfirmed && currentOffer && (
+        <ServiceTripStartConfirmationCard
+          customerName={customerNameForOffer || ""}
+          vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
+          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`}
+          onConfirmStart={handleConfirmTripStart}
+          tripId={currentOffer.id}
         />
       )}
 
