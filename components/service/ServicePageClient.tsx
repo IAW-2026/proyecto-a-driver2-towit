@@ -218,7 +218,8 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
           if (currentOffer?.id !== data.trip.id) {
             setCurrentOffer(data.trip);
             setOfferTimeRemaining(data.time_remaining);
-            console.log(data)
+            console.log(data);
+            setIsTripStartedLocallyConfirmed(false); // NUEVO: Asegurarse de que sea falso para una nueva oferta
 
             if (data.trip.customer_id) {
               try {
@@ -251,12 +252,16 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
             }
 
             if (currentLocation) {
-              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long });
+              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // NUEVO: Actualizar inicio de ruta a ubicación actual del conductor
               setMapRouteEnd({ lat: parseFloat(data.trip.origin.lat), lng: parseFloat(data.trip.origin.long) });
               setMapRouteOriginToDestinationEnd({ lat: parseFloat(data.trip.destination.lat), lng: parseFloat(data.trip.destination.long) });
             }
           } else {
             setOfferTimeRemaining(data.time_remaining);
+            // NUEVO: Si es la misma oferta, pero la ubicación del conductor ha cambiado, actualizar mapRouteStart
+            if (currentLocation && isAvailable && !isTripActive) {
+              setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long });
+            }
           }
         } else {
           if (currentOffer !== null) {
@@ -267,6 +272,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
             setMapRouteStart(null);
             setMapRouteEnd(null);
             setMapRouteOriginToDestinationEnd(null);
+            setIsTripStartedLocallyConfirmed(false); // NUEVO: Resetear al limpiar oferta
           }
         }
       } catch (error) {
@@ -455,9 +461,17 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
       if (data.success) {
         console.log("Oferta aceptada:", data);
-        setCurrentOffer(null);
         setOfferTimeRemaining(0);
         setIsTripActive(true);
+        setIsTripStartedLocallyConfirmed(false); // IMPORTANTE: Resetear para el nuevo viaje
+
+        // Configurar las rutas para la primera pierna del viaje: conductor -> origen del viaje
+        if (currentLocation && currentOffer && currentOffer.origin && currentOffer.destination) {
+          setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // Driver's current location
+          setMapRouteEnd({ lat: parseFloat(currentOffer.origin.lat), lng: parseFloat(currentOffer.origin.long) }); // Trip origin
+          setMapRouteOriginToDestinationEnd({ lat: parseFloat(currentOffer.destination.lat), lng: parseFloat(currentOffer.destination.long) }); // Final destination for context
+        }
+
         setCustomerNameForOffer(null);
         setCustomerRatingForOffer(null);
       } else {
@@ -509,10 +523,17 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
   // NUEVA FUNCIÓN: Para manejar la confirmación de inicio de viaje (dummy por ahora)
   const handleConfirmTripStart = (tripId: string) => {
-    console.log(`Inicio de viaje ${tripId} confirmado localmente.`);
+    console.log(`Inicio de viaje ${tripId} confirmado localmente. Ahora hacia el destino final.`);
     setIsTripStartedLocallyConfirmed(true); // Marca el viaje como iniciado localmente
     setShowStartTripConfirmation(false); // Oculta la tarjeta de confirmación
     // A futuro: Aquí se enviará una llamada a la API para actualizar el estado del viaje en el backend.
+
+    // Configurar las rutas para la segunda pierna del viaje: conductor -> destino final
+    if (currentOffer && currentLocation) {
+      setMapRouteStart({ lat: currentLocation.lat, lng: currentLocation.long }); // Driver's current location
+      setMapRouteEnd({ lat: parseFloat(currentOffer.destination.lat), lng: parseFloat(currentOffer.destination.long) }); // Final destination
+      // mapRouteOriginToDestinationEnd ya contiene el destino final, no necesita cambiarse
+    }
   };
 
   // NUEVA FUNCIÓN: Para manejar la confirmación de finalización de viaje (dummy por ahora)
@@ -521,12 +542,14 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     setIsTripEndedLocallyConfirmed(true); // Marca el viaje como finalizado localmente
     setShowEndTripConfirmation(false); // Oculta la tarjeta de confirmación
     setIsTripActive(false); // Considerar el viaje como no activo
-    // Limpiar rutas del mapa y oferta
+    setIsTripStartedLocallyConfirmed(false); // Resetear también para el próximo viaje
+    setIsTripEndedLocallyConfirmed(false); // Resetear también para el próximo viaje
+
+    // Limpiar rutas y oferta del mapa
     setCurrentOffer(null);
     setMapRouteStart(null);
     setMapRouteEnd(null);
     setMapRouteOriginToDestinationEnd(null);
-    // A futuro: Aquí se enviará una llamada a la API para actualizar el estado del viaje en el backend.
   };
 
   return (
@@ -544,6 +567,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
           routeEnd={mapRouteEnd}
           tripDestination={mapRouteOriginToDestinationEnd}
           isTripActive={isTripActive}
+          isEnRouteToDestination={isTripStartedLocallyConfirmed} // NUEVA PROP
         />
       </div>
 
