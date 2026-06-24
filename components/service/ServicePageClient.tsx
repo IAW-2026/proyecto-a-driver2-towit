@@ -20,7 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
 import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower";
-import { recordAcceptedAssignment } from "@/app/actions/assignments"; // NUEVO: Importar la Server Action
+import { recordAcceptedAssignment, completeAssignment } from "@/app/actions/assignments"; // NUEVO: Importar completeAssignment
 import * as turf from '@turf/turf'
 
 interface Vehicle {
@@ -623,13 +623,32 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   };
 
   // NUEVA FUNCIÓN: Para manejar la confirmación de finalización de viaje (dummy por ahora)
-  const handleConfirmTripEnd = (tripId: string) => {
+  const handleConfirmTripEnd = async (tripId: string) => { // CAMBIO: Ahora es asíncrona
     console.log(`Finalización de viaje ${tripId} confirmada localmente.`);
     setIsTripEndedLocallyConfirmed(true); // Marca el viaje como finalizado localmente
     setShowEndTripConfirmation(false); // Oculta la tarjeta de confirmación
     setIsTripActive(false); // Considerar el viaje como no activo
     setIsTripStartedLocallyConfirmed(false); // Resetear también para el próximo viaje
     setIsTripEndedLocallyConfirmed(false); // Resetear también para el próximo viaje
+
+    // NUEVO: Actualizar la asignación en la base de datos
+    if (activeTripDetails && currentLocation) {
+      const completionData = {
+        tripId: tripId, // Usa el tripId que se pasa a la función
+        finalLocation: {
+          lat: String(currentLocation.lat), // Asegurarse de que sean strings
+          long: String(currentLocation.long),
+        },
+      };
+      const completionResult = await completeAssignment(completionData);
+      if (completionResult.success) {
+        console.log("Asignación completada y actualizada en la DB con ID:", completionResult.assignmentId);
+      } else {
+        console.error("Fallo al completar la asignación en la DB:", completionResult.error);
+      }
+    } else {
+      console.error("No se pudo completar la asignación: faltan activeTripDetails o currentLocation.");
+    }
 
     // Limpiar todas las referencias del viaje activo
     setCurrentOffer(null); // No debería haber una oferta pendiente, pero por si acaso.

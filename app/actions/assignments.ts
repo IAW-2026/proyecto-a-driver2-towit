@@ -42,3 +42,41 @@ export async function recordAcceptedAssignment(
     return { success: false, error: "Fallo al guardar el registro de la asignación." };
   }
 }
+
+interface CompleteAssignmentData {
+  tripId: string;
+  finalLocation: { lat: string; long: string };
+}
+
+interface CompleteAssignmentResponse {
+  success: boolean;
+  error?: string;
+  assignmentId?: string;
+}
+
+/**
+ * Actualiza una asignación existente a estado 'completed' y guarda la ubicación final.
+ * @param data Los datos del viaje y la ubicación final para completar la asignación.
+ * @returns Una promesa que resuelve con un objeto indicando el éxito o un error.
+ */
+export async function completeAssignment(
+  data: CompleteAssignmentData
+): Promise<CompleteAssignmentResponse> {
+  try {
+    const updatedAssignment = await prisma.assignment.update({
+      where: { trip_id: data.tripId },
+      data: {
+        status: 'completed',
+        location: data.finalLocation, // Actualizar la ubicación a la final
+        updatedAt: new Date(), // Actualizar la marca de tiempo de modificación
+      },
+    });
+    return { success: true, assignmentId: updatedAssignment.assignment_id };
+  } catch (error: any) {
+    console.error("Error al completar la asignación en la DB:", error);
+    if (error.code === 'P2025') { // Código de error de Prisma para 'record not found'
+        return { success: false, error: "Asignación no encontrada para actualizar." };
+    }
+    return { success: false, error: "Fallo al completar la asignación." };
+  }
+}
