@@ -3,14 +3,15 @@
 import dynamic from "next/dynamic";
 import ServiceHeader from "@/components/service/ServiceHeader";
 import ServiceRequestCard from "@/components/service/ServiceRequestCard";
-import ServiceTripStartConfirmationCard from "@/components/service/ServiceTripStartConfirmationCard"; // NUEVO: Importar la nueva tarjeta
+import ServiceTripStartConfirmationCard from "@/components/service/ServiceTripStartConfirmationCard";
+import ServiceTripEndingConfirmationCard from "@/components/service/ServiceTripEndingConfirmationCard"; // NUEVO: Importar la tarjeta de finalización
 import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { getTowerData, TowerData } from "@/app/actions/tower";
 import { getTowerVehicles } from "@/app/actions/vehicle";
-import { getCustomerName } from "@/app/actions/customer"; // NUEVO: Importar la nueva Server Action
-import { getAverageRatingForCustomer } from "@/app/actions/feedback"; // NUEVO: Importar la Server Action para feedback
-import { useRouter } from "next/navigation"; // Nuevo: Importar useRouter
+import { getCustomerName } from "@/app/actions/customer";
+import { getAverageRatingForCustomer } from "@/app/actions/feedback";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,10 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const [showStartTripConfirmation, setShowStartTripConfirmation] = useState(false);
   // NUEVO ESTADO: Para el estado local después de confirmar el inicio (dummy por ahora)
   const [isTripStartedLocallyConfirmed, setIsTripStartedLocallyConfirmed] = useState(false);
+  // NUEVO ESTADO: Para controlar la visibilidad de la tarjeta de confirmación de finalización de viaje
+  const [showEndTripConfirmation, setShowEndTripConfirmation] = useState(false);
+  // NUEVO ESTADO: Para el estado local después de confirmar la finalización (dummy por ahora)
+  const [isTripEndedLocallyConfirmed, setIsTripEndedLocallyConfirmed] = useState(false);
 
 
   // Efecto para cargar los datos del servicio (torre y vehículos) y determinar la redirección
@@ -314,6 +319,34 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     }
   }, [isTripActive, isTripStartedLocallyConfirmed, currentLocation, currentOffer]); // Dependencias clave
 
+  // NUEVO EFECTO 3: Para detectar cercanía al destino del viaje y mostrar la tarjeta de confirmación de finalización
+  useEffect(() => {
+    // Solo si el viaje está activo, el inicio ya fue confirmado, el final NO fue confirmado,
+    // tenemos ubicación y datos de la oferta
+    if (isTripActive && isTripStartedLocallyConfirmed && !isTripEndedLocallyConfirmed && currentLocation && currentOffer) {
+      const destinationLat = parseFloat(currentOffer.destination.lat);
+      const destinationLong = parseFloat(currentOffer.destination.long);
+
+      if (!isNaN(destinationLat) && !isNaN(destinationLong)) {
+        const distance = getDistanceInMeters(
+          currentLocation.lat,
+          currentLocation.long,
+          destinationLat,
+          destinationLong
+        );
+
+        if (distance <= 50) { // Si está a 50 metros o menos del destino
+          setShowEndTripConfirmation(true);
+        } else {
+          setShowEndTripConfirmation(false);
+        }
+      }
+    } else {
+      // Reiniciar si el viaje no está en el estado correcto, ya se confirmó localmente, o faltan datos
+      setShowEndTripConfirmation(false);
+    }
+  }, [isTripActive, isTripStartedLocallyConfirmed, isTripEndedLocallyConfirmed, currentLocation, currentOffer]); // Dependencias clave
+
   // Contador regresivo local para la oferta (EXISTENTE)
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout | null = null;
@@ -482,6 +515,20 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     // A futuro: Aquí se enviará una llamada a la API para actualizar el estado del viaje en el backend.
   };
 
+  // NUEVA FUNCIÓN: Para manejar la confirmación de finalización de viaje (dummy por ahora)
+  const handleConfirmTripEnd = (tripId: string) => {
+    console.log(`Finalización de viaje ${tripId} confirmada localmente.`);
+    setIsTripEndedLocallyConfirmed(true); // Marca el viaje como finalizado localmente
+    setShowEndTripConfirmation(false); // Oculta la tarjeta de confirmación
+    setIsTripActive(false); // Considerar el viaje como no activo
+    // Limpiar rutas del mapa y oferta
+    setCurrentOffer(null);
+    setMapRouteStart(null);
+    setMapRouteEnd(null);
+    setMapRouteOriginToDestinationEnd(null);
+    // A futuro: Aquí se enviará una llamada a la API para actualizar el estado del viaje en el backend.
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       <ServiceHeader
@@ -516,13 +563,23 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         />
       )}
 
-      {/* NUEVO: Renderizado condicional de la tarjeta de confirmación de inicio de viaje */}
+      {/* Renderizado condicional de la tarjeta de confirmación de inicio de viaje */}
       {isTripActive && showStartTripConfirmation && !isTripStartedLocallyConfirmed && currentOffer && (
         <ServiceTripStartConfirmationCard
           customerName={customerNameForOffer || ""}
           vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
           destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`}
           onConfirmStart={handleConfirmTripStart}
+          tripId={currentOffer.id}
+        />
+      )}
+
+      {/* NUEVO: Renderizado condicional de la tarjeta de confirmación de finalización de viaje */}
+      {isTripActive && isTripStartedLocallyConfirmed && showEndTripConfirmation && !isTripEndedLocallyConfirmed && currentOffer && (
+        <ServiceTripEndingConfirmationCard
+          customerName={customerNameForOffer || ""}
+          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`} // Mostrar la dirección de destino
+          onConfirmEnd={handleConfirmTripEnd}
           tripId={currentOffer.id}
         />
       )}
