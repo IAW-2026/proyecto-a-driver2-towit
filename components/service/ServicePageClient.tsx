@@ -658,6 +658,18 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     setActiveTripDetails(null); // MUY IMPORTANTE: Limpiar los detalles del viaje activo
     setActiveTripCustomerName(null);
     setActiveTripCustomerRating(null);
+
+    // NUEVO: Redirigir a la Feedback App para calificar el viaje, DESPUÉS de limpiar los estados locales
+    const feedbackAppUrl = process.env.NEXT_PUBLIC_FEEDBACK_APP_URL;
+    if (feedbackAppUrl) {
+      const currentServiceUrl = window.location.origin + '/service';
+      const encodedReturnUrl = encodeURIComponent(currentServiceUrl); // Codificar la URL completa
+      router.push(`${feedbackAppUrl}/rate/${tripId}?return_url=${encodedReturnUrl}`);
+    } else {
+      console.error("NEXT_PUBLIC_FEEDBACK_APP_URL no está configurada, no se pudo redirigir para calificar.");
+      // Opcional: Podrías redirigir a una ruta por defecto si la URL no está disponible
+      // router.push("/dashboard"); 
+    }
   };
 
   return (
