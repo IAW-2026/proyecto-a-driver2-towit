@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
 import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower";
+import * as turf from '@turf/turf'
 
 interface Vehicle {
   vehicle_id: string;
@@ -55,8 +56,8 @@ function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: num
   const Δλ = (lon2 - lon1) * Math.PI / 180;
 
   const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // Distance in meters
@@ -97,6 +98,11 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const [showEndTripConfirmation, setShowEndTripConfirmation] = useState(false);
   // NUEVO ESTADO: Para el estado local después de confirmar la finalización (dummy por ahora)
   const [isTripEndedLocallyConfirmed, setIsTripEndedLocallyConfirmed] = useState(false);
+
+  // NUEVO: Estado para almacenar los detalles del viaje activo una vez aceptado
+  const [activeTripDetails, setActiveTripDetails] = useState<any | null>(null);
+  const [activeTripCustomerName, setActiveTripCustomerName] = useState<string | null>(null);
+  const [activeTripCustomerRating, setActiveTripCustomerRating] = useState<number | null>(null);
 
   // NUEVO: Estado para el modo de ubicación manual
   const [isManualLocationMode, setIsManualLocationMode] = useState(false);
@@ -330,45 +336,58 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
   // NUEVO EFECTO 2: Para detectar cercanía al origen del viaje y mostrar la tarjeta de confirmación
   useEffect(() => {
-    if (isTripActive && !isTripStartedLocallyConfirmed && currentLocation && currentOffer) {
-      const originLat = parseFloat(currentOffer.origin.lat);
-      const originLong = parseFloat(currentOffer.origin.long);
+    // Usar activeTripDetails en lugar de currentOffer para el viaje activo
+    if (isTripActive && !isTripStartedLocallyConfirmed && currentLocation && activeTripDetails) {
+      const originLat = parseFloat(activeTripDetails.origin.lat);
+      const originLong = parseFloat(activeTripDetails.origin.long);
+
+      console.log("Depuración Tarjeta Inicio Viaje:");
+      console.log("  isTripActive:", isTripActive);
+      console.log("  isTripStartedLocallyConfirmed:", isTripStartedLocallyConfirmed);
+      console.log("  currentLocation:", currentLocation);
+      console.log("  activeTripDetails:", activeTripDetails); // Usar activeTripDetails
+      console.log("  Origen de la oferta (lat, long):", originLat, originLong);
 
       if (!isNaN(originLat) && !isNaN(originLong)) {
-        const distance = getDistanceInMeters(
-          currentLocation.lat,
-          currentLocation.long,
-          originLat,
-          originLong
-        );
+        const currentLocationPoint = turf.point([currentLocation.lat, currentLocation.long]);
+        const originLocationPoint = turf.point([originLat, originLong]);
+        const distance = turf.distance(currentLocationPoint, originLocationPoint, {units: 'meters'});
+            
+        console.log("  Distancia al origen:", distance, "metros"); // Imprime la distancia        
 
-        if (distance <= 50) { // Si está a 50 metros o menos del origen
+        if (distance <= 50) {
+          console.log("  ¡Dentro del rango de 50m! Mostrando tarjeta de inicio.");
           setShowStartTripConfirmation(true);
         } else {
+          console.log("  Fuera del rango de 50m. No mostrando tarjeta de inicio.");
           setShowStartTripConfirmation(false);
         }
+      } else {
+        console.error("  Coordenadas de origen no válidas:", activeTripDetails.origin); // Usar activeTripDetails
+        setShowStartTripConfirmation(false);
       }
     } else {
-      // Reiniciar si el viaje no está activo, ya se confirmó localmente, o faltan datos
+      console.log("Depuración Tarjeta Inicio Viaje: Condiciones NO cumplidas para mostrar.");
+      console.log(String(isTripActive))
+      console.log(String(isTripStartedLocallyConfirmed))
+      console.log(currentLocation)
+      console.log(activeTripDetails) // Usar activeTripDetails
       setShowStartTripConfirmation(false);
     }
-  }, [isTripActive, isTripStartedLocallyConfirmed, currentLocation, currentOffer]); // Dependencias clave
+  }, [isTripActive, isTripStartedLocallyConfirmed, currentLocation, activeTripDetails]); // Dependencia: activeTripDetails
 
   // NUEVO EFECTO 3: Para detectar cercanía al destino del viaje y mostrar la tarjeta de confirmación de finalización
   useEffect(() => {
     // Solo si el viaje está activo, el inicio ya fue confirmado, el final NO fue confirmado,
-    // tenemos ubicación y datos de la oferta
-    if (isTripActive && isTripStartedLocallyConfirmed && !isTripEndedLocallyConfirmed && currentLocation && currentOffer) {
-      const destinationLat = parseFloat(currentOffer.destination.lat);
-      const destinationLong = parseFloat(currentOffer.destination.long);
+    // tenemos ubicación y datos del viaje activo
+    if (isTripActive && isTripStartedLocallyConfirmed && !isTripEndedLocallyConfirmed && currentLocation && activeTripDetails) {
+      const destinationLat = parseFloat(activeTripDetails.destination.lat); // Usar activeTripDetails
+      const destinationLong = parseFloat(activeTripDetails.destination.long); // Usar activeTripDetails
 
       if (!isNaN(destinationLat) && !isNaN(destinationLong)) {
-        const distance = getDistanceInMeters(
-          currentLocation.lat,
-          currentLocation.long,
-          destinationLat,
-          destinationLong
-        );
+        const currentLocationPoint = turf.point([currentLocation.lat, currentLocation.long]);
+        const destinationLocationPoint = turf.point([destinationLat, destinationLong]);
+        const distance = turf.distance(currentLocationPoint, destinationLocationPoint, {units: 'meters'});
 
         if (distance <= 50) { // Si está a 50 metros o menos del destino
           setShowEndTripConfirmation(true);
@@ -380,7 +399,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       // Reiniciar si el viaje no está en el estado correcto, ya se confirmó localmente, o faltan datos
       setShowEndTripConfirmation(false);
     }
-  }, [isTripActive, isTripStartedLocallyConfirmed, isTripEndedLocallyConfirmed, currentLocation, currentOffer]); // Dependencias clave
+  }, [isTripActive, isTripStartedLocallyConfirmed, isTripEndedLocallyConfirmed, currentLocation, activeTripDetails]); // Dependencia: activeTripDetails
 
   // Contador regresivo local para la oferta (EXISTENTE)
   useEffect(() => {
@@ -494,15 +513,54 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         setIsTripActive(true);
         setIsTripStartedLocallyConfirmed(false); // IMPORTANTE: Resetear para el nuevo viaje
 
+        // Almacenar los detalles de la oferta como el viaje activo
+        setActiveTripDetails(currentOffer);
+
+        // Fetch y almacenar el nombre y rating del cliente para el viaje activo
+        if (currentOffer?.customer_id) {
+          try {
+            const customerNameResult = await getCustomerName(currentOffer.customer_id);
+            if (customerNameResult.success && customerNameResult.fullname) {
+              setActiveTripCustomerName(customerNameResult.fullname);
+            } else {
+              console.error("Error al obtener el nombre del cliente para viaje activo:", customerNameResult.error);
+              setActiveTripCustomerName("Cliente desconocido");
+            }
+          } catch (nameError) {
+            console.error("Error al invocar Server Action getCustomerName para viaje activo:", nameError);
+            setActiveTripCustomerName("Cliente desconocido (error)");
+          }
+          try {
+            const customerRatingResult = await getAverageRatingForCustomer(currentOffer.customer_id);
+            if (customerRatingResult.success) {
+              setActiveTripCustomerRating(customerRatingResult.rating ?? null);
+            } else {
+              console.error("Error al obtener la calificación del cliente para viaje activo:", customerRatingResult.error);
+              setActiveTripCustomerRating(null);
+            }
+          } catch (ratingError) {
+            console.error("Error al invocar Server Action getAverageRatingForCustomer para viaje activo:", ratingError);
+            setActiveTripCustomerRating(null);
+          }
+        } else {
+          setActiveTripCustomerName("Cliente desconocido (ID no disponible)");
+          setActiveTripCustomerRating(null);
+        }
+
         // Configurar las rutas para la primera pierna del viaje: conductor -> origen del viaje
+        // (Usa currentOffer aquí antes de que se limpie, o activeTripDetails que ya lo almacena)
         if (currentLocation && currentOffer && currentOffer.origin && currentOffer.destination) {
           setMapRouteStart({ lat: currentLocation.lat, long: currentLocation.long }); // Driver's current location
           setMapRouteEnd({ lat: parseFloat(currentOffer.origin.lat), long: parseFloat(currentOffer.origin.long) }); // Trip origin
           setMapRouteOriginToDestinationEnd({ lat: parseFloat(currentOffer.destination.lat), long: parseFloat(currentOffer.destination.long) }); // Final destination for context
         }
 
+        // Limpiar la oferta pendiente una vez aceptada
+        setCurrentOffer(null);
+        setOfferTimeRemaining(0);
         setCustomerNameForOffer(null);
         setCustomerRatingForOffer(null);
+
       } else {
         console.error("Error al aceptar la oferta:", data.error);
       }
@@ -558,9 +616,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     // A futuro: Aquí se enviará una llamada a la API para actualizar el estado del viaje en el backend.
 
     // Configurar las rutas para la segunda pierna del viaje: conductor -> destino final
-    if (currentOffer && currentLocation) {
+    if (activeTripDetails && currentLocation) { // Usar activeTripDetails
       setMapRouteStart({ lat: currentLocation.lat, long: currentLocation.long }); // Driver's current location
-      setMapRouteEnd({ lat: parseFloat(currentOffer.destination.lat), long: parseFloat(currentOffer.destination.long) }); // Final destination
+      setMapRouteEnd({ lat: parseFloat(activeTripDetails.destination.lat), long: parseFloat(activeTripDetails.destination.long) }); // Final destination
       // mapRouteOriginToDestinationEnd ya contiene el destino final, no necesita cambiarse
     }
   };
@@ -574,11 +632,14 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     setIsTripStartedLocallyConfirmed(false); // Resetear también para el próximo viaje
     setIsTripEndedLocallyConfirmed(false); // Resetear también para el próximo viaje
 
-    // Limpiar rutas y oferta del mapa
-    setCurrentOffer(null);
+    // Limpiar todas las referencias del viaje activo
+    setCurrentOffer(null); // No debería haber una oferta pendiente, pero por si acaso.
     setMapRouteStart(null);
     setMapRouteEnd(null);
     setMapRouteOriginToDestinationEnd(null);
+    setActiveTripDetails(null); // MUY IMPORTANTE: Limpiar los detalles del viaje activo
+    setActiveTripCustomerName(null);
+    setActiveTripCustomerRating(null);
   };
 
   return (
@@ -621,23 +682,23 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       )}
 
       {/* Renderizado condicional de la tarjeta de confirmación de inicio de viaje */}
-      {isTripActive && showStartTripConfirmation && !isTripStartedLocallyConfirmed && currentOffer && (
+      {isTripActive && showStartTripConfirmation && !isTripStartedLocallyConfirmed && activeTripDetails && (
         <ServiceTripStartConfirmationCard
-          customerName={customerNameForOffer || ""}
-          vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
-          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`}
+          customerName={activeTripCustomerName || ""} // Usar activeTripCustomerName
+          vehicleModel={`${activeTripDetails.vehicle.brand} ${activeTripDetails.vehicle.model} (${activeTripDetails.vehicle.year})`} // Usar activeTripDetails
+          destinationAddress={`Lat: ${activeTripDetails.destination.lat}, Long: ${activeTripDetails.destination.long}`} // Usar activeTripDetails
           onConfirmStart={handleConfirmTripStart}
-          tripId={currentOffer.id}
+          tripId={activeTripDetails.id} // Usar activeTripDetails
         />
       )}
 
       {/* NUEVO: Renderizado condicional de la tarjeta de confirmación de finalización de viaje */}
-      {isTripActive && isTripStartedLocallyConfirmed && showEndTripConfirmation && !isTripEndedLocallyConfirmed && currentOffer && (
+      {isTripActive && isTripStartedLocallyConfirmed && showEndTripConfirmation && !isTripEndedLocallyConfirmed && activeTripDetails && ( // Usar activeTripDetails
         <ServiceTripEndingConfirmationCard
-          customerName={customerNameForOffer || ""}
-          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`} // Mostrar la dirección de destino
+          customerName={activeTripCustomerName || ""} // Usar activeTripCustomerName
+          destinationAddress={`Lat: ${activeTripDetails.destination.lat}, Long: ${activeTripDetails.destination.long}`} // Usar activeTripDetails
           onConfirmEnd={handleConfirmTripEnd}
-          tripId={currentOffer.id}
+          tripId={activeTripDetails.id} // Usar activeTripDetails
         />
       )}
 
