@@ -42,7 +42,7 @@ export default function RecentTripsList() {
         // Ordenar por fecha y tomar los 2 más recientes
         const sortedRecentTrips = apiTrips
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Ordenar por fecha descendente
-          .slice(0, 2); // Tomar los dos más recientes
+          .slice(0, 4); // Tomar los cuatro más recientes
 
         setRecentTrips(sortedRecentTrips);
 
@@ -85,7 +85,7 @@ export default function RecentTripsList() {
   return (
     <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 flex flex-col h-full">
       <h3 className="text-lg font-bold text-white mb-4">Últimos viajes</h3>
-      <ul className="space-y-3 flex-1">
+      <ul className="space-y-3 flex-1 overflow-hidden"> {/* Añadido overflow-hidden */}
         {recentTrips.map((trip) => (
           <li key={trip.id} className="border-b border-slate-800 pb-3 last:border-b-0 last:pb-0">
             <p className="text-white text-base">{trip.customer.full_name}</p>
