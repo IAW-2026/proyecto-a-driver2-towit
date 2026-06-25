@@ -572,10 +572,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
         // NUEVO: Registrar el viaje aceptado como una asignación en la base de datos
         if (user?.id && currentOffer) {
-          const realTowerId = (await getTowerIdByClerkId(user.id)).towerId!;
           const assignmentData = {
             tripId: currentOffer.id,
-            towerId: realTowerId,
+            towerId: user.id,
             location: {
               lat: currentOffer.origin.lat,
               long: currentOffer.origin.long,
@@ -592,7 +591,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
           // NUEVO: Actualizar el estado del viaje en la Customer App a 'aceptado'
           try {
-            const customerAppUpdateResult = await updateTripStatusInCustomerApp(currentOffer.id, realTowerId, 'aceptado');
+            const customerAppUpdateResult = await updateTripStatusInCustomerApp(currentOffer.id, user.id, 'aceptado');
             if (customerAppUpdateResult.success) {
               console.log("Estado del viaje actualizado a 'aceptado' en Customer App.");
             } else {
@@ -665,8 +664,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     // NUEVO: Actualizar el estado del viaje en la Customer App a 'en proceso'
     if (activeTripDetails && user?.id) {
       try {
-        const realTowerId = (await getTowerIdByClerkId(user.id)).towerId!;
-        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, realTowerId, 'en proceso');
+        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, user.id, 'en proceso');
         if (customerAppUpdateResult.success) {
           console.log("Estado del viaje actualizado a 'en proceso' en Customer App.");
         } else {
@@ -732,8 +730,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     // NUEVO: Actualizar el estado del viaje en la Customer App a 'finalizado'
     if (activeTripDetails && user?.id) {
       try {
-        const realTowerId = (await getTowerIdByClerkId(user.id)).towerId!;
-        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, realTowerId, 'finalizado');
+        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, user.id, 'finalizado');
         if (customerAppUpdateResult.success) {
           console.log("Estado del viaje actualizado a 'finalizado' en Customer App.");
         } else {
