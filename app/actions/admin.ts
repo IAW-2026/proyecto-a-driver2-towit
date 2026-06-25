@@ -4,6 +4,14 @@ import prisma from "@/lib/prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
+interface PaginatedAdminActionResponse {
+  success: boolean;
+  data?: any;
+  totalPages?: number;
+  currentPage?: number;
+  error?: string;
+}
+// AdminActionResponse es para acciones que no devuelven datos paginados
 interface AdminActionResponse {
   success: boolean;
   data?: any;
@@ -27,18 +35,27 @@ async function isAdmin(): Promise<boolean> {
 }
 
 /**
- * Obtiene todos los registros de la tabla Tower.
+ * Obtiene todos los registros de la tabla Tower con paginación.
  * Requiere rol de administrador.
  */
-export async function getAllTowers(): Promise<AdminActionResponse> {
+export async function getAllTowers(page: number = 1, limit: number = 10): Promise<PaginatedAdminActionResponse> {
   if (!await isAdmin()) {
     return { success: false, error: "No autorizado. Solo administradores pueden ver esta información." };
   }
   try {
-    const towers = await prisma.tower.findMany({
-      orderBy: { createdAt: 'asc' },
-    });
-    return { success: true, data: towers };
+    const skip = (page - 1) * limit;
+    const [towers, totalCount] = await prisma.$transaction([
+      prisma.tower.findMany({
+        orderBy: { createdAt: 'asc' },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.tower.count(),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return { success: true, data: towers, totalPages, currentPage: page };
   } catch (error: any) {
     console.error("Error al obtener Towers:", error);
     return { success: false, error: "Error al obtener la lista de Towers." };
@@ -46,18 +63,27 @@ export async function getAllTowers(): Promise<AdminActionResponse> {
 }
 
 /**
- * Obtiene todos los registros de la tabla Vehicle.
+ * Obtiene todos los registros de la tabla Vehicle con paginación.
  * Requiere rol de administrador.
  */
-export async function getAllVehicles(): Promise<AdminActionResponse> {
+export async function getAllVehicles(page: number = 1, limit: number = 10): Promise<PaginatedAdminActionResponse> {
   if (!await isAdmin()) {
     return { success: false, error: "No autorizado. Solo administradores pueden ver esta información." };
   }
   try {
-    const vehicles = await prisma.vehicle.findMany({
-      orderBy: { createdAt: 'asc' },
-    });
-    return { success: true, data: vehicles };
+    const skip = (page - 1) * limit;
+    const [vehicles, totalCount] = await prisma.$transaction([
+      prisma.vehicle.findMany({
+        orderBy: { createdAt: 'asc' },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.vehicle.count(),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return { success: true, data: vehicles, totalPages, currentPage: page };
   } catch (error: any) {
     console.error("Error al obtener Vehicles:", error);
     return { success: false, error: "Error al obtener la lista de Vehículos." };
@@ -65,19 +91,31 @@ export async function getAllVehicles(): Promise<AdminActionResponse> {
 }
 
 /**
- * Obtiene todos los registros de la tabla Assignment. (Aún no implementada en el esquema, pero se incluye para completitud)
+ * Obtiene todos los registros de la tabla Assignment con paginación.
  * Requiere rol de administrador.
  */
-export async function getAllAssignments(): Promise<AdminActionResponse> {
+export async function getAllAssignments(page: number = 1, limit: number = 10): Promise<PaginatedAdminActionResponse> {
   if (!await isAdmin()) {
     return { success: false, error: "No autorizado. Solo administradores pueden ver esta información." };
   }
-  // No hay un modelo Assignment en prisma/schema.prisma aún, se devuelve un mock.
-  // Una vez que se agregue, se debería reemplazar con:
-  // const assignments = await prisma.assignment.findMany();
-  // return { success: true, data: assignments };
-  console.warn("getAllAssignments llamada pero el modelo Assignment no está en Prisma. Devolviendo datos mock.");
-  return { success: true, data: [] }; // Mock vacío
+  try {
+    const skip = (page - 1) * limit;
+    const [assignments, totalCount] = await prisma.$transaction([
+      prisma.assignment.findMany({
+        orderBy: { createdAt: 'asc' },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.assignment.count(),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return { success: true, data: assignments, totalPages, currentPage: page };
+  } catch (error: any) {
+    console.error("Error al obtener Assignments:", error);
+    return { success: false, error: "Error al obtener la lista de Asignaciones." };
+  }
 }
 
 /**
@@ -145,18 +183,27 @@ export async function getAdminDetails(): Promise<
 }
 
 /**
- * Obtiene todos los registros de la tabla Admin.
+ * Obtiene todos los registros de la tabla Admin con paginación.
  * Requiere rol de administrador.
  */
-export async function getAllAdmins(): Promise<AdminActionResponse> {
+export async function getAllAdmins(page: number = 1, limit: number = 10): Promise<PaginatedAdminActionResponse> {
   if (!await isAdmin()) {
     return { success: false, error: "No autorizado. Solo administradores pueden ver esta información." };
   }
   try {
-    const admins = await prisma.admin.findMany({
-      orderBy: { createdAt: 'asc' },
-    });
-    return { success: true, data: admins };
+    const skip = (page - 1) * limit;
+    const [admins, totalCount] = await prisma.$transaction([
+      prisma.admin.findMany({
+        orderBy: { createdAt: 'asc' },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.admin.count(),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return { success: true, data: admins, totalPages, currentPage: page };
   } catch (error: any) {
     console.error("Error al obtener Admins:", error);
     return { success: false, error: "Error al obtener la lista de Administradores." };

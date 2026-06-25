@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import PaginationControls from '../ui/PaginationControls'; // Importar el nuevo componente de paginación
 
 interface DataTableProps<T extends Record<string, any>> {
   title: string;
@@ -10,6 +11,9 @@ interface DataTableProps<T extends Record<string, any>> {
   onEdit?: (id: string) => void; // Hacemos opcional
   onDelete?: (id: string) => void; // Hacemos opcional
   onToggleDeactivated?: (id: string, currentStatus: boolean) => void; // Nuevo: para activar/desactivar
+  currentPage?: number; // Para paginación
+  totalPages?: number; // Para paginación
+  onPageChange?: (page: number) => void; // Para paginación
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -19,14 +23,25 @@ export default function DataTable<T extends Record<string, any>>({
   idFieldName,
   onEdit,
   onDelete,
-  onToggleDeactivated, // Desestructuramos la nueva prop
+  onToggleDeactivated,
+  currentPage, // Desestructurar props de paginación
+  totalPages,
+  onPageChange,
 }: DataTableProps<T>) {
-  const hasActions = onEdit || onDelete || onToggleDeactivated; // Las acciones incluyen también toggle
+  const hasActions = onEdit || onDelete || onToggleDeactivated;
   if (!data || data.length === 0) {
     return (
       <div className="bg-slate-900/70 p-6 rounded-lg shadow-lg border border-slate-800 h-full flex flex-col">
         <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
         <p className="text-slate-400 text-center flex-1 flex items-center justify-center">{emptyMessage}</p>
+        {/* Mostrar controles de paginación incluso si no hay datos, si totalPages indica que podría haberlos */}
+        {totalPages && totalPages > 1 && currentPage && onPageChange && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+          />
+        )}
       </div>
     );
   }
@@ -135,6 +150,14 @@ export default function DataTable<T extends Record<string, any>>({
           </tbody>
         </table>
       </div>
+      {/* Añadir controles de paginación al final de la tabla */}
+      {totalPages && totalPages > 1 && currentPage && onPageChange && (
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
+      )}
     </div>
   );
 }

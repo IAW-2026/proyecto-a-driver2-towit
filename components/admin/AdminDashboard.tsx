@@ -6,17 +6,19 @@ import {
   getAllVehicles,
   getAllAssignments,
   getAllAdmins,
-  updateAdmin, // Importar la nueva acción de actualización de Admin
-  deleteAdmin, // Importar la nueva acción de eliminación de Admin
-  toggleAdminDeactivated, // Importar la nueva acción de activar/desactivar Admin
+  updateAdmin,
+  deleteAdmin,
+  toggleAdminDeactivated,
+  // Importar la nueva interfaz PaginatedAdminActionResponse
+  type PaginatedAdminActionResponse,
 } from '@/app/actions/admin';
-import { updateTowerDetails, deleteTowerAccount, toggleTowerDeactivated } from '@/app/actions/tower'; // Importar acciones de Tower
-import { updateVehicle, deleteVehicle, toggleVehicleDeactivated } from '@/app/actions/vehicle'; // Importar acciones de Vehicle
+import { updateTowerDetails, deleteTowerAccount, toggleTowerDeactivated } from '@/app/actions/tower';
+import { updateVehicle, deleteVehicle, toggleVehicleDeactivated } from '@/app/actions/vehicle';
 import UserCreationForm from './UserCreationForm';
 import DataTable from './DataTable';
-import AdminEditForm from './AdminEditForm'; // Nuevo componente
-import TowerEditForm from './TowerEditForm'; // Nuevo componente
-import VehicleForm from '../vehicles/VehicleForm'; // Reutilizar el formulario de vehículos
+import AdminEditForm from './AdminEditForm';
+import TowerEditForm from './TowerEditForm';
+import VehicleForm from '../vehicles/VehicleForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tower, Vehicle, Admin, Assignment } from '@prisma/client';
@@ -39,18 +41,31 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [editingEntity, setEditingEntity] = useState<EditingEntity>(null);
   const [deletingEntity, setDeletingEntity] = useState<DeletingEntity>(null);
-  const [togglingDeactivatedEntity, setTogglingDeactivatedEntity] = useState<ToggleDeactivatedEntity>(null); // Nuevo estado para activar/desactivar
-  const [actionError, setActionError] = useState<string | null>(null); // Para errores de acciones CRUD
+  const [togglingDeactivatedEntity, setTogglingDeactivatedEntity] = useState<ToggleDeactivatedEntity>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // Estados de paginación para cada tabla
+  const [adminsPage, setAdminsPage] = useState(1);
+  const [adminsTotalPages, setAdminsTotalPages] = useState(1);
+  const [towersPage, setTowersPage] = useState(1);
+  const [towersTotalPages, setTowersTotalPages] = useState(1);
+  const [vehiclesPage, setVehiclesPage] = useState(1);
+  const [vehiclesTotalPages, setVehiclesTotalPages] = useState(1);
+  const [assignmentsPage, setAssignmentsPage] = useState(1);
+  const [assignmentsTotalPages, setAssignmentsTotalPages] = useState(1);
+
+  const ITEMS_PER_PAGE = 5; // Definir el límite de elementos por página
 
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // Llamar a las acciones de servidor con los parámetros de paginación
       const [towersRes, vehiclesRes, assignmentsRes, adminsRes] = await Promise.all([
-        getAllTowers(),
-        getAllVehicles(),
-        getAllAssignments(),
-        getAllAdmins(),
+        getAllTowers(towersPage, ITEMS_PER_PAGE),
+        getAllVehicles(vehiclesPage, ITEMS_PER_PAGE),
+        getAllAssignments(assignmentsPage, ITEMS_PER_PAGE),
+        getAllAdmins(adminsPage, ITEMS_PER_PAGE),
       ]);
 
       if (!towersRes.success || !vehiclesRes.success || !assignmentsRes.success || !adminsRes.success) {
@@ -68,9 +83,20 @@ export default function AdminDashboard() {
       setData({
         towers: towersRes.data as Tower[],
         vehicles: vehiclesRes.data as Vehicle[],
-        assignments: assignmentsRes.data as Assignment[], // Casting a Assignment[]
+        assignments: assignmentsRes.data as Assignment[],
         admins: adminsRes.data as Admin[],
       });
+
+      // Actualizar estados de paginación
+      setAdminsTotalPages(adminsRes.totalPages || 1);
+      setAdminsPage(adminsRes.currentPage || 1);
+      setTowersTotalPages(towersRes.totalPages || 1);
+      setTowersPage(towersRes.currentPage || 1);
+      setVehiclesTotalPages(vehiclesRes.totalPages || 1);
+      setVehiclesPage(vehiclesRes.currentPage || 1);
+      setAssignmentsTotalPages(assignmentsRes.totalPages || 1);
+      setAssignmentsPage(assignmentsRes.currentPage || 1);
+
     } catch (err: any) {
       console.error("Excepción al cargar datos del panel de administración:", err);
       setError(err.message || "Error al cargar los datos del panel de administración.");
@@ -81,8 +107,9 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    // Cuando el componente monta o las páginas cambian, se vuelve a buscar la data
     fetchData();
-  }, []); // Empty dependency array means this runs once on mount
+  }, [adminsPage, towersPage, vehiclesPage, assignmentsPage]);
 
   const handleEditAdmin = (id: string) => {
     const adminToEdit = data?.admins.find((a) => a.admin_id === id);
@@ -260,7 +287,10 @@ export default function AdminDashboard() {
         idFieldName="admin_id"
         onEdit={handleEditAdmin}
         onDelete={handleDeleteAdmin}
-        onToggleDeactivated={handleToggleDeactivatedAdmin} // Pasar el nuevo handler
+        onToggleDeactivated={handleToggleDeactivatedAdmin}
+        currentPage={adminsPage}
+        totalPages={adminsTotalPages}
+        onPageChange={setAdminsPage}
       />
       <DataTable
         title="Towers"
@@ -269,7 +299,10 @@ export default function AdminDashboard() {
         idFieldName="tower_id"
         onEdit={handleEditTower}
         onDelete={handleDeleteTower}
-        onToggleDeactivated={handleToggleDeactivatedTower} // Pasar el nuevo handler
+        onToggleDeactivated={handleToggleDeactivatedTower}
+        currentPage={towersPage}
+        totalPages={towersTotalPages}
+        onPageChange={setTowersPage}
       />
       <DataTable
         title="Vehículos"
@@ -278,15 +311,21 @@ export default function AdminDashboard() {
         idFieldName="vehicle_id"
         onEdit={handleEditVehicle}
         onDelete={handleDeleteVehicle}
-        onToggleDeactivated={handleToggleDeactivatedVehicle} // Pasar el nuevo handler
+        onToggleDeactivated={handleToggleDeactivatedVehicle}
+        currentPage={vehiclesPage}
+        totalPages={vehiclesTotalPages}
+        onPageChange={setVehiclesPage}
       />
-      <DataTable<Assignment & { deactivated?: boolean }> // DataTable para Assignments
+      <DataTable<Assignment & { deactivated?: boolean }>
         title="Asignaciones"
         data={data?.assignments || []}
         emptyMessage="No hay asignaciones para mostrar."
-        idFieldName="assignment_id" // Usar assignment_id como clave única
-        // No se pasan onEdit ni onDelete para que no se muestre la columna de acciones
-        // ni onToggleDeactivated para Assignments
+        idFieldName="assignment_id"
+        // Las asignaciones no tienen edición, eliminación o toggle de desactivación en este contexto.
+        // Se pueden añadir más tarde si el modelo de Assignment en Prisma lo soporta.
+        currentPage={assignmentsPage}
+        totalPages={assignmentsTotalPages}
+        onPageChange={setAssignmentsPage}
       />
 
       {/* Modales de Edición */}

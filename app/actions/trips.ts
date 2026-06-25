@@ -43,10 +43,16 @@ export interface Trip {
 
 interface GetTripsResult {
   trips?: Trip[];
+  totalPages?: number;
+  currentPage?: number;
   error?: string;
 }
 
-export async function getTripsForUser(userId: string): Promise<GetTripsResult> {
+export async function getTripsForUser(
+  userId: string,
+  page: number = 1,
+  limit: number = 10
+): Promise<GetTripsResult> {
   const customerAppUrl = process.env.NEXT_PUBLIC_CUSTOMER_APP_URL;
   const apiSecretKey = process.env.API_SECRET_KEY;
 
@@ -62,7 +68,7 @@ export async function getTripsForUser(userId: string): Promise<GetTripsResult> {
 
   try {
     // 1. Obtener la lista de viajes desde la customer app
-    const tripsResponse = await fetch(`${customerAppUrl}/api/customer/trips/${userId}`, {
+    const tripsResponse = await fetch(`${customerAppUrl}/api/customer/trips/${userId}?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: {
         'x-api-key': apiSecretKey,
@@ -74,12 +80,21 @@ export async function getTripsForUser(userId: string): Promise<GetTripsResult> {
       const errorData = await tripsResponse.json();
       // Si es un 404 específico, devolverlo como un array vacío de viajes
       if (tripsResponse.status === 404 && errorData.error === "No trips found for the given clerk_id") {
-        return { trips: [] };
+        return { trips: [], totalPages: 0, currentPage: 1 };
       }
       return { error: errorData.message || errorData.error || `Error fetching trips: ${tripsResponse.statusText}` };
     }
 
-    const apiTrips: ApiTrip[] = await tripsResponse.json();
+    // Suponemos que la API devuelve un objeto con 'trips', 'totalPages' y 'currentPage'
+    interface CustomerTripsApiResponse {
+      trips: ApiTrip[];
+      totalPages: number;
+      currentPage: number;
+    }
+    const apiData: CustomerTripsApiResponse = await tripsResponse.json();
+    const apiTrips: ApiTrip[] = apiData.trips;
+    const totalPages = apiData.totalPages;
+    const currentPage = apiData.currentPage;
 
     // 2. Obtener nombres de clientes para cada viaje
     const uniqueCustomerIds = [...new Set(apiTrips.map(trip => trip.customer_id))];
@@ -116,7 +131,7 @@ export async function getTripsForUser(userId: string): Promise<GetTripsResult> {
       // vehicle, time, amount son opcionales y no provienen de la API actual, se omiten explícitamente.
     }));
 
-    return { trips: tripsData };
+    return { trips: tripsData, totalPages, currentPage };
 
   } catch (error: any) {
     console.error("Error in getTripsForUser server action:", error);
