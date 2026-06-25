@@ -32,7 +32,7 @@ export async function POST(req: Request) {
             
             // NUEVO: Informar a la Customer App que el viaje fue cancelado
             after(() =>
-              updateTripStatusInCustomerApp(trip_id, "", 'cancelado').catch(error => {
+              updateTripStatusInCustomerApp(trip_id, "-", 'cancelado').catch(error => {
                 console.error(`[Error Background Trigger] No se pudo cancelar el viaje ${trip_id} en Customer App: `, error);
               })
             );

@@ -111,7 +111,7 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
     if (availableTowerClerkIds.length === 0) {
       // NUEVO: Informar a la Customer App que el viaje fue cancelado por falta de towers
       after(() =>
-        updateTripStatusInCustomerApp(trip.id, "", 'cancelado').catch(error => {
+        updateTripStatusInCustomerApp(trip.id, "-", 'cancelado').catch(error => {
           console.error(`[Error Background Trigger] No se pudo cancelar el viaje ${trip.id} en Customer App: `, error);
         })
       );
