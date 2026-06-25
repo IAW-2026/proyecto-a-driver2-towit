@@ -29,19 +29,21 @@ Este endpoint permite a la `Customer App` enviar una solicitud de viaje. La soli
       "customer_id": "string",
       "trip": {
         "id": "string",
-        "origin": {"lat": "string","long": "string"},
-        "destination": {"lat": "string","long": "string"}
+        "origin": {"lat": "string", "long": "string", "address": "string"},
+        "destination": {"lat": "string", "long": "string", "address": "string"}
       },
       "vehicle_data": {"brand": "string", "model": "string", "year": "number"},
-      "preferred_tow_type": "string"
+      "preferred_tow_type": "string",
+      "service_value": "number"
     }
     ```
     *   `customer_id`: ID único del cliente.
     *   `trip.id`: ID único del viaje.
-    *   `trip.origin`: Coordenadas de latitud y longitud del origen del viaje.
-    *   `trip.destination`: Coordenadas de latitud y longitud del destino del viaje.
+    *   `trip.origin`: Coordenadas de latitud, longitud y dirección de origen del viaje.
+    *   `trip.destination`: Coordenadas de latitud, longitud y dirección de destino del viaje.
     *   `vehicle_data`: Detalles del vehículo que necesita el servicio.
     *   `preferred_tow_type`: Tipo de remolque preferido (ej. "standard", "platform").
+    *   `service_value`: Valor monetario estimado del servicio.
 
 *   **Respuestas Posibles:**
 
@@ -79,11 +81,11 @@ Este endpoint permite a la `Customer App` enviar una solicitud de viaje. La soli
         }
         ```
 
-    *   **404 Not Found - No se Encontraron Towers Disponibles**
+    *   **404 Not Found - No se Encontraron Towers Activos Disponibles**
         ```json
         {
           "success": false,
-          "error": "No se pudieron encontrar towers disponibles en este momento."
+          "error": "No se pudieron encontrar towers activos disponibles en este momento."
         }
         ```
 
@@ -105,15 +107,16 @@ Este endpoint permite a la `Customer App` enviar una solicitud de viaje. La soli
             "customer_id": "cust_EXAMPLE_ID",
             "trip": {
               "id": "trip_REQ_XYZ123",
-              "origin": {"lat": "-38.7196", "long": "-62.2651"},
-              "destination": {"lat": "-38.7000", "long": "-62.2500"}
+              "origin": {"lat": "-38.7196", "long": "-62.2651", "address": "Calle Falsa 123, Bahía Blanca"},
+              "destination": {"lat": "-38.7000", "long": "-62.2500", "address": "Avenida Siempre Viva 742, Bahía Blanca"}
             },
             "vehicle_data": {
               "brand": "Toyota",
               "model": "Hilux",
               "year": 2020
             },
-            "preferred_tow_type": "standard"
+            "preferred_tow_type": "standard",
+            "service_value": 5000.75
           }'
     ```
 

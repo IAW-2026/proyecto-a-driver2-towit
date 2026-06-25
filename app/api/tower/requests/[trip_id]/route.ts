@@ -74,7 +74,18 @@ export async function PATCH(
   const { trip_id } = await context.params;
 
   try {
-    // 1. Encontrar la asignación del viaje en Neon
+    const requestKey = `trip:request:${trip_id}`;
+    
+    // 1. Consultar estado en Redis primero
+    const requestData = await redis.hgetall(requestKey);
+
+    let currentStatus = 'unknown';
+    
+    if (requestData && Object.keys(requestData).length > 0) {
+      currentStatus = requestData.status as string;
+    }
+
+    // 2. Si está en Neon, buscar la asignación
     const assignment = await prisma.assignment.findUnique({
       where: { trip_id: trip_id },
       include: {
@@ -84,52 +95,64 @@ export async function PATCH(
       }
     });
 
-    if (!assignment) {
+    // Si no está ni en Redis ni en Neon, no existe
+    if ((!requestData || Object.keys(requestData).length === 0) && !assignment) {
       return NextResponse.json(
         { success: false, error: 'Viaje no encontrado o no asignado.' },
         { status: 404 }
       );
     }
+    
+    if (assignment) {
+        currentStatus = assignment.status;
+    }
 
-    // Si el viaje ya está completado o cancelado, no permitir otra cancelación
-    if (assignment.status === 'cancelled' || assignment.status === 'completed') {
+    // Si ya está completado o cancelado
+    if (currentStatus === 'cancelled' || currentStatus === 'completed') {
       return NextResponse.json(
-        { success: false, error: `El viaje ya está en estado ${assignment.status}.` },
+        { success: false, error: `El viaje ya está en estado ${currentStatus}.` },
         { status: 400 }
       );
     }
 
-    const requestKey = `trip:request:${trip_id}`;
-
-    // 2. Actualizar el estado de la asignación a 'CANCELADO' en Neon
-    const updatedAssignment = await prisma.assignment.update({
-      where: { trip_id: trip_id },
-      data: { status: 'cancelled' },
-    });
-
-    // 3. Liberar la torre en Redis si estaba asignada Y actualizar el estado de la solicitud en Redis
     const pipeline = redis.pipeline();
-    pipeline.hset(requestKey, { status: 'cancelled' }); // Marcar la solicitud como cancelada en Redis
-
-    if (assignment.tower && assignment.tower.clerk_id) {
-      const towerClerkId = assignment.tower.clerk_id;
-
-      // Actualizar el estado de la torre a "disponible" en su perfil de Redis.
-      // La propia aplicación del conductor (ServicePageClient) se encargará de re-añadir
-      // sus coordenadas al GeoSet `towers:locations:available` si se marca como "disponible"
-      // y está enviando su ubicación.
-      pipeline.hset(`tower:profile:${towerClerkId}`, { status: 'available' }); // Corregido a 'available'
-      pipeline.set(`tower:heartbeat:${towerClerkId}`, '1', { ex: 30 }); // Renovar heartbeat con opciones
-
-      console.log(`Tower ${towerClerkId} liberada y marcada como available después de la cancelación del viaje ${trip_id}.`);
+    // 3. Marcar la solicitud como cancelada en Redis siempre si existe ahí
+    if (requestData && Object.keys(requestData).length > 0) {
+      pipeline.hset(requestKey, { status: 'cancelled' });
     }
+
+    let responseData: any = {
+      trip_id: trip_id,
+      status: 'cancelled'
+    };
+
+    if (assignment) {
+      // 4. Actualizar el estado de la asignación a 'cancelled' en Neon
+      const updatedAssignment = await prisma.assignment.update({
+        where: { trip_id: trip_id },
+        data: { status: 'cancelled' },
+      });
+      responseData = updatedAssignment;
+
+      // 5. Liberar la torre en Redis si estaba asignada
+      if (assignment.tower && assignment.tower.clerk_id) {
+        const towerClerkId = assignment.tower.clerk_id;
+
+        // Actualizar el estado de la torre a "disponible" en su perfil de Redis.
+        pipeline.hset(`tower:profile:${towerClerkId}`, { status: 'available' });
+        pipeline.set(`tower:heartbeat:${towerClerkId}`, '1', { ex: 30 });
+
+        console.log(`Tower ${towerClerkId} liberada y marcada como available después de la cancelación del viaje ${trip_id}.`);
+      }
+    }
+
     await pipeline.exec(); // Ejecutar todas las operaciones en pipeline
 
     console.log(`Viaje ${trip_id} cancelado.`);
 
     // En una implementación real, aquí se notificaría a la Tower App de la cancelación.
 
-    return NextResponse.json({ success: true, data: updatedAssignment }, { status: 200 });
+    return NextResponse.json({ success: true, data: responseData }, { status: 200 });
   } catch (error: any) {
     console.error(`Error al cancelar pedido de tower ${trip_id}:`, error);
     return NextResponse.json(
