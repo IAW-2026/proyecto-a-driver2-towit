@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs'; // Importar useAuth y useUser
-import AccountDetailsForm from './AccountDetailsForm';
 import AdminDetailsForm from './AdminDetailsForm'; // Importar el nuevo formulario para administradores
 import { Button } from "@/components/ui/button";
 import { useAccountDetailsModal } from "@/components/providers/AccountDetailsModalProvider";
@@ -56,11 +55,7 @@ export default function AccountDetailsModal() {
         >
           &times;
         </Button>
-        {isAdmin ? (
-          <AdminDetailsForm onClose={closeModal} />
-        ) : (
-          <AccountDetailsForm onClose={closeModal} />
-        )}
+        <AdminDetailsForm onClose={closeModal} />
       </div>
     </div>
   );

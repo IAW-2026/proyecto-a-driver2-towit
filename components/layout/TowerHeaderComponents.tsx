@@ -4,9 +4,8 @@ import { UserButton } from "@clerk/nextjs"; // Importa UserButton
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-// Se elimina la importación de useAccountDetailsModal ya que no se usará
 
-export default function AppHeaderClientTower() {
+export default function TowerHeaderComponents() {
   const router = useRouter();
   const pathname = usePathname();
   // Se elimina la desestructuración de openModal ya que no se usará
@@ -43,7 +42,6 @@ export default function AppHeaderClientTower() {
           Dashboard
         </Button>
       )}
-      {/* Reemplazamos el botón y el avatar con el UserButton de Clerk */}
       <UserButton />
     </>
   );

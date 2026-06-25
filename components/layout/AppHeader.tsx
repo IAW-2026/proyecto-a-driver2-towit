@@ -1,8 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import AppHeaderClientTower from "./AppHeaderClientTower";
-import AppHeaderClientGuest from "./AppHeaderClientGuest";
-import AppHeaderMobileMenu from "./AppHeaderMobileMenu";
+import TowerHeaderComponents from "./TowerHeaderComponents";
+import GuestHeaderComponents from "./GuestHeaderComponents";
+import MobileTowerHeaderComponents from "./MobileTowerHeaderComponents";
+import MobileGuestHeaderComponents from "./MobileGuestHeaderComponents";
 
 export default async function AppHeader() {
   const { userId } = await auth();
@@ -17,14 +18,12 @@ export default async function AppHeader() {
             <span className="bg-yellow-500/10 text-yellow-500 text-xs font-semibold px-2 py-0.5 rounded border border-yellow-500/20">Towers</span>
           </Link>
         </div>
-
-        {/* Navegación para escritorio */}
-        <nav className="hidden md:flex items-center gap-4">
-          {isSignedIn ? <AppHeaderClientTower /> : <AppHeaderClientGuest />}
+        <nav className="hidden sm:flex items-center gap-4">
+          {isSignedIn ? <TowerHeaderComponents /> : <GuestHeaderComponents />}
         </nav>
-
-        {/* Menú móvil */}
-        <AppHeaderMobileMenu isSignedIn={isSignedIn} />
+        <nav className="flex sm:hidden items-center gap-4">
+          {isSignedIn ? <MobileTowerHeaderComponents /> : <MobileGuestHeaderComponents />}
+        </nav>
       </div>
     </header>
   );

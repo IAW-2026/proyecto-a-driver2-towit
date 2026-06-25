@@ -2,10 +2,10 @@
 
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
-export default function AppHeaderClientGuest() {
+export default function GuestHeaderComponents() {
   return (
     <>
-      <SignInButton mode="modal" forceRedirectUrl={"/dashboard"} signUpForceRedirectUrl={"/dashboard"}>
+      <SignInButton mode="modal" forceRedirectUrl={"/dashboard"} signUpForceRedirectUrl={"/dashboard"} >
         <button className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
           Iniciar Sesión
         </button>
