@@ -590,16 +590,16 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
             console.error("Fallo al registrar la asignación de viaje aceptada en la DB:", assignmentResult.error);
           }
 
-          // NUEVO: Actualizar el estado del viaje en la Customer App a 'en proceso'
+          // NUEVO: Actualizar el estado del viaje en la Customer App a 'aceptado'
           try {
-            const customerAppUpdateResult = await updateTripStatusInCustomerApp(currentOffer.id, realTowerId, 'en proceso');
+            const customerAppUpdateResult = await updateTripStatusInCustomerApp(currentOffer.id, realTowerId, 'aceptado');
             if (customerAppUpdateResult.success) {
-              console.log("Estado del viaje actualizado a 'en proceso' en Customer App.");
+              console.log("Estado del viaje actualizado a 'aceptado' en Customer App.");
             } else {
-              console.error("Fallo al actualizar el estado del viaje en Customer App a 'en proceso':", customerAppUpdateResult.error);
+              console.error("Fallo al actualizar el estado del viaje en Customer App a 'aceptado':", customerAppUpdateResult.error);
             }
           } catch (appUpdateError) {
-            console.error("Error al llamar a updateTripStatusInCustomerApp para 'en proceso':", appUpdateError);
+            console.error("Error al llamar a updateTripStatusInCustomerApp para 'aceptado':", appUpdateError);
           }
         }
 
@@ -657,11 +657,25 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   };
 
   // NUEVA FUNCIÓN: Para manejar la confirmación de inicio de viaje (dummy por ahora)
-  const handleConfirmTripStart = (tripId: string) => {
+  const handleConfirmTripStart = async (tripId: string) => {
     console.log(`Inicio de viaje ${tripId} confirmado localmente. Ahora hacia el destino final.`);
     setIsTripStartedLocallyConfirmed(true); // Marca el viaje como iniciado localmente
     setShowStartTripConfirmation(false); // Oculta la tarjeta de confirmación
-    // A futuro: Aquí se enviará una llamada a la API para actualizar el estado del viaje en el backend.
+
+    // NUEVO: Actualizar el estado del viaje en la Customer App a 'en proceso'
+    if (activeTripDetails && user?.id) {
+      try {
+        const realTowerId = (await getTowerIdByClerkId(user.id)).towerId!;
+        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, realTowerId, 'en proceso');
+        if (customerAppUpdateResult.success) {
+          console.log("Estado del viaje actualizado a 'en proceso' en Customer App.");
+        } else {
+          console.error("Fallo al actualizar el estado del viaje en Customer App a 'en proceso':", customerAppUpdateResult.error);
+        }
+      } catch (appUpdateError) {
+        console.error("Error al llamar a updateTripStatusInCustomerApp para 'en proceso':", appUpdateError);
+      }
+    }
 
     // Configurar las rutas para la segunda pierna del viaje: conductor -> destino final
     if (activeTripDetails && currentLocation) { // Usar activeTripDetails
@@ -698,7 +712,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         // Se asume que activeTripDetails.service_value está disponible y es numérico para calcular el feePercentage.
         // Por ahora, usaremos un valor fijo como 100 si no se especifica.
         const feePercentage = activeTripDetails.service_value ? 100 : 100; // Ajustar según la lógica de negocio
-        const disbursementResult = await createDisbursement(tripId, user.id, feePercentage); 
+        const disbursementResult = await createDisbursement(tripId, user.id, feePercentage);
         if (disbursementResult.success) {
           setPaymentNotificationMessage("Se acreditó el pago en su cuenta asociada.");
           setShowPaymentSuccessMessage(true);
