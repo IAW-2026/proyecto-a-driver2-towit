@@ -67,8 +67,8 @@ export async function getTripsForUser(
   }
 
   try {
-    // 1. Obtener la lista de viajes desde la customer app
-    const tripsResponse = await fetch(`${customerAppUrl}/api/customer/trips/${userId}?page=${page}&limit=${limit}`, {
+    // 1. Obtener la lista COMPLETA de viajes desde la customer app (la API no admite paginación)
+    const tripsResponse = await fetch(`${customerAppUrl}/api/customer/trips/${userId}`, {
       method: 'GET',
       headers: {
         'x-api-key': apiSecretKey,
@@ -85,16 +85,8 @@ export async function getTripsForUser(
       return { error: errorData.message || errorData.error || `Error fetching trips: ${tripsResponse.statusText}` };
     }
 
-    // Suponemos que la API devuelve un objeto con 'trips', 'totalPages' y 'currentPage'
-    interface CustomerTripsApiResponse {
-      trips: ApiTrip[];
-      totalPages: number;
-      currentPage: number;
-    }
-    const apiData: CustomerTripsApiResponse = await tripsResponse.json();
-    const apiTrips: ApiTrip[] = apiData.trips;
-    const totalPages = apiData.totalPages;
-    const currentPage = apiData.currentPage;
+    // Suponemos que la API devuelve un array directo de ApiTrip[]
+    const apiTrips: ApiTrip[] = await tripsResponse.json();
 
     // 2. Obtener nombres de clientes para cada viaje
     const uniqueCustomerIds = [...new Set(apiTrips.map(trip => trip.customer_id))];
@@ -116,8 +108,8 @@ export async function getTripsForUser(
       }
     }));
 
-    // 3. Construir los objetos Trip para la respuesta
-    const tripsData: Trip[] = apiTrips.map(apiTrip => ({
+    // 3. Construir los objetos Trip y aplicar paginación localmente
+    const allTripsData: Trip[] = apiTrips.map(apiTrip => ({
       id: apiTrip.trip_id,
       tower_id: apiTrip.tower_id,
       customer: {
@@ -131,7 +123,15 @@ export async function getTripsForUser(
       // vehicle, time, amount son opcionales y no provienen de la API actual, se omiten explícitamente.
     }));
 
-    return { trips: tripsData, totalPages, currentPage };
+    // Aplicar paginación localmente
+    const totalItems = allTripsData.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = Math.min(startIndex + limit, totalItems);
+
+    const paginatedTrips = allTripsData.slice(startIndex, endIndex);
+
+    return { trips: paginatedTrips, totalPages, currentPage: page };
 
   } catch (error: any) {
     console.error("Error in getTripsForUser server action:", error);
