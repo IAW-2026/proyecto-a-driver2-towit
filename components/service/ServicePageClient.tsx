@@ -699,7 +699,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     <div className="flex flex-col h-screen w-screen overflow-hidden">
       {/* NUEVO: Notificación de éxito/error de pago */}
       {showPaymentSuccessMessage && (
-        <div className={`absolute w-full top-20 left-1/2 -translate-x-1/2 z-[1002] transition-opacity duration-500`}>
+        <div className={`absolute w-full bottom-4 left-1/2 md:left-4 md:translate-x-0 max-w-sm -translate-x-1/2 z-[1002] transition-opacity duration-500`}>
           <p className={`mx-4  rounded-md shadow-lg text-white font-semibold p-4 text-center ${paymentNotificationMessage.includes("Error") || true ? "bg-red-600/80" : "bg-green-600/80"}`}>
             {paymentNotificationMessage || "Error al acreditar el pago en su cuenta. Contacte al soporte técnico."}
           </p>
