@@ -731,10 +731,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         <ServiceRequestCard
           customerName={customerNameForOffer || ""}
           vehicleModel={`${currentOffer.vehicle.brand} ${currentOffer.vehicle.model} (${currentOffer.vehicle.year})`}
-          vehiclePlate="N/D"
-          originAddress={`Lat: ${currentOffer.origin.lat}, Long: ${currentOffer.origin.long}`}
-          destinationAddress={`Lat: ${currentOffer.destination.lat}, Long: ${currentOffer.destination.long}`}
-          serviceValue={currentOffer.service_value} // Asume un valor fijo por ahora, o tómalo de currentOffer
+          originAddress={currentOffer.origin.address}
+          destinationAddress={currentOffer.destination.address}
+          serviceValue={currentOffer.service_value}
           onAccept={handleAcceptOffer}
           onReject={handleRejectOffer}
           tripId={currentOffer.id}
@@ -746,20 +745,20 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       {isTripActive && showStartTripConfirmation && !isTripStartedLocallyConfirmed && activeTripDetails && (
         <ServiceTripStartConfirmationCard
           customerName={activeTripCustomerName || ""} // Usar activeTripCustomerName
-          vehicleModel={`${activeTripDetails.vehicle.brand} ${activeTripDetails.vehicle.model} (${activeTripDetails.vehicle.year})`} // Usar activeTripDetails
-          destinationAddress={`Lat: ${activeTripDetails.destination.lat}, Long: ${activeTripDetails.destination.long}`} // Usar activeTripDetails
+          vehicleModel={`${activeTripDetails.vehicle.brand} ${activeTripDetails.vehicle.model} (${activeTripDetails.vehicle.year})`}
+          destinationAddress={activeTripDetails.destination.address} // Usar la dirección completa
           onConfirmStart={handleConfirmTripStart}
-          tripId={activeTripDetails.id} // Usar activeTripDetails
+          tripId={activeTripDetails.id}
         />
       )}
 
       {/* NUEVO: Renderizado condicional de la tarjeta de confirmación de finalización de viaje */}
       {isTripActive && isTripStartedLocallyConfirmed && showEndTripConfirmation && !isTripEndedLocallyConfirmed && activeTripDetails && ( // Usar activeTripDetails
         <ServiceTripEndingConfirmationCard
-          customerName={activeTripCustomerName || ""} // Usar activeTripCustomerName
-          destinationAddress={`Lat: ${activeTripDetails.destination.lat}, Long: ${activeTripDetails.destination.long}`} // Usar activeTripDetails
+          customerName={activeTripCustomerName || ""}
+          destinationAddress={activeTripDetails.destination.address} // Usar la dirección completa
           onConfirmEnd={handleConfirmTripEnd}
-          tripId={activeTripDetails.id} // Usar activeTripDetails
+          tripId={activeTripDetails.id}
         />
       )}
 

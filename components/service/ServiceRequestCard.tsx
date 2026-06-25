@@ -7,7 +7,6 @@ interface ServiceRequestCardProps {
   customerName: string;
   customerRating?: number | null; // Opcional, si se obtiene de Feedback App (puede ser null para N/D)
   vehicleModel: string;
-  vehiclePlate: string; // Patente
   originAddress: string;
   destinationAddress: string; // Nuevo: dirección de destino
   serviceValue: number;
@@ -20,7 +19,6 @@ export default function ServiceRequestCard({
   customerName,
   customerRating,
   vehicleModel,
-  vehiclePlate,
   originAddress,
   destinationAddress,
   serviceValue,
@@ -49,7 +47,7 @@ export default function ServiceRequestCard({
           </span>
         </p>
         <p className="text-base text-slate-300">
-          <span className="font-semibold">Vehículo:</span> {vehicleModel} ({vehiclePlate})
+          <span className="font-semibold">Vehículo:</span> {vehicleModel}
         </p>
         <p className="text-base text-slate-300">
           <span className="font-semibold">Origen:</span> {originAddress}
