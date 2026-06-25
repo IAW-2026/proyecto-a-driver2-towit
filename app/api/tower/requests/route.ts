@@ -2,6 +2,7 @@ import { after, NextResponse } from 'next/server';
 import { z } from 'zod'; // Para validación de esquema
 import { validateApiKey, unauthorizedResponse, AdminActionResponse } from '@/lib/apiAuth';
 import { redis } from '@/lib/redis-client'; // Importamos el cliente Redis
+import { updateTripStatusInCustomerApp } from '@/app/actions/trip-status'; // NUEVO: Importar la Server Action
 
 // Esquema de validación para el cuerpo de la solicitud POST
 const requestBodySchema = z.object({
@@ -108,6 +109,12 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
     });
 
     if (availableTowerClerkIds.length === 0) {
+      // NUEVO: Informar a la Customer App que el viaje fue cancelado por falta de towers
+      after(() =>
+        updateTripStatusInCustomerApp(trip.id, 'cancelado').catch(error => {
+          console.error(`[Error Background Trigger] No se pudo cancelar el viaje ${trip.id} en Customer App: `, error);
+        })
+      );
       return NextResponse.json(
         { success: false, error: 'No se pudieron encontrar towers activos disponibles en este momento.' },
         { status: 404 }

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server'; // NUEVO: Importar 'after'
 import { redis } from '@/lib/redis-client';
 import { Client } from '@upstash/qstash';
+import { updateTripStatusInCustomerApp } from '@/app/actions/trip-status'; // NUEVO: Importar la Server Action
 
 const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
 
@@ -28,6 +29,14 @@ export async function POST(req: Request) {
         if (!towerId) {
             await redis.hset(requestKey, { status: 'cancelled' });
             console.log(`[Asignación] Viaje ${trip_id} cancelado automáticamente: Se agotaron los candidatos.`);
+            
+            // NUEVO: Informar a la Customer App que el viaje fue cancelado
+            after(() =>
+              updateTripStatusInCustomerApp(trip_id, 'cancelado').catch(error => {
+                console.error(`[Error Background Trigger] No se pudo cancelar el viaje ${trip_id} en Customer App: `, error);
+              })
+            );
+
             return NextResponse.json({ message: 'No se encontraron torres. Viaje cancelado.' });
         }
 
