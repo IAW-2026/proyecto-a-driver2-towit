@@ -20,7 +20,7 @@ export default function MobileTowerHeaderComponents() {
         { href: "/dashboard", label: "Dashboard" },
         { href: "/trips", label: "Viajes" },
         { href: "/vehicles", label: "Vehículos" },
-        { href: `${process.env.NEXT_PUBLIC_PAYMENTS_APP_URL}`, label: "Liquidaciones" },
+        { href: `${process.env.NEXT_PUBLIC_PAYMENTS_APP_URL}/disbursements`, label: "Liquidaciones" },
     ];
 
     return (

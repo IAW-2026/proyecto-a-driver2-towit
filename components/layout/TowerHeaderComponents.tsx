@@ -13,7 +13,7 @@ export default function TowerHeaderComponents() {
     { href: "/dashboard", label: "Dashboard" },
     { href: "/trips", label: "Viajes" },
     { href: "/vehicles", label: "Vehículos" },
-    { href: process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || "#", label: "Liquidaciones" }, // Usar NEXT_PUBLIC_PAYMENTS_APP_URL
+    { href: `${process.env.NEXT_PUBLIC_PAYMENTS_APP_URL}/disbursements` || "#", label: "Liquidaciones" }, // Usar NEXT_PUBLIC_PAYMENTS_APP_URL
   ];
 
   return (

@@ -69,7 +69,7 @@ const RenderTripContent: React.FC<{ tripData: Trip }> = ({ tripData }) => {
           Volver a Mis Viajes
         </Button>
         <div className="flex flex-col sm:flex-row gap-4">
-          <Link href={`/payments/${tripData.id}`} passHref>
+          <Link href={`${`${process.env.NEXT_PUBLIC_PAYMENTS_APP_URL}/disbursements/${tripData.id}`}`} passHref>
             <Button variant="secondary" className="w-full sm:w-auto">
               Ver Recibo
             </Button>
