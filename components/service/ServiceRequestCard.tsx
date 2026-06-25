@@ -56,7 +56,7 @@ export default function ServiceRequestCard({
           <span className="font-semibold">Destino:</span> {destinationAddress}
         </p>
         <p className="text-right text-2xl font-bold text-green-400">
-          ${serviceValue.toFixed(2)}
+          ${serviceValue}
         </p>
       </div>
 
