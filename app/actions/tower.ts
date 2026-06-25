@@ -94,7 +94,7 @@ export async function getTowerDetails(): Promise<TowerDetails | null> { // Mante
   }
 
   const tower = await prisma.tower.findUnique({
-    where: { clerk_id: userId },
+    where: { clerk_id: userId},
   });
 
   if (!tower) {
@@ -125,7 +125,7 @@ export async function getTowerData(userId: string): Promise<UpdateTowerDetailsRe
 
   try {
     const tower = await prisma.tower.findUnique({
-      where: { clerk_id: userId },
+      where: { clerk_id: userId},
       select: { // Seleccionar solo los campos necesarios para TowerData
         clerk_id: true,
         email: true,
@@ -157,7 +157,7 @@ export async function getTowerIdByClerkId(clerkId: string): Promise<{ success: b
 
   try {
     const tower = await prisma.tower.findUnique({
-      where: { clerk_id: clerkId },
+      where: { clerk_id: clerkId }, // Solo torres no desactivadas
       select: {
         tower_id: true,
       },

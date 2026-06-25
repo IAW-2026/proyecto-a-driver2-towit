@@ -33,7 +33,7 @@ export async function getTowerVehicles(): Promise<VehicleActionResponse> {
     }
 
     const vehicles = await prisma.vehicle.findMany({
-      where: { tower_id: tower.tower_id },
+      where: { tower_id: tower.tower_id, deactivated: false }, // Solo vehículos no desactivados
       orderBy: { createdAt: 'asc' }, // Ordenar por fecha de creación
     });
     return { success: true, data: vehicles };

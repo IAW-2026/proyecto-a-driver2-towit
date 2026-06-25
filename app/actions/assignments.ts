@@ -1,6 +1,7 @@
 "use server";
 
-import prisma from '@/lib/prisma'; // Asumiendo que el cliente de Prisma se importa desde aquí
+import prisma from '@/lib/prisma';
+import { Assignment } from '@prisma/client'; // Importar el tipo Assignment de Prisma
 
 interface RecordAcceptedAssignmentData {
   tripId: string;
@@ -52,6 +53,31 @@ interface CompleteAssignmentResponse {
   success: boolean;
   error?: string;
   assignmentId?: string;
+}
+
+interface AssignmentsActionResponse {
+  success: boolean;
+  data?: Assignment[];
+  error?: string;
+}
+
+/**
+ * Obtiene todas las asignaciones que no están desactivadas.
+ * @returns Una promesa que resuelve con un objeto de respuesta que contiene la lista de asignaciones o un error.
+ */
+export async function getNonDeactivatedAssignments(): Promise<AssignmentsActionResponse> {
+  try {
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        deactivated: false,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return { success: true, data: assignments };
+  } catch (error: any) {
+    console.error("Error al obtener asignaciones no desactivadas:", error);
+    return { success: false, error: "Fallo al obtener la lista de asignaciones no desactivadas." };
+  }
 }
 
 /**
