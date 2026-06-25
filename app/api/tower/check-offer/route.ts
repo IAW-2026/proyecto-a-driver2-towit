@@ -53,8 +53,16 @@ export async function GET(req: Request) {
       trip: {
         id: tripData.trip_id,
         customer_id: tripData.customer_id,
-        origin: { lat: tripData.trip_origin_lat, long: tripData.trip_origin_long },
-        destination: { lat: tripData.trip_destination_lat, long: tripData.trip_destination_long },
+        origin: { 
+          lat: tripData.trip_origin_lat, 
+          long: tripData.trip_origin_long, 
+          address: tripData.trip_origin_address 
+        },
+        destination: {
+          lat: tripData.trip_destination_lat, 
+          long: tripData.trip_destination_long, 
+          address: tripData.trip_destination_address 
+        },
         vehicle: {
           brand: tripData.vehicle_brand,
           model: tripData.vehicle_model,
