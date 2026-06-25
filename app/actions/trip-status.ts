@@ -13,6 +13,7 @@ interface UpdateTripStatusResponse {
  */
 export async function updateTripStatusInCustomerApp(
   tripId: string,
+  towerId: string,
   status: string
 ): Promise<UpdateTripStatusResponse> {
   const customerAppUrl = process.env.NEXT_PUBLIC_CUSTOMER_APP_URL;
@@ -35,7 +36,10 @@ export async function updateTripStatusInCustomerApp(
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        tower_id: towerId,
+        status: status
+      }),
     });
 
     if (response.ok) {

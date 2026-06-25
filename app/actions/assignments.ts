@@ -9,6 +9,8 @@ interface RecordAcceptedAssignmentData {
   tripId: string;
   towerId: string;
   location: { lat: string; long: string }; // Coordenadas del origen del viaje
+  origin: string;
+  destination: string;
 }
 
 interface RecordAcceptedAssignmentResponse {
@@ -33,6 +35,8 @@ export async function recordAcceptedAssignment(
         tower_id: data.towerId,
         status: 'accepted', // El estado inicial cuando se acepta un viaje
         location: data.location, // La ubicación del origen del viaje
+        origin: data.origin,
+        destination: data.destination
       },
     });
     return { success: true, assignmentId: newAssignment.assignment_id };

@@ -551,6 +551,8 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
               lat: currentOffer.origin.lat,
               long: currentOffer.origin.long,
             },
+            origin: currentOffer.origin.address,
+            destination: currentOffer.destination.address
           };
           const assignmentResult = await recordAcceptedAssignment(assignmentData);
           if (assignmentResult.success) {
@@ -561,7 +563,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
           // NUEVO: Actualizar el estado del viaje en la Customer App a 'en proceso'
           try {
-            const customerAppUpdateResult = await updateTripStatusInCustomerApp(currentOffer.id, 'en proceso');
+            const customerAppUpdateResult = await updateTripStatusInCustomerApp(currentOffer.id, towerData?.clerk_id!, 'en proceso');
             if (customerAppUpdateResult.success) {
               console.log("Estado del viaje actualizado a 'en proceso' en Customer App.");
             } else {
@@ -687,7 +689,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     // NUEVO: Actualizar el estado del viaje en la Customer App a 'finalizado'
     if (activeTripDetails) {
       try {
-        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, 'finalizado');
+        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, towerData?.clerk_id!, 'finalizado');
         if (customerAppUpdateResult.success) {
           console.log("Estado del viaje actualizado a 'finalizado' en Customer App.");
         } else {
