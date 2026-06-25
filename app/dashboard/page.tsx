@@ -3,9 +3,26 @@ import AppFooter from "@/components/layout/AppFooter";
 import UserProfileSummary from "@/components/dashboard/UserProfileSummary";
 import MonthlyTripsSummary from "@/components/dashboard/MonthlyTripsSummary";
 import RecentTripsList from "@/components/dashboard/RecentTripsList";
+import { auth } from "@clerk/nextjs/server"; // Importar auth para obtener el userId
+import { getMonthlyAssignmentCounts } from "@/app/actions/assignments"; // Importar la nueva server action
 
 export default async function DashboardPage() {
   // Redirección manejada por el middleware (proxy.ts)
+  const { userId } = await auth(); // Obtener userId
+
+  let currentMonthAssignments = 0;
+  let previousMonthAssignments = 0;
+
+  if (userId) { // Solo si hay un usuario logueado
+    const countsResponse = await getMonthlyAssignmentCounts();
+    if (countsResponse.success) {
+      currentMonthAssignments = countsResponse.currentMonthCount || 0;
+      previousMonthAssignments = countsResponse.previousMonthCount || 0;
+    } else {
+      console.error("Error al cargar conteos de asignaciones:", countsResponse.error);
+      // Podrías implementar una UI para mostrar este error si fuera necesario
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-900/50 text-slate-100 flex flex-col">
@@ -21,7 +38,10 @@ export default async function DashboardPage() {
 
             {/* Sección 2: Cantidad de viajes realizados en el mes (1 columna de ancho, 1 fila de alto) */}
             <div className="md:col-span-1 md:row-span-1 h-full">
-              <MonthlyTripsSummary />
+              <MonthlyTripsSummary
+                currentMonthCount={currentMonthAssignments}
+                previousMonthCount={previousMonthAssignments}
+              />
             </div>
 
             {/* Sección 3: Listado de viajes (2 columnas de ancho, 2 filas de alto) */}

@@ -1,7 +1,9 @@
 "use server";
 
 import prisma from '@/lib/prisma';
-import { Assignment } from '@prisma/client'; // Importar el tipo Assignment de Prisma
+import { Assignment } from '@prisma/client';
+import { auth } from "@clerk/nextjs/server"; // Importar auth para obtener el userId del servidor
+import { getTowerIdByClerkId } from "./tower"; // Importar función para obtener towerId
 
 interface RecordAcceptedAssignmentData {
   tripId: string;
@@ -61,6 +63,13 @@ interface AssignmentsActionResponse {
   error?: string;
 }
 
+interface MonthlyAssignmentCountsResponse {
+  success: boolean;
+  currentMonthCount?: number;
+  previousMonthCount?: number;
+  error?: string;
+}
+
 /**
  * Obtiene todas las asignaciones que no están desactivadas.
  * @returns Una promesa que resuelve con un objeto de respuesta que contiene la lista de asignaciones o un error.
@@ -77,6 +86,65 @@ export async function getNonDeactivatedAssignments(): Promise<AssignmentsActionR
   } catch (error: any) {
     console.error("Error al obtener asignaciones no desactivadas:", error);
     return { success: false, error: "Fallo al obtener la lista de asignaciones no desactivadas." };
+  }
+}
+
+/**
+ * Obtiene el número de asignaciones del mes actual y del mes anterior para la torre del usuario autenticado.
+ * Solo cuenta asignaciones que no estén desactivadas.
+ * @returns Un objeto con el éxito, los conteos de asignaciones o un error.
+ */
+export async function getMonthlyAssignmentCounts(): Promise<MonthlyAssignmentCountsResponse> {
+  const { userId } = await auth();
+  if (!userId) {
+    return { success: false, error: "Usuario no autenticado." };
+  }
+
+  const towerData = await getTowerIdByClerkId(userId);
+  if (!towerData?.towerId) {
+    return { success: false, error: "Tower no encontrada para el usuario." };
+  }
+
+  const towerId = towerData.towerId;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
+
+  // Rango para el mes actual
+  const startCurrentMonth = new Date(currentYear, currentMonth, 1);
+  const endCurrentMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59, 999); // Último milisegundo del mes actual
+
+  // Rango para el mes anterior
+  const startPreviousMonth = new Date(currentYear, currentMonth - 1, 1);
+  const endPreviousMonth = new Date(currentYear, currentMonth, 0, 23, 59, 59, 999); // Último milisegundo del mes anterior
+
+  try {
+    const currentMonthCount = await prisma.assignment.count({
+      where: {
+        tower_id: towerId,
+        deactivated: false,
+        createdAt: {
+          gte: startCurrentMonth,
+          lte: endCurrentMonth,
+        },
+      },
+    });
+
+    const previousMonthCount = await prisma.assignment.count({
+      where: {
+        tower_id: towerId,
+        deactivated: false,
+        createdAt: {
+          gte: startPreviousMonth,
+          lte: endPreviousMonth,
+        },
+      },
+    });
+
+    return { success: true, currentMonthCount, previousMonthCount };
+  } catch (error: any) {
+    console.error("Error al obtener conteos de asignaciones mensuales:", error);
+    return { success: false, error: "Fallo al obtener los conteos de asignaciones." };
   }
 }
 
