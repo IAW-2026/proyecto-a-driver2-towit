@@ -12,15 +12,15 @@ const LocationModeToggle: React.FC<LocationModeToggleProps> = ({ isManualLocatio
     <Button
       onClick={toggleManualLocationMode}
       variant="ghost"
-      className={`font-bold transition-colors duration-200 ${
+      className={`font-bold w-min transition-colors duration-200 ${
         isManualLocationMode
           ? 'bg-blue-600 hover:bg-blue-500 text-white'
           : 'bg-slate-700 hover:bg-slate-600 text-white'
       }`}
       aria-label={isManualLocationMode ? "Desactivar modo de ubicación manual" : "Activar modo de ubicación manual"}
     >
-      <Globe className="h-5 w-5 mr-2" />
-      {isManualLocationMode ? 'Ubicación Manual' : 'Ubicación Automática'}
+      <Globe className="h-5 w-5" />
+      <span className="hidden md:inline">{isManualLocationMode ? 'Ubicación Manual' : 'Ubicación Automática'}</span>
     </Button>
   );
 };

@@ -41,7 +41,7 @@ export default function ServiceRequestCard({
 
       <div className="md:space-y-3 mb-3 md:mb-6">
         <p className="text-lg flex items-center">
-          <span className="font-semibold mr-2">Cliente:</span> {customerName}
+          <span className="font-semibold mr-1">Cliente:</span> {customerName}
           <span className="ml-2 inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-0.5 text-sm font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/20">
             {typeof customerRating === 'number' ? `${customerRating.toFixed(1)} ★` : 'N/D'}
           </span>

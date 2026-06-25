@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { UserButton } from "@clerk/nextjs";
 import React from "react";
 import LocationModeToggle from "@/components/service/LocationModeToggle"; // NUEVO: Importar LocationModeToggle
+import { UserCheck, UserX } from "lucide-react";
 
 interface ServiceHeaderProps {
   isAvailable: boolean;
@@ -33,7 +34,7 @@ export default function ServiceHeader({
             Tow<span className="text-white">It</span>
           </Link>
           <Link href="/dashboard">
-            <Button variant="ghost" className="text-white hover:bg-slate-800/50">Dashboard</Button>
+            <Button variant="ghost" className="text-white hover:bg-slate-800/50 p-0">Dashboard</Button>
           </Link>
         </div>
         <div className="flex items-center gap-4">
@@ -50,7 +51,9 @@ export default function ServiceHeader({
             }`}
             disabled={isTripActive || !isButtonEnabled} // Deshabilitar si hay un viaje activo O si el botón no está habilitado
           >
-            {isAvailable ? "Disponible" : "No Disponible"}
+            <UserX className={`${isAvailable ? "hidden" : "inline"}`}/>
+            <UserCheck className={`${!isAvailable ? "hidden" : "inline"}`}/>
+            <span className="hidden md:inline">{isAvailable ? "Disponible" : "No Disponible"}</span>
           </Button>
         </div>
       </div>
