@@ -20,7 +20,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
 import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower";
-import { recordAcceptedAssignment, completeAssignment } from "@/app/actions/assignments"; // NUEVO: Importar completeAssignment
+import { recordAcceptedAssignment, completeAssignment } from "@/app/actions/assignments";
+import { createDisbursement } from "@/app/actions/payments"; // NUEVO: Importar createDisbursement
 import * as turf from '@turf/turf'
 
 interface Vehicle {
@@ -105,6 +106,10 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const [activeTripCustomerName, setActiveTripCustomerName] = useState<string | null>(null);
   const [activeTripCustomerRating, setActiveTripCustomerRating] = useState<number | null>(null);
 
+  // NUEVO: Estados para la notificación de pago
+  const [showPaymentSuccessMessage, setShowPaymentSuccessMessage] = useState(false);
+  const [paymentNotificationMessage, setPaymentNotificationMessage] = useState("");
+
   // NUEVO: Estado para el modo de ubicación manual
   const [isManualLocationMode, setIsManualLocationMode] = useState(false);
 
@@ -188,7 +193,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         setShowRedirectionPopup(true);
         setTimeout(() => {
           router.push("/dashboard");
-        }, 3000);
+        }, 5000);
       } finally {
         setIsLoading(false);
         setArePrerequisitesLoaded(true);
@@ -345,7 +350,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       if (!isNaN(originLat) && !isNaN(originLong)) {
         const currentLocationPoint = turf.point([currentLocation.lat, currentLocation.long]);
         const originLocationPoint = turf.point([originLat, originLong]);
-        const distance = turf.distance(currentLocationPoint, originLocationPoint, {units: 'meters'});
+        const distance = turf.distance(currentLocationPoint, originLocationPoint, { units: 'meters' });
 
         if (distance <= 50) {
           setShowStartTripConfirmation(true);
@@ -372,7 +377,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       if (!isNaN(destinationLat) && !isNaN(destinationLong)) {
         const currentLocationPoint = turf.point([currentLocation.lat, currentLocation.long]);
         const destinationLocationPoint = turf.point([destinationLat, destinationLong]);
-        const distance = turf.distance(currentLocationPoint, destinationLocationPoint, {units: 'meters'});
+        const distance = turf.distance(currentLocationPoint, destinationLocationPoint, { units: 'meters' });
 
         if (distance <= 50) { // Si está a 50 metros o menos del destino
           setShowEndTripConfirmation(true);
@@ -632,7 +637,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     setIsTripEndedLocallyConfirmed(false); // Resetear también para el próximo viaje
 
     // NUEVO: Actualizar la asignación en la base de datos
-    if (activeTripDetails && currentLocation) {
+    if (activeTripDetails && currentLocation && user?.id) { // Añadir user?.id a la condición
       const completionData = {
         tripId: tripId, // Usa el tripId que se pasa a la función
         finalLocation: {
@@ -643,19 +648,35 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       const completionResult = await completeAssignment(completionData);
       if (completionResult.success) {
         console.log("Asignación completada y actualizada en la DB con ID:", completionResult.assignmentId);
+
+        // NUEVO: Generar el desembolso del pago
+        // Asumiendo un feePercentage del 100% para el tower por simplicidad, o podrías derivarlo de activeTripDetails.service_value
+        // Se asume que activeTripDetails.service_value está disponible y es numérico para calcular el feePercentage.
+        // Por ahora, usaremos un valor fijo como 100 si no se especifica.
+        const feePercentage = activeTripDetails.service_value ? 100 : 100; // Ajustar según la lógica de negocio
+        const disbursementResult = await createDisbursement(tripId, user.id, feePercentage); 
+        if (disbursementResult.success) {
+          setPaymentNotificationMessage("Se acreditó el pago en su cuenta asociada.");
+          setShowPaymentSuccessMessage(true);
+          console.log("Desembolso de pago generado exitosamente.");
+        } else {
+          setPaymentNotificationMessage(`Error al acreditar el pago en su cuenta. Contacte al soporte técnico.`);
+          setShowPaymentSuccessMessage(true);
+          console.error("Fallo al generar el desembolso de pago:", disbursementResult.error);
+        }
       } else {
         console.error("Fallo al completar la asignación en la DB:", completionResult.error);
       }
     } else {
-      console.error("No se pudo completar la asignación: faltan activeTripDetails o currentLocation.");
+      console.error("No se pudo completar la asignación: faltan activeTripDetails, currentLocation o user?.id.");
     }
 
     // Limpiar todas las referencias del viaje activo
-    setCurrentOffer(null); // No debería haber una oferta pendiente, pero por si acaso.
+    setCurrentOffer(null);
     setMapRouteStart(null);
     setMapRouteEnd(null);
     setMapRouteOriginToDestinationEnd(null);
-    setActiveTripDetails(null); // MUY IMPORTANTE: Limpiar los detalles del viaje activo
+    setActiveTripDetails(null);
     setActiveTripCustomerName(null);
     setActiveTripCustomerRating(null);
 
@@ -664,7 +685,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     if (feedbackAppUrl) {
       const currentServiceUrl = window.location.origin + '/service';
       const encodedReturnUrl = encodeURIComponent(currentServiceUrl); // Codificar la URL completa
-      router.push(`${feedbackAppUrl}/rate/${tripId}?return_url=${encodedReturnUrl}`);
+      setTimeout(() => {
+        router.push(`${feedbackAppUrl}/rate/${tripId}?return_url=${encodedReturnUrl}`);
+      }, 3000); // 3 segundos para mostrar la notificación antes de redirigir
     } else {
       console.error("NEXT_PUBLIC_FEEDBACK_APP_URL no está configurada, no se pudo redirigir para calificar.");
       // Opcional: Podrías redirigir a una ruta por defecto si la URL no está disponible
@@ -674,6 +697,14 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
+      {/* NUEVO: Notificación de éxito/error de pago */}
+      {showPaymentSuccessMessage && (
+        <div className={`absolute w-full top-20 left-1/2 -translate-x-1/2 z-[1002] transition-opacity duration-500`}>
+          <p className={`mx-4  rounded-md shadow-lg text-white font-semibold p-4 text-center ${paymentNotificationMessage.includes("Error") || true ? "bg-red-600/80" : "bg-green-600/80"}`}>
+            {paymentNotificationMessage || "Error al acreditar el pago en su cuenta. Contacte al soporte técnico."}
+          </p>
+        </div>
+      )}
       <ServiceHeader
         isAvailable={isAvailable}
         setIsAvailable={handleToggleAvailability}
