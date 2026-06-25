@@ -37,7 +37,7 @@ export async function GET(
  * Actualiza un registro de la tabla Admin.
  * Requiere rol de administrador.
  */
-export async function PUT(
+export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
@@ -47,7 +47,15 @@ export async function PUT(
   const { id } = await context.params;
   try {
     const data = await req.json();
-    const { full_name, email } = data;
+    const updateData: {
+      full_name?: string;
+      email?: string;
+      deactivated?: boolean; // Permitir actualizar el campo deactivated
+    } = {};
+
+    if (data.full_name !== undefined) updateData.full_name = data.full_name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.deactivated !== undefined) updateData.deactivated = data.deactivated; // Añadir deactivated
 
     // Primero, obtener el clerk_id asociado al admin_id de Prisma
     const existingAdmin = await prisma.admin.findUnique({
@@ -59,24 +67,25 @@ export async function PUT(
       return NextResponse.json({ success: false, error: "Administrador no encontrado en la base de datos." }, { status: 404 });
     }
 
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ success: false, error: "No se proporcionaron datos para actualizar." }, { status: 400 });
+    }
+
     const updatedAdmin = await prisma.admin.update({
       where: { admin_id: id },
-      data: {
-        full_name: full_name,
-        email: email,
-      },
+      data: updateData, // Usar updateData para la actualización
     });
 
     // Opcional: Si el email o nombre completo del Admin cambia, también actualizar en Clerk
-    if (updatedAdmin.clerk_id && (full_name !== undefined || email !== undefined)) {
+    if (updatedAdmin.clerk_id && (updateData.full_name !== undefined || updateData.email !== undefined)) {
       const clerkUpdateParams: { firstName?: string; lastName?: string; emailAddress?: string } = {};
-      if (full_name !== undefined) {
-        const nameParts = full_name.split(' ');
+      if (updateData.full_name !== undefined) {
+        const nameParts = updateData.full_name.split(' ');
         clerkUpdateParams.firstName = nameParts[0] || '';
         clerkUpdateParams.lastName = nameParts.slice(1).join(' ') || '';
       }
-      if (email !== undefined) {
-        clerkUpdateParams.emailAddress = email;
+      if (updateData.email !== undefined) {
+        clerkUpdateParams.emailAddress = updateData.email;
       }
 
       if (Object.keys(clerkUpdateParams).length > 0) {

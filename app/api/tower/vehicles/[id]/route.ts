@@ -36,7 +36,7 @@ export async function GET(
  * Actualiza un registro de la tabla Vehicle.
  * Requiere rol de administrador.
  */
-export async function PUT(
+export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
@@ -46,27 +46,39 @@ export async function PUT(
   const { id } = await context.params;
   try {
     const data = await req.json();
-    const { brand, model, year, max_load, tower_id } = data;
+    const updateData: {
+      brand?: string;
+      model?: string;
+      year?: number;
+      max_load?: number;
+      tower_id?: string;
+      deactivated?: boolean; // Permitir actualizar el campo deactivated
+    } = {};
 
-    if (tower_id) {
+    if (data.brand !== undefined) updateData.brand = data.brand;
+    if (data.model !== undefined) updateData.model = data.model;
+    if (data.year !== undefined) updateData.year = parseInt(data.year, 10);
+    if (data.max_load !== undefined) updateData.max_load = parseFloat(data.max_load);
+    if (data.tower_id !== undefined) updateData.tower_id = data.tower_id;
+    if (data.deactivated !== undefined) updateData.deactivated = data.deactivated; // Añadir deactivated
+
+    if (data.tower_id) {
       // Verificar si la tower_id existe si se está actualizando
       const towerExists = await prisma.tower.findUnique({
-        where: { tower_id: tower_id },
+        where: { tower_id: data.tower_id },
       });
       if (!towerExists) {
         return NextResponse.json({ success: false, error: "La Tower especificada no existe." }, { status: 404 });
       }
     }
 
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ success: false, error: "No se proporcionaron datos para actualizar." }, { status: 400 });
+    }
+
     const updatedVehicle = await prisma.vehicle.update({
       where: { vehicle_id: id },
-      data: {
-        brand: brand,
-        model: model,
-        year: year ? parseInt(year, 10) : undefined,
-        max_load: max_load ? parseFloat(max_load) : undefined,
-        tower_id: tower_id,
-      },
+      data: updateData, // Usar updateData para la actualización
     });
 
     revalidatePath("/admin/vehicles");

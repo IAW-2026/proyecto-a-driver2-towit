@@ -35,10 +35,10 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
 
   try {
     const data = await req.json();
-    const { trip_id, tower_id, status, location } = data;
+    const { trip_id, tower_id, status, location, origin, destination } = data;
 
-    if (!trip_id || !tower_id || !status || !location) {
-      return NextResponse.json({ success: false, error: "Faltan campos obligatorios para la asignación: trip_id, tower_id, status, location." }, { status: 400 });
+    if (!trip_id || !tower_id || !status || !location || !origin || !destination) {
+      return NextResponse.json({ success: false, error: "Faltan campos obligatorios para la asignación: trip_id, tower_id, status, location, origin, destination." }, { status: 400 });
     }
 
     // Verificar si la tower_id existe
@@ -54,7 +54,9 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
         trip_id,
         tower_id,
         status,
-        location, // Asumimos que `location` ya es un objeto JSON válido
+        location,
+        origin,
+        destination,
       },
     });
 

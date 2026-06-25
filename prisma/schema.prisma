@@ -57,6 +57,8 @@ model Assignment {
   tower         Tower    @relation(fields: [tower_id], references: [tower_id], onDelete: Cascade)
   status        String   // pending, accepted, completed, cancelled
   location      Json     // {lat: string, long: string}
+  origin        String   @default("") // Nueva: Dirección de origen del viaje
+  destination   String   @default("") // Nueva: Dirección de destino del viaje
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

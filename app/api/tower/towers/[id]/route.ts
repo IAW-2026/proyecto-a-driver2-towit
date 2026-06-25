@@ -37,7 +37,7 @@ export async function GET(
  * Actualiza un registro de la tabla Tower.
  * Requiere rol de administrador.
  */
-export async function PUT(
+export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<AdminActionResponse>> {
@@ -47,7 +47,17 @@ export async function PUT(
   const { id } = await context.params;
   try {
     const data = await req.json();
-    const { full_name, email, payments_alias } = data;
+    const updateData: {
+      full_name?: string;
+      email?: string;
+      payments_alias?: string | null;
+      deactivated?: boolean; // Permitir actualizar el campo deactivated
+    } = {};
+
+    if (data.full_name !== undefined) updateData.full_name = data.full_name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.payments_alias !== undefined) updateData.payments_alias = data.payments_alias;
+    if (data.deactivated !== undefined) updateData.deactivated = data.deactivated; // Añadir deactivated
 
     // Primero, obtener el clerk_id asociado al tower_id de Prisma
     const existingTower = await prisma.tower.findUnique({
@@ -59,25 +69,25 @@ export async function PUT(
       return NextResponse.json({ success: false, error: "Tower no encontrada en la base de datos." }, { status: 404 });
     }
 
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ success: false, error: "No se proporcionaron datos para actualizar." }, { status: 400 });
+    }
+
     const updatedTower = await prisma.tower.update({
       where: { tower_id: id },
-      data: {
-        full_name: full_name,
-        email: email,
-        payments_alias: payments_alias,
-      },
+      data: updateData, // Usar updateData para la actualización
     });
 
     // Opcional: Si el email o nombre completo de la Tower cambia, también actualizar en Clerk
-    if (updatedTower.clerk_id && (full_name !== undefined || email !== undefined)) {
+    if (updatedTower.clerk_id && (updateData.full_name !== undefined || updateData.email !== undefined)) {
       const clerkUpdateParams: { firstName?: string; lastName?: string; emailAddress?: string } = {};
-      if (full_name !== undefined) {
-        const nameParts = full_name.split(' ');
+      if (updateData.full_name !== undefined) {
+        const nameParts = updateData.full_name.split(' ');
         clerkUpdateParams.firstName = nameParts[0] || '';
         clerkUpdateParams.lastName = nameParts.slice(1).join(' ') || '';
       }
-      if (email !== undefined) {
-        clerkUpdateParams.emailAddress = email;
+      if (updateData.email !== undefined) {
+        clerkUpdateParams.emailAddress = updateData.email;
       }
 
       if (Object.keys(clerkUpdateParams).length > 0) {
