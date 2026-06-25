@@ -8,8 +8,8 @@ const requestBodySchema = z.object({
   customer_id: z.string(),
   trip: z.object({
     id: z.string(), // trip_id
-    origin: z.object({ lat: z.string(), long: z.string() }),
-    destination: z.object({ lat: z.string(), long: z.string() }),
+    origin: z.object({ lat: z.string(), long: z.string(), address: z.string() }),
+    destination: z.object({ lat: z.string(), long: z.string(), address: z.string() }),
   }),
   vehicle_data: z.object({
     brand: z.string(),
@@ -124,8 +124,10 @@ export async function POST(req: Request): Promise<NextResponse<AdminActionRespon
       trip_id: trip.id,
       trip_origin_lat: trip.origin.lat,
       trip_origin_long: trip.origin.long,
+      trip_origin_address: trip.origin.address,
       trip_destination_lat: trip.destination.lat,
       trip_destination_long: trip.destination.long,
+      trip_destination_address: trip.destination.address,
       vehicle_brand: vehicle_data.brand,
       vehicle_model: vehicle_data.model,
       vehicle_year: vehicle_data.year,
