@@ -18,11 +18,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
-import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower";
+} from "@/components/ui/dialog";
+import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData, updateTowerLocationInActiveTrip } from "@/app/actions/redis-tower"; // NUEVO: Importar updateTowerLocationInActiveTrip
 import { recordAcceptedAssignment, completeAssignment } from "@/app/actions/assignments";
 import { createDisbursement } from "@/app/actions/payments";
-import { updateTripStatusInCustomerApp } from "@/app/actions/trip-status"; // NUEVO: Importar la Server Action
+import { updateTripStatusInCustomerApp } from "@/app/actions/trip-status";
 import * as turf from '@turf/turf'
 
 interface Vehicle {
@@ -118,6 +118,32 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   const toggleManualLocationMode = useCallback(() => {
     setIsManualLocationMode(prevMode => !prevMode);
   }, []);
+
+  // NUEVO EFECTO: Para actualizar la ubicación del Tower en el viaje activo en Redis
+  useEffect(() => {
+    let updateInterval: NodeJS.Timeout | null = null;
+
+    if (isTripActive && user?.id && currentLocation && activeTripDetails?.id) {
+      const sendLocationUpdate = async () => {
+        if (currentLocation && activeTripDetails?.id) {
+          await updateTowerLocationInActiveTrip(activeTripDetails.id, currentLocation);
+        }
+      };
+
+      // Realizar la actualización inicial y luego cada 5 segundos
+      sendLocationUpdate();
+      updateInterval = setInterval(sendLocationUpdate, 5000); // Actualiza cada 5 segundos
+
+    } else if (updateInterval) {
+      clearInterval(updateInterval);
+    }
+
+    return () => {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+      }
+    };
+  }, [isTripActive, user?.id, currentLocation, activeTripDetails?.id]); // Depende de estos estados
 
   // NUEVO: Función para manejar el cambio de ubicación desde el mapa en modo manual
   const handleManualLocationChange = useCallback((location: Coordinates) => {
@@ -475,8 +501,8 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
   // NUEVA FUNCIÓN: Para aceptar una oferta de viaje
   const handleAcceptOffer = async (tripId: string) => {
-    if (!user?.id) {
-      console.error("User ID not available to accept offer.");
+    if (!user?.id || !currentLocation) { // AÑADIR currentLocation a la validación
+      console.error("User ID or current location not available to accept offer.");
       return;
     }
 
@@ -490,6 +516,8 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
           trip_id: tripId,
           tower_id: user.id,
           action: 'accept',
+          tower_location_lat: currentLocation.lat, // ENVIAR LATITUD
+          tower_location_long: currentLocation.long, // ENVIAR LONGITUD
         }),
       });
       const data = await response.json();

@@ -54,6 +54,44 @@ export async function getTowerInitialVehicle(): Promise<VehicleProfileData | nul
 }
 
 /**
+ * NUEVO: Acción de servidor para actualizar la ubicación del Tower en un viaje activo en Redis.
+ */
+export async function updateTowerLocationInActiveTrip(
+  tripId: string,
+  location: { lat: number, long: number }
+): Promise<void> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    console.warn("No user ID found, cannot update tower location in active trip.");
+    return;
+  }
+  if (!tripId || !location || !location.lat || !location.long) {
+    console.warn(`Invalid data provided for updating active trip location for user ${userId}.`);
+    return;
+  }
+
+  const long = parseFloat(location.long.toString());
+  const lat = parseFloat(location.lat.toString());
+
+  if (isNaN(long) || isNaN(lat)) {
+    console.warn(`Invalid location coordinates for updating active trip location for user ${userId}:`, location);
+    return;
+  }
+
+  try {
+    const requestKey = `trip:request:${tripId}`;
+    await redis.hset(requestKey, {
+      tower_location_lat: String(lat),
+      tower_location_long: String(long),
+    });
+    // console.log(`Ubicación del Tower ${userId} actualizada para el viaje ${tripId}.`); // Descomentar para depuración
+  } catch (error) {
+    console.error(`Error actualizando la ubicación del Tower para el viaje ${tripId} en Redis:`, error);
+  }
+}
+
+/**
  * Acción de servidor para cambiar el estado de disponibilidad de un tower,
  * actualizar su perfil en Redis, el GeoSet y el heartbeat.
  */

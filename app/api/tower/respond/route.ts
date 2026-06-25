@@ -3,7 +3,7 @@ import { redis } from '@/lib/redis-client';
 
 export async function POST(req: Request) {
     try {
-        const { trip_id, tower_id, action } = await req.json(); // action: 'accept' | 'reject'
+        const { trip_id, tower_id, action, tower_location_lat, tower_location_long } = await req.json(); // action: 'accept' | 'reject'
 
         const requestKey = `trip:request:${trip_id}`;
         const trip = await redis.hgetall(requestKey);
@@ -27,8 +27,10 @@ export async function POST(req: Request) {
             updatePipeline.hset(requestKey, {
                 status: 'accepted',
                 tower_clerk_id: tower_id,
+                tower_location_lat: tower_location_lat ? String(tower_location_lat) : undefined,
+                tower_location_long: tower_location_long ? String(tower_location_long) : undefined,
             });
-            //eliminamos el ttl del viaje
+            // eliminamos el ttl del viaje
             updatePipeline.persist(requestKey);
             // 2. Quitamos al tower de los disponibles y actualizamos su perfil
             updatePipeline.zrem('towers:locations:available', tower_id);
