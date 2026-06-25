@@ -27,13 +27,13 @@ export async function getAverageRatingForCustomer(customerId: string): Promise<C
   }
 
   try {
-    const response = await fetch(`${feedbackAppUrl}/api/avg_rating/${customerId}`, {
+    const response = await fetch(`${feedbackAppUrl}/api/feedback/avg_rating/${customerId}`, {
       method: 'GET',
       headers: {
         'x-api-key': apiKey,
         'Accept': 'application/json'
       },
-      // cache: 'no-store', // Se puede descomentar si se quiere asegurar que no haya caché de esta llamada
+      cache: 'no-store', // Se puede descomentar si se quiere asegurar que no haya caché de esta llamada
     });
 
     if (response.ok) {
