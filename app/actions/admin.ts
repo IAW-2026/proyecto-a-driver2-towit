@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
-interface PaginatedAdminActionResponse {
+export interface PaginatedAdminActionResponse {
   success: boolean;
   data?: any;
   totalPages?: number;
