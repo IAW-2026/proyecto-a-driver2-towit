@@ -27,11 +27,15 @@ interface Vehicle {
   max_load: number;
 }
 
+interface UserProfileSummaryProps {
+  avgRating: number | null; // Nuevo prop para la calificación promedio
+}
+
 // Ubicación mockeada para el contexto del dashboard, ya que no se rastrea la ubicación en tiempo real aquí.
 // Esta es una solución temporal.
 const DASHBOARD_MOCK_LOCATION = { lat: -38.7196, long: -62.2651 }; // Ejemplo: Bahía Blanca
 
-export default function UserProfileSummary() {
+export default function UserProfileSummary({ avgRating }: UserProfileSummaryProps) {
   const { user, isLoaded } = useUser();
   const [vehicles, setVehicles] = useState<Vehicle[] | null>(null);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
@@ -120,7 +124,8 @@ export default function UserProfileSummary() {
   // Si no hay datos de Tower o el alias de pagos no está configurado, mostrar el botón.
   const hasPaymentAlias = !!towerData?.payments_alias;
 
-  const avgRating = 4.8;
+  // Usa la prop avgRating en lugar del valor hardcodeado
+  // const avgRating = 4.8; // Eliminar esta línea
   const currentVehicle = vehicles?.find(v => v.vehicle_id === selectedVehicleId) || null;
 
   const handleToggleAvailability = useCallback(async () => { // Hacemos la función asíncrona
@@ -149,7 +154,7 @@ export default function UserProfileSummary() {
       // Aquí podrías añadir una notificación al usuario si se considera necesario,
       // pero por ahora solo se registrará el error.
     }
-  }, [isAvailable, vehicles, user?.id, openNoVehicleErrorModal]); // Añadir dependencias
+  }, [isAvailable, vehicles, user?.id, openNoVehicleErrorModal, currentVehicle]); // Añadir currentVehicle a las dependencias
 
   const handleOpenPaymentAliasModal = () => setShowPaymentAliasModal(true);
   const handleClosePaymentAliasModal = () => setShowPaymentAliasModal(false);
@@ -193,7 +198,7 @@ h-full">
               </h2>
               <div className="flex items-center">
                 <p className="text-sm text-yellow-400">
-                  Calificación: {avgRating}
+                  Calificación: {avgRating !== null ? avgRating.toFixed(1) : "-"}
                 </p>
               </div>
               {/* Botón para abrir el modal de alias de pago */}

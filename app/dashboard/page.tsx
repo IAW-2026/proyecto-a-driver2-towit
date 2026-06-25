@@ -3,24 +3,37 @@ import AppFooter from "@/components/layout/AppFooter";
 import UserProfileSummary from "@/components/dashboard/UserProfileSummary";
 import MonthlyTripsSummary from "@/components/dashboard/MonthlyTripsSummary";
 import RecentTripsList from "@/components/dashboard/RecentTripsList";
-import { auth } from "@clerk/nextjs/server"; // Importar auth para obtener el userId
-import { getMonthlyAssignmentCounts } from "@/app/actions/assignments"; // Importar la nueva server action
+import { auth } from "@clerk/nextjs/server";
+import { getMonthlyAssignmentCounts } from "@/app/actions/assignments";
+import { getAverageRatingForCustomer } from "@/app/actions/feedback"; // Importar la acción para obtener calificación
+import { getTowerIdByClerkId } from "@/app/actions/tower"; // Importar para obtener towerId
 
 export default async function DashboardPage() {
-  // Redirección manejada por el middleware (proxy.ts)
-  const { userId } = await auth(); // Obtener userId
+  const { userId } = await auth();
 
   let currentMonthAssignments = 0;
   let previousMonthAssignments = 0;
+  let towerAvgRating: number | null = null; // Inicializar la calificación promedio de la torre
 
-  if (userId) { // Solo si hay un usuario logueado
+  if (userId) {
     const countsResponse = await getMonthlyAssignmentCounts();
     if (countsResponse.success) {
       currentMonthAssignments = countsResponse.currentMonthCount || 0;
       previousMonthAssignments = countsResponse.previousMonthCount || 0;
     } else {
       console.error("Error al cargar conteos de asignaciones:", countsResponse.error);
-      // Podrías implementar una UI para mostrar este error si fuera necesario
+    }
+
+    // Obtener la calificación de la torre
+    const towerData = await getTowerIdByClerkId(userId);
+    if (towerData?.towerId) {
+      // Usar getAverageRatingForCustomer con el towerId, según la indicación
+      const ratingResponse = await getAverageRatingForCustomer(towerData.towerId);
+      if (ratingResponse.success) {
+        towerAvgRating = ratingResponse.rating || null;
+      } else {
+        console.error("Error al cargar la calificación de la torre:", ratingResponse.error);
+      }
     }
   }
 
@@ -33,7 +46,9 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 grid-flow-row-dense">
             {/* Sección 1: Resumen de detalles de usuario (3 columnas de ancho, 1 fila de alto) */}
             <div className="md:col-span-3 md:row-span-1 h-full">
-              <UserProfileSummary />
+              <UserProfileSummary
+                avgRating={towerAvgRating} // Pasar la calificación promedio de la torre como prop
+              />
             </div>
 
             {/* Sección 2: Cantidad de viajes realizados en el mes (1 columna de ancho, 1 fila de alto) */}
