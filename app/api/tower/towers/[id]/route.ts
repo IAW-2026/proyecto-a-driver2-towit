@@ -78,9 +78,9 @@ export async function PATCH(
       data: updateData, // Usar updateData para la actualización
     });
 
-    // Opcional: Si el email o nombre completo de la Tower cambia, también actualizar en Clerk
-    if (updatedTower.clerk_id && (updateData.full_name !== undefined || updateData.email !== undefined)) {
-      const clerkUpdateParams: { firstName?: string; lastName?: string; emailAddress?: string } = {};
+    // Opcional: Si el email, nombre completo o estado de la Tower cambia, también actualizar en Clerk
+    if (updatedTower.clerk_id && (updateData.full_name !== undefined || updateData.email !== undefined || updateData.deactivated !== undefined)) {
+      const clerkUpdateParams: { firstName?: string; lastName?: string; emailAddress?: string; publicMetadata?: { role: string } } = {};
       if (updateData.full_name !== undefined) {
         const nameParts = updateData.full_name.split(' ');
         clerkUpdateParams.firstName = nameParts[0] || '';
@@ -88,6 +88,11 @@ export async function PATCH(
       }
       if (updateData.email !== undefined) {
         clerkUpdateParams.emailAddress = updateData.email;
+      }
+      if (updateData.deactivated !== undefined) {
+        clerkUpdateParams.publicMetadata = {
+          role: updateData.deactivated ? 'deactivated_tower' : 'tower'
+        };
       }
 
       if (Object.keys(clerkUpdateParams).length > 0) {
