@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog"; // NUEVO: Importar componentes de Dialog
 import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData } from "@/app/actions/redis-tower";
 import { recordAcceptedAssignment, completeAssignment } from "@/app/actions/assignments";
-import { createDisbursement } from "@/app/actions/payments"; // NUEVO: Importar createDisbursement
+import { createDisbursement } from "@/app/actions/payments";
+import { updateTripStatusInCustomerApp } from "@/app/actions/trip-status"; // NUEVO: Importar la Server Action
 import * as turf from '@turf/turf'
 
 interface Vehicle {
@@ -542,11 +543,11 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
         }
 
         // NUEVO: Registrar el viaje aceptado como una asignación en la base de datos
-        if (user?.id && currentOffer) { // Usar activeTripDetails que ya tiene la info de la oferta
+        if (user?.id && currentOffer) {
           const assignmentData = {
             tripId: currentOffer.id,
             towerId: (await getTowerIdByClerkId(user.id)).towerId!,
-            location: { // La ubicación del origen del viaje
+            location: {
               lat: currentOffer.origin.lat,
               long: currentOffer.origin.long,
             },
@@ -556,6 +557,18 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
             console.log("Asignación de viaje aceptada registrada en la DB con ID:", assignmentResult.assignmentId);
           } else {
             console.error("Fallo al registrar la asignación de viaje aceptada en la DB:", assignmentResult.error);
+          }
+
+          // NUEVO: Actualizar el estado del viaje en la Customer App a 'en proceso'
+          try {
+            const customerAppUpdateResult = await updateTripStatusInCustomerApp(currentOffer.id, 'en proceso');
+            if (customerAppUpdateResult.success) {
+              console.log("Estado del viaje actualizado a 'en proceso' en Customer App.");
+            } else {
+              console.error("Fallo al actualizar el estado del viaje en Customer App a 'en proceso':", customerAppUpdateResult.error);
+            }
+          } catch (appUpdateError) {
+            console.error("Error al llamar a updateTripStatusInCustomerApp para 'en proceso':", appUpdateError);
           }
         }
 
@@ -669,6 +682,20 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       }
     } else {
       console.error("No se pudo completar la asignación: faltan activeTripDetails, currentLocation o user?.id.");
+    }
+
+    // NUEVO: Actualizar el estado del viaje en la Customer App a 'finalizado'
+    if (activeTripDetails) {
+      try {
+        const customerAppUpdateResult = await updateTripStatusInCustomerApp(activeTripDetails.id, 'finalizado');
+        if (customerAppUpdateResult.success) {
+          console.log("Estado del viaje actualizado a 'finalizado' en Customer App.");
+        } else {
+          console.error("Fallo al actualizar el estado del viaje en Customer App a 'finalizado':", customerAppUpdateResult.error);
+        }
+      } catch (appUpdateError) {
+        console.error("Error al llamar a updateTripStatusInCustomerApp para 'finalizado':", appUpdateError);
+      }
     }
 
     // Limpiar todas las referencias del viaje activo
