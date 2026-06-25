@@ -2,46 +2,39 @@
 
 import { UserButton } from "@clerk/nextjs"; // Importa UserButton
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
+// ELIMINADO: useRouter, Button
+import { cn } from "@/lib/utils"; // NUEVO: Importa la utilidad cn
 
 export default function TowerHeaderComponents() {
-  const router = useRouter();
   const pathname = usePathname();
-  // Se elimina la desestructuración de openModal ya que no se usará
 
-  const showDashboardButton = pathname !== "/dashboard";
-  const showTripsLink = pathname !== "/trips";
-  const showVehiclesLink = pathname !== "/vehicles";
-  const showPaymentsLink = pathname !== "/payments";
-  // showAccountDetailsLink ya no es necesario, UserButton siempre se mostrará para un usuario logueado.
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/trips", label: "Viajes" },
+    { href: "/vehicles", label: "Vehículos" },
+    { href: process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || "#", label: "Liquidaciones" }, // Usar NEXT_PUBLIC_PAYMENTS_APP_URL
+  ];
 
   return (
     <>
-      {showTripsLink && (
-        <Link href="/trips" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-          Mis Viajes
-        </Link>
-      )}
-      {showVehiclesLink && (
-        <Link href="/vehicles" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-          Mis Vehículos
-        </Link>
-      )}
-      {showPaymentsLink && (
-        <Link href="/payments" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
-          Mis Liquidaciones
-        </Link>
-      )}
-      {showDashboardButton && (
-        <Button
-          variant="ghost"
-          onClick={() => router.push('/dashboard')}
-          className="text-sm font-medium text-yellow-500 hover:text-yellow-500 underline-offset-4 transition-colors"
+      {navLinks.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className={cn(
+            "text-sm font-medium transition-colors",
+            pathname === link.href // Destacar el link activo
+              ? "text-yellow-500 font-bold underline underline-offset-4" // Estilo para link activo
+              : "text-slate-300 hover:text-white" // Estilo para links inactivos
+          )}
+          // Para enlaces externos, es buena práctica abrir en nueva pestaña
+          target={link.href.startsWith('http') ? '_blank' : undefined}
+          rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
         >
-          Dashboard
-        </Button>
-      )}
+          {link.label}
+        </Link>
+      ))}
       <UserButton />
     </>
   );
