@@ -572,9 +572,15 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
         // NUEVO: Registrar el viaje aceptado como una asignación en la base de datos
         if (user?.id && currentOffer) {
+          const towerIdResult = await getTowerIdByClerkId(user.id);
+          if (!towerIdResult.success || !towerIdResult.towerId) {
+            console.error("No se pudo obtener el ID del tower");
+            return;
+          }
+          const towerId = towerIdResult.towerId;
           const assignmentData = {
-            tripId: currentOffer.id,
-            towerId: user.id,
+            tripId: String(currentOffer.id),
+            towerId: towerId,
             location: {
               lat: currentOffer.origin.lat,
               long: currentOffer.origin.long,
@@ -695,7 +701,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
     // NUEVO: Actualizar la asignación en la base de datos
     if (activeTripDetails && currentLocation && user?.id) { // Añadir user?.id a la condición
       const completionData = {
-        tripId: tripId, // Usa el tripId que se pasa a la función
+        tripId: String(tripId), // Usa el tripId que se pasa a la función
         finalLocation: {
           lat: String(currentLocation.lat), // Asegurarse de que sean strings
           long: String(currentLocation.long),
@@ -705,11 +711,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       if (completionResult.success) {
         console.log("Asignación completada y actualizada en la DB con ID:", completionResult.assignmentId);
 
-        // NUEVO: Generar el desembolso del pago
-        // Asumiendo un feePercentage del 100% para el tower por simplicidad, o podrías derivarlo de activeTripDetails.service_value
-        // Se asume que activeTripDetails.service_value está disponible y es numérico para calcular el feePercentage.
-        // Por ahora, usaremos un valor fijo como 100 si no se especifica.
-        const feePercentage = activeTripDetails.service_value ? 100 : 100; // Ajustar según la lógica de negocio
+        const feePercentage = 15;
         const disbursementResult = await createDisbursement(tripId, user.id, feePercentage);
         if (disbursementResult.success) {
           setPaymentNotificationMessage("Se acreditó el pago en su cuenta asociada.");

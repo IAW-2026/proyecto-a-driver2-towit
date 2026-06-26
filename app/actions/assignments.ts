@@ -29,9 +29,10 @@ export async function recordAcceptedAssignment(
   data: RecordAcceptedAssignmentData
 ): Promise<RecordAcceptedAssignmentResponse> {
   try {
+    console.warn(data.tripId)
     const newAssignment = await prisma.assignment.create({
       data: {
-        trip_id: data.tripId,
+        trip_id: String(data.tripId),
         tower_id: data.towerId,
         status: 'accepted', // El estado inicial cuando se acepta un viaje
         location: data.location, // La ubicación del origen del viaje
@@ -44,7 +45,7 @@ export async function recordAcceptedAssignment(
     console.error("Error al registrar la asignación aceptada en la DB:", error);
     // Verificar si es un error de unicidad (trip_id ya existe)
     if (error.code === 'P2002' && error.meta?.target?.includes('trip_id')) {
-        return { success: false, error: "Ya existe una asignación para este viaje." };
+      return { success: false, error: "Ya existe una asignación para este viaje." };
     }
     return { success: false, error: "Fallo al guardar el registro de la asignación." };
   }
@@ -161,8 +162,9 @@ export async function completeAssignment(
   data: CompleteAssignmentData
 ): Promise<CompleteAssignmentResponse> {
   try {
+    console.warn(data.tripId)
     const updatedAssignment = await prisma.assignment.update({
-      where: { trip_id: data.tripId },
+      where: { trip_id: String(data.tripId) },
       data: {
         status: 'completed',
         location: data.finalLocation, // Actualizar la ubicación a la final
@@ -173,7 +175,7 @@ export async function completeAssignment(
   } catch (error: any) {
     console.error("Error al completar la asignación en la DB:", error);
     if (error.code === 'P2025') { // Código de error de Prisma para 'record not found'
-        return { success: false, error: "Asignación no encontrada para actualizar." };
+      return { success: false, error: "Asignación no encontrada para actualizar." };
     }
     return { success: false, error: "Fallo al completar la asignación." };
   }
