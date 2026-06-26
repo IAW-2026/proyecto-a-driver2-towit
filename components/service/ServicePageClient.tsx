@@ -22,7 +22,7 @@ import {
 import { toggleTowerAvailability, refreshTowerHeartbeatAndLocation, VehicleProfileData, updateTowerLocationInActiveTrip } from "@/app/actions/redis-tower"; // NUEVO: Importar updateTowerLocationInActiveTrip
 import { recordAcceptedAssignment, completeAssignment } from "@/app/actions/assignments";
 import { createDisbursement } from "@/app/actions/payments";
-import { updateTripStatusInCustomerApp } from "@/app/actions/trip-status";
+import { updateTripStatusInCustomerApp, checkActiveTripStatusLocal } from "@/app/actions/trip-status";
 import * as turf from '@turf/turf'
 
 interface Vehicle {
@@ -110,6 +110,9 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
   // NUEVO: Estados para la notificación de pago
   const [showPaymentSuccessMessage, setShowPaymentSuccessMessage] = useState(false);
   const [paymentNotificationMessage, setPaymentNotificationMessage] = useState("");
+
+  // NUEVO: Estado para notificación de viaje cancelado por el cliente
+  const [showCustomerCancelledMessage, setShowCustomerCancelledMessage] = useState(false);
 
   // NUEVO: Estado para el modo de ubicación manual
   const [isManualLocationMode, setIsManualLocationMode] = useState(false);
@@ -354,7 +357,7 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
     if (isAvailable && user?.id) {
       checkOffers();
-      pollingInterval = setInterval(checkOffers, 3000);
+      pollingInterval = setInterval(checkOffers, 2000);
     } else {
       setCurrentOffer(null);
       setOfferTimeRemaining(0);
@@ -417,6 +420,45 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
       setShowEndTripConfirmation(false);
     }
   }, [isTripActive, isTripStartedLocallyConfirmed, isTripEndedLocallyConfirmed, currentLocation, activeTripDetails]); // Dependencia: activeTripDetails
+
+  // NUEVO EFECTO 4: Polling para verificar si el cliente canceló el viaje ANTES de confirmar el inicio
+  useEffect(() => {
+    let checkInterval: NodeJS.Timeout | null = null;
+
+    const verifyActiveTripStatus = async () => {
+      if (isTripActive && !isTripStartedLocallyConfirmed && activeTripDetails?.id) {
+        const result = await checkActiveTripStatusLocal(activeTripDetails.id);
+        if (result.success && result.status === 'cancelled') {
+          console.log('El cliente canceló el viaje activo');
+
+          // Notificar al tower
+          setShowCustomerCancelledMessage(true);
+          setTimeout(() => setShowCustomerCancelledMessage(false), 6000);
+
+          // Resetear estados locales
+          setIsTripActive(false);
+          setShowStartTripConfirmation(false);
+          setCurrentOffer(null);
+          setMapRouteStart(null);
+          setMapRouteEnd(null);
+          setMapRouteOriginToDestinationEnd(null);
+          setActiveTripDetails(null);
+          setActiveTripCustomerName(null);
+          setActiveTripCustomerRating(null);
+        }
+      }
+    };
+
+    if (isTripActive && !isTripStartedLocallyConfirmed && activeTripDetails?.id) {
+      checkInterval = setInterval(verifyActiveTripStatus, 2000);
+    }
+
+    return () => {
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+    };
+  }, [isTripActive, isTripStartedLocallyConfirmed, activeTripDetails?.id]);
 
   // Contador regresivo local para la oferta (EXISTENTE)
   useEffect(() => {
@@ -769,10 +811,25 @@ export default function ServicePageClient({ initialIsAvailable, initialVehicle }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">
+      {/* NUEVO: Notificación de Viaje Cancelado por el Cliente */}
+      {showCustomerCancelledMessage && (
+        <div className="absolute w-full top-20 left-1/2 md:left-1/2 -translate-x-1/2 max-w-md z-[1002] transition-opacity duration-500 px-4">
+          <div className="bg-orange-500 shadow-xl rounded-xl p-4 flex items-center gap-3 border border-orange-400">
+            <svg className="w-8 h-8 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div>
+              <h3 className="text-white font-bold text-lg">Viaje Cancelado</h3>
+              <p className="text-orange-50 font-medium">El cliente ha cancelado la solicitud de remolque.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* NUEVO: Notificación de éxito/error de pago */}
       {showPaymentSuccessMessage && (
         <div className={`absolute w-full bottom-4 left-1/2 md:left-4 md:translate-x-0 max-w-sm -translate-x-1/2 z-[1002] transition-opacity duration-500`}>
-          <p className={`mx-4  rounded-md shadow-lg text-white font-semibold p-4 text-center ${paymentNotificationMessage.includes("Error") || true ? "bg-red-600/80" : "bg-green-600/80"}`}>
+          <p className={`mx-4  rounded-md shadow-lg text-white font-semibold p-4 text-center ${paymentNotificationMessage.includes("Error") ? "bg-red-600/80" : "bg-green-600/80"}`}>
             {paymentNotificationMessage || "Error al acreditar el pago en su cuenta. Contacte al soporte técnico."}
           </p>
         </div>

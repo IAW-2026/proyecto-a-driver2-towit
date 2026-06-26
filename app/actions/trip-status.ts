@@ -1,5 +1,20 @@
 "use server";
 
+import { redis } from '@/lib/redis-client';
+
+export async function checkActiveTripStatusLocal(tripId: string): Promise<{ success: boolean; status?: string; error?: string }> {
+  try {
+    const requestData = await redis.hgetall(`trip:request:${tripId}`);
+    if (!requestData || Object.keys(requestData).length === 0) {
+      return { success: false, error: 'Viaje no encontrado' };
+    }
+    return { success: true, status: requestData.status as string };
+  } catch (error: any) {
+    console.error("Error checking trip status locally:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 interface UpdateTripStatusResponse {
   success: boolean;
   error?: string;
